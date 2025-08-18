@@ -6,15 +6,86 @@
     <description>Recent content in Posts on My New Hugo Site</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 18 Aug 2025 19:18:27 +0300</lastBuildDate><atom:link href="https://mamonas.dev/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 18 Aug 2025 20:13:35 +0300</lastBuildDate><atom:link href="https://mamonas.dev/posts/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>My First Post</title>
-      <link>https://mamonas.dev/posts/my-first-post/</link>
-      <pubDate>Mon, 18 Aug 2025 19:18:27 +0300</pubDate>
+      <title>How Kafka Achieves High Throughput: A Breakdown of Its Log-Centric Architecture</title>
+      <link>https://mamonas.dev/posts/how-kafka-achieves-high-throughput/</link>
+      <pubDate>Mon, 18 Aug 2025 20:13:35 +0300</pubDate>
       
-      <guid>https://mamonas.dev/posts/my-first-post/</guid>
-      <description></description>
-      <content></content>
+      <guid>https://mamonas.dev/posts/how-kafka-achieves-high-throughput/</guid>
+      <description>&lt;p&gt;Kafka routinely handles millions of messages per second on commodity hardware. This performance isn&amp;rsquo;t accidental. It stems from deliberate architectural choices centered around log-based storage, OS-level optimizations, and minimal coordination between readers and writers.&lt;/p&gt;
+&lt;p&gt;This post breaks down the core mechanisms that enable Kafka&amp;rsquo;s high-throughput design.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;1-append-only-log-storage&#34;&gt;1. Append-Only Log Storage&lt;/h2&gt;
+&lt;p&gt;Each Kafka topic is split into partitions, and each partition is an append-only log. It is essentially a durable, ordered sequence of messages that are immutable once written.&lt;/p&gt;</description>
+      <content>&lt;p&gt;Kafka routinely handles millions of messages per second on commodity hardware. This performance isn&amp;rsquo;t accidental. It stems from deliberate architectural choices centered around log-based storage, OS-level optimizations, and minimal coordination between readers and writers.&lt;/p&gt;
+&lt;p&gt;This post breaks down the core mechanisms that enable Kafka&amp;rsquo;s high-throughput design.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;1-append-only-log-storage&#34;&gt;1. Append-Only Log Storage&lt;/h2&gt;
+&lt;p&gt;Each Kafka topic is split into partitions, and each partition is an append-only log. It is essentially a durable, ordered sequence of messages that are immutable once written.&lt;/p&gt;
+&lt;p&gt;To manage growing data size efficiently, Kafka breaks each partition’s log into multiple segment files. A segment is a file on disk that stores a continuous range of messages. New messages are always written to the active segment using low-level system calls like &lt;code&gt;write()&lt;/code&gt;. This write lands in the OS page cache, not written to disk immediately.&lt;/p&gt;
+&lt;p&gt;Kafka delays calling &lt;code&gt;fsync()&lt;/code&gt; to flush data to disk, relying instead on configurable flush policies (based on time or size). This reduces disk I/O and improves performance, at the cost of brief durability gaps. Kafka mitigates this through replication across brokers.&lt;/p&gt;
+&lt;p&gt;Over time, when a segment reaches a size threshold, it is closed and a new one is created. Older segments become read-only and are subject to log retention, compaction, or deletion based on topic settings.&lt;/p&gt;
+&lt;p&gt;By aligning its write path with sequential disk I/O, Kafka avoids random seeks entirely. This makes reads and writes fast and predictable, even on spinning disks, and scales well with data volume.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;2-outperforming-traditional-queues-with-sequential-io&#34;&gt;2. Outperforming Traditional Queues with Sequential I/O&lt;/h2&gt;
+&lt;p&gt;Traditional messaging systems often manage message delivery using per-consumer tracking and persistence mechanisms that can result in random disk access, especially during acknowledgment, redelivery, or crash recovery. While these systems are efficient in memory, random I/O patterns on disk introduce performance bottlenecks. For spinning disks, a single seek can take around 10 milliseconds, and disks can only perform one seek at a time.&lt;/p&gt;
+&lt;p&gt;Kafka sidesteps this entirely by relying on sequential I/O. Writes are appended, and reads proceed in order. This design significantly improves disk efficiency, especially under load.&lt;/p&gt;
+&lt;p&gt;By decoupling performance from data volume and enabling concurrent read/write access, Kafka makes efficient use of low-cost storage hardware, such as commodity SATA drives, without sacrificing performance.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;3-speeding-up-seeks-with-lightweight-indexing&#34;&gt;3. Speeding Up Seeks with Lightweight Indexing&lt;/h2&gt;
+&lt;p&gt;Each segment file is accompanied by lightweight offset and timestamp indexes. These allow consumers to seek directly to specific message positions without scanning entire files, ensuring fast lookup even on large datasets.&lt;/p&gt;
+&lt;p&gt;Since Kafka consumers track their own offsets and messages are immutable, there is no need to update shared state for acknowledgments or deletions. This eliminates coordination between readers and writers, reducing contention and enabling true parallelism.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;4-batching-to-maximize-io-efficiency&#34;&gt;4. Batching to Maximize I/O Efficiency&lt;/h2&gt;
+&lt;p&gt;High-throughput systems must avoid the overhead of processing one message at a time. Kafka uses a message set abstraction to batch messages:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Producers group messages before sending them.&lt;/li&gt;
+&lt;li&gt;Brokers perform a single disk write per batch.&lt;/li&gt;
+&lt;li&gt;Consumers fetch large batches with a single network call.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;This batching reduces system calls, disk seeks, and protocol overhead. As a result, throughput improves significantly.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;5-zero-copy-data-transfer-with-sendfile&#34;&gt;5. Zero-Copy Data Transfer with &lt;code&gt;sendfile()&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;Conventional data transfer involves multiple memory copies:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Disk to kernel space (page cache)&lt;/li&gt;
+&lt;li&gt;Kernel to user space (application buffer)&lt;/li&gt;
+&lt;li&gt;User space back to kernel (socket buffer)&lt;/li&gt;
+&lt;li&gt;Kernel to NIC buffer (for network)&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Kafka avoids this overhead using the &lt;code&gt;sendfile()&lt;/code&gt; system call. This enables zero-copy data transfer from the page cache directly to the network stack, bypassing user space entirely.&lt;/p&gt;
+&lt;p&gt;This reduces CPU usage and memory pressure, allowing near wire-speed data transfer even under heavy load.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;6-long-term-retention-without-performance-loss&#34;&gt;6. Long-Term Retention Without Performance Loss&lt;/h2&gt;
+&lt;p&gt;Kafka’s append-only log model enables long-term message retention, even for days or weeks, without degrading performance. Because reads and writes are decoupled, and messages are not mutated post-write, old data remains accessible without impacting current workloads.&lt;/p&gt;
+&lt;p&gt;This supports powerful use cases like:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Replaying messages for state recovery&lt;/li&gt;
+&lt;li&gt;Late-arriving consumer processing&lt;/li&gt;
+&lt;li&gt;Time-travel debugging and auditing&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;Kafka’s high throughput is the result of system and architectural decisions that work together by design. Its log-centric model avoids random I/O, minimizes coordination, and takes full advantage of OS-level features like the page cache and zero-copy transfers.&lt;/p&gt;
+&lt;p&gt;The result: Kafka handles massive data volumes not through abstract complexity, but by working with the OS instead of against it.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;appendix-key-terms&#34;&gt;Appendix: Key Terms&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;write()&lt;/code&gt;: A system call that transfers data from user space to the OS page cache.&lt;/li&gt;
+&lt;li&gt;Page cache: A memory buffer managed by the kernel.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;fsync()&lt;/code&gt;: Forces data in the page cache to be flushed to disk.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;sendfile()&lt;/code&gt;: A system call that sends data from a file directly to the network without copying to user space.&lt;/li&gt;
+&lt;li&gt;Sequential I/O: Reading or writing data in a linear order. Much faster than random I/O, especially on HDDs.&lt;/li&gt;
+&lt;li&gt;Random I/O: Accessing data at non-contiguous disk locations. This causes performance degradation due to disk seeks.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;Further Reading:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://kafka.apache.org/documentation/#design&#34;&gt;Kafka Official Design Documentation&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+</content>
     </item>
     
   </channel>

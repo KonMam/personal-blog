@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>How Kafka Achieves High Throughput: A Breakdown of Its Log-Centric Architecture :: My New Hugo Site</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A breakdown of the core mechanisms that enable Kafka&#39;s high-throughput design." />
+<meta name="keywords" content="" />
+
+  <meta name="robots" content="noodp" />
+
+<link rel="canonical" href="https://mamonas.dev/posts/how-kafka-achieves-high-throughput/" />
+
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  <link rel="stylesheet" href="https://mamonas.dev/styles.css">
+
+
+
+
+
+
+
+  <link rel="shortcut icon" href="https://mamonas.dev/img/theme-colors/orange.png">
+  <link rel="apple-touch-icon" href="https://mamonas.dev/img/theme-colors/orange.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="How Kafka Achieves High Throughput: A Breakdown of Its Log-Centric Architecture">
+<meta property="og:description" content="A breakdown of the core mechanisms that enable Kafka&#39;s high-throughput design." />
+<meta property="og:url" content="https://mamonas.dev/posts/how-kafka-achieves-high-throughput/" />
+<meta property="og:site_name" content="My New Hugo Site" />
+
+  
+    <meta property="og:image" content="img/favicon/%!s(&lt;nil&gt;).png">
+  
+
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+
+
+  <meta property="article:published_time" content="2025-08-18 20:13:35 &#43;0300 &#43;0300" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+</head>
+<body class="">
+
+
+
+
+<div class="container center headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="https://mamonas.dev/">
+  <div class="logo">
+    re-Terminal
+  </div>
+</a>
+
+    </div>
+    
+    
+  </div>
+  
+</header>
+
+
+  <div class="content">
+    
+<article class="post">
+  <h1 class="post-title">
+    <a href="https://mamonas.dev/posts/how-kafka-achieves-high-throughput/">How Kafka Achieves High Throughput: A Breakdown of Its Log-Centric Architecture</a>
+  </h1>
+  <div class="post-meta"><time class="post-date">2025-08-18</time>
+    
+</div>
+
+  
+    <span class="post-tags">
+      
+      #<a href="https://mamonas.dev/tags/kafka/">kafka</a>&nbsp;
+      
+      #<a href="https://mamonas.dev/tags/performance/">performance</a>&nbsp;
+      
+      #<a href="https://mamonas.dev/tags/architecture/">architecture</a>&nbsp;
+      
+    </span>
+  
+  
+
+
+
+  
+
+  <div class="post-content"><div>
+        <p>Kafka routinely handles millions of messages per second on commodity hardware. This performance isn&rsquo;t accidental. It stems from deliberate architectural choices centered around log-based storage, OS-level optimizations, and minimal coordination between readers and writers.</p>
+<p>This post breaks down the core mechanisms that enable Kafka&rsquo;s high-throughput design.</p>
+<hr>
+<h2 id="1-append-only-log-storage">1. Append-Only Log Storage<a href="#1-append-only-log-storage" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>Each Kafka topic is split into partitions, and each partition is an append-only log. It is essentially a durable, ordered sequence of messages that are immutable once written.</p>
+<p>To manage growing data size efficiently, Kafka breaks each partition’s log into multiple segment files. A segment is a file on disk that stores a continuous range of messages. New messages are always written to the active segment using low-level system calls like <code>write()</code>. This write lands in the OS page cache, not written to disk immediately.</p>
+<p>Kafka delays calling <code>fsync()</code> to flush data to disk, relying instead on configurable flush policies (based on time or size). This reduces disk I/O and improves performance, at the cost of brief durability gaps. Kafka mitigates this through replication across brokers.</p>
+<p>Over time, when a segment reaches a size threshold, it is closed and a new one is created. Older segments become read-only and are subject to log retention, compaction, or deletion based on topic settings.</p>
+<p>By aligning its write path with sequential disk I/O, Kafka avoids random seeks entirely. This makes reads and writes fast and predictable, even on spinning disks, and scales well with data volume.</p>
+<hr>
+<h2 id="2-outperforming-traditional-queues-with-sequential-io">2. Outperforming Traditional Queues with Sequential I/O<a href="#2-outperforming-traditional-queues-with-sequential-io" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>Traditional messaging systems often manage message delivery using per-consumer tracking and persistence mechanisms that can result in random disk access, especially during acknowledgment, redelivery, or crash recovery. While these systems are efficient in memory, random I/O patterns on disk introduce performance bottlenecks. For spinning disks, a single seek can take around 10 milliseconds, and disks can only perform one seek at a time.</p>
+<p>Kafka sidesteps this entirely by relying on sequential I/O. Writes are appended, and reads proceed in order. This design significantly improves disk efficiency, especially under load.</p>
+<p>By decoupling performance from data volume and enabling concurrent read/write access, Kafka makes efficient use of low-cost storage hardware, such as commodity SATA drives, without sacrificing performance.</p>
+<hr>
+<h2 id="3-speeding-up-seeks-with-lightweight-indexing">3. Speeding Up Seeks with Lightweight Indexing<a href="#3-speeding-up-seeks-with-lightweight-indexing" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>Each segment file is accompanied by lightweight offset and timestamp indexes. These allow consumers to seek directly to specific message positions without scanning entire files, ensuring fast lookup even on large datasets.</p>
+<p>Since Kafka consumers track their own offsets and messages are immutable, there is no need to update shared state for acknowledgments or deletions. This eliminates coordination between readers and writers, reducing contention and enabling true parallelism.</p>
+<hr>
+<h2 id="4-batching-to-maximize-io-efficiency">4. Batching to Maximize I/O Efficiency<a href="#4-batching-to-maximize-io-efficiency" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>High-throughput systems must avoid the overhead of processing one message at a time. Kafka uses a message set abstraction to batch messages:</p>
+<ul>
+<li>Producers group messages before sending them.</li>
+<li>Brokers perform a single disk write per batch.</li>
+<li>Consumers fetch large batches with a single network call.</li>
+</ul>
+<p>This batching reduces system calls, disk seeks, and protocol overhead. As a result, throughput improves significantly.</p>
+<hr>
+<h2 id="5-zero-copy-data-transfer-with-sendfile">5. Zero-Copy Data Transfer with <code>sendfile()</code><a href="#5-zero-copy-data-transfer-with-sendfile" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>Conventional data transfer involves multiple memory copies:</p>
+<ol>
+<li>Disk to kernel space (page cache)</li>
+<li>Kernel to user space (application buffer)</li>
+<li>User space back to kernel (socket buffer)</li>
+<li>Kernel to NIC buffer (for network)</li>
+</ol>
+<p>Kafka avoids this overhead using the <code>sendfile()</code> system call. This enables zero-copy data transfer from the page cache directly to the network stack, bypassing user space entirely.</p>
+<p>This reduces CPU usage and memory pressure, allowing near wire-speed data transfer even under heavy load.</p>
+<hr>
+<h2 id="6-long-term-retention-without-performance-loss">6. Long-Term Retention Without Performance Loss<a href="#6-long-term-retention-without-performance-loss" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>Kafka’s append-only log model enables long-term message retention, even for days or weeks, without degrading performance. Because reads and writes are decoupled, and messages are not mutated post-write, old data remains accessible without impacting current workloads.</p>
+<p>This supports powerful use cases like:</p>
+<ul>
+<li>Replaying messages for state recovery</li>
+<li>Late-arriving consumer processing</li>
+<li>Time-travel debugging and auditing</li>
+</ul>
+<hr>
+<h2 id="conclusion">Conclusion<a href="#conclusion" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>Kafka’s high throughput is the result of system and architectural decisions that work together by design. Its log-centric model avoids random I/O, minimizes coordination, and takes full advantage of OS-level features like the page cache and zero-copy transfers.</p>
+<p>The result: Kafka handles massive data volumes not through abstract complexity, but by working with the OS instead of against it.</p>
+<hr>
+<h2 id="appendix-key-terms">Appendix: Key Terms<a href="#appendix-key-terms" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<ul>
+<li><code>write()</code>: A system call that transfers data from user space to the OS page cache.</li>
+<li>Page cache: A memory buffer managed by the kernel.</li>
+<li><code>fsync()</code>: Forces data in the page cache to be flushed to disk.</li>
+<li><code>sendfile()</code>: A system call that sends data from a file directly to the network without copying to user space.</li>
+<li>Sequential I/O: Reading or writing data in a linear order. Much faster than random I/O, especially on HDDs.</li>
+<li>Random I/O: Accessing data at non-contiguous disk locations. This causes performance degradation due to disk seeks.</li>
+</ul>
+<hr>
+<p><strong>Further Reading:</strong></p>
+<ul>
+<li><a href="https://kafka.apache.org/documentation/#design">Kafka Official Design Documentation</a></li>
+</ul>
+<hr>
+
+      </div></div>
+
+  
+
+  
+    
+
+  
+</article>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright">
+        <span>© 2025 Powered by <a href="https://gohugo.io">Hugo</a></span>
+    
+      <span>:: <a href="https://github.com/mirus-ua/hugo-theme-re-terminal" target="_blank">Theme</a> made by <a href="https://github.com/mirus-ua" target="_blank">Mirus</a></span>
+      </div>
+  </div>
+</footer>
+
+
+
+
+
+
+<script type="text/javascript" src="/bundle.min.js"></script>
+
+
+
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>

@@ -2,17 +2,27 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://mamonas.dev/posts/my-first-post/</loc>
-    <lastmod>2025-08-18T19:18:27+03:00</lastmod>
+    <loc>https://mamonas.dev/tags/architecture/</loc>
+    <lastmod>2025-08-18T20:13:35+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/posts/how-kafka-achieves-high-throughput/</loc>
+    <lastmod>2025-08-18T20:13:35+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/tags/kafka/</loc>
+    <lastmod>2025-08-18T20:13:35+03:00</lastmod>
   </url><url>
     <loc>https://mamonas.dev/</loc>
-    <lastmod>2025-08-18T19:18:27+03:00</lastmod>
+    <lastmod>2025-08-18T20:13:35+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/tags/performance/</loc>
+    <lastmod>2025-08-18T20:13:35+03:00</lastmod>
   </url><url>
     <loc>https://mamonas.dev/posts/</loc>
-    <lastmod>2025-08-18T19:18:27+03:00</lastmod>
-  </url><url>
-    <loc>https://mamonas.dev/categories/</loc>
+    <lastmod>2025-08-18T20:13:35+03:00</lastmod>
   </url><url>
     <loc>https://mamonas.dev/tags/</loc>
+    <lastmod>2025-08-18T20:13:35+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/categories/</loc>
   </url>
 </urlset>
