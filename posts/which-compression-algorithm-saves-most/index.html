@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>Which Compression Saves the Most Storage $? (gzip, Snappy, LZ4, zstd) :: mamonas.dev</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A detailed comparison of gzip, Snappy, LZ4, and zstd compression algorithms, analyzing their impact on storage savings, performance, and cost based on real-world data benchmarks." />
+<meta name="keywords" content="" />
+
+  <meta name="robots" content="noodp" />
+
+<link rel="canonical" href="https://mamonas.dev/posts/which-compression-algorithm-saves-most/" />
+
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  <link rel="stylesheet" href="https://mamonas.dev/styles.css">
+
+
+
+<link rel="stylesheet" href="https://mamonas.dev/style.css">
+
+
+
+  <link rel="shortcut icon" href="https://mamonas.dev/img/theme-colors/green.png">
+  <link rel="apple-touch-icon" href="https://mamonas.dev/img/theme-colors/green.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Which Compression Saves the Most Storage $? (gzip, Snappy, LZ4, zstd)">
+<meta property="og:description" content="A detailed comparison of gzip, Snappy, LZ4, and zstd compression algorithms, analyzing their impact on storage savings, performance, and cost based on real-world data benchmarks." />
+<meta property="og:url" content="https://mamonas.dev/posts/which-compression-algorithm-saves-most/" />
+<meta property="og:site_name" content="mamonas.dev" />
+
+  
+    <meta property="og:image" content="https://mamonas.dev/img/favicon/green.png">
+  
+
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+
+
+  <meta property="article:published_time" content="2025-08-18 22:04:52 &#43;0300 &#43;0300" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+</head>
+<body class="green">
+
+
+
+
+<div class="container center headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    mamonas.dev
+  </div>
+</a>
+
+    </div>
+    
+      <ul class="menu menu--mobile">
+  <li class="menu__trigger">Menu&nbsp;▾</li>
+  <li>
+    <ul class="menu__dropdown">
+      
+        
+          <li><a href="/about">About</a></li>
+        
+      
+        
+          <li><a href="/">Home</a></li>
+        
+      
+      
+    </ul>
+  </li>
+</ul>
+
+    
+    
+  </div>
+  
+    <nav class="navigation-menu">
+  <ul class="navigation-menu__inner menu--desktop">
+    
+      
+        
+          <li><a href="/about" >About</a></li>
+        
+      
+        
+          <li><a href="/" >Home</a></li>
+        
+      
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<article class="post">
+  <h1 class="post-title">
+    <a href="https://mamonas.dev/posts/which-compression-algorithm-saves-most/">Which Compression Saves the Most Storage $? (gzip, Snappy, LZ4, zstd)</a>
+  </h1>
+  <div class="post-meta"><time class="post-date">2025-08-18</time>
+    
+</div>
+
+  
+    <span class="post-tags">
+      
+      #<a href="https://mamonas.dev/tags/compression/">compression</a>&nbsp;
+      
+      #<a href="https://mamonas.dev/tags/benchmarking/">benchmarking</a>&nbsp;
+      
+      #<a href="https://mamonas.dev/tags/data-engineering/">data-engineering</a>&nbsp;
+      
+    </span>
+  
+  
+
+
+
+  
+
+  <div class="post-content"><div>
+        <p>Compression setting are set and forget in most cases, if it works no reason to change it. I decided to look into and see whether it would be beneficial to review the defaults and if it could save money. I covered most of the algorithms discussed in this post previously in <a href="https://mamonas.dev/posts/compression-algorithms-you-probably-inherited/">Compression Algorithms You Probably Inherited</a>, where I summarized the info I collected while researching. But I wanted to sanity-check the findings myself and decided to run some benchmarks. This should help me see if compression actually makes a difference for storage costs.</p>
+<hr>
+<h2 id="what-i-tested">What I Tested<a href="#what-i-tested" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>To keep things real, I used actual data: <a href="https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page">NYC TLC trip records</a>. Each month’s data file was ~500MB. I combined a few to get files at 500MB, 1.6GB, 3.9GB, and 6.6GB.</p>
+<p><strong>Compression algorithms tested:</strong></p>
+<ul>
+<li>gzip</li>
+<li>Snappy</li>
+<li>LZ4</li>
+<li>zstd at levels 1, 3, 9, and 19</li>
+</ul>
+<p><strong>Environment:</strong></p>
+<ul>
+<li>MacBook Pro (2021, M1 Pro, 16GB RAM)</li>
+<li>Single-threaded runs</li>
+</ul>
+<p>I couldn’t process the largest file with my setup. SKILL ISSUE. In reality, I didn’t bother trying to fix it, multi-threading and batching the compression should have allowed me to do it, but I already had the 3 other files to work with.</p>
+<p>To run the benchmarks, I built a small CLI tool: <a href="https://github.com/KonMam/compressbench">compressbench</a>. It’s publicly available and it currently supports gzip, snappy, lz4, and zstd (with levels) and outputs compression/decompression benchmarks for Parquet files. I’m planning to add support for custom codecs later, mostly so I can benchmark my own RLE, Huffman, and LZ77 implementations.</p>
+<hr>
+<h2 id="results">Results<a href="#results" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p><img src="/posts/which-compression-algorithm-saves-most/image-1.png" alt="Compression Ratio/Time/Throughput, Decompression Throughput"></p>
+<h3 id="compression-ratio">Compression Ratio<a href="#compression-ratio" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>If you only care about the smallest file, zstd-19 and gzip come out ahead. But the margin over zstd-3 is tiny, and you pay for it heavily elsewhere. Snappy and LZ4 compress to about 1.12 - just enough to make it look like they tried. But if that’s all you have, 12% savings is still better than no savings.</p>
+<p>For most storage use cases, zstd-3 gets close enough to the “best” ratio without turning your CPU into a space heater.</p>
+<h3 id="compression-speed">Compression Speed<a href="#compression-speed" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>Snappy and LZ4 are fast. zstd-1, 3, and 9 kept up surprisingly well. gzip is predictably slow. zstd-19 made me question my life choices, I thought it might have frozen or got silently murdered by the OS. I’m not saying never use it, there are some use cases, but they’re likely few and far between.</p>
+<h3 id="decompression-speed">Decompression Speed<a href="#decompression-speed" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>Snappy and LZ4 hit over 3.5GB/s. zstd held steady around 1GB/s across all levels. gzip stayed slow.</p>
+<p>If you need to read the same data multiple times Snappy and LZ4 are faster than gzip or zstd. But zstd isn’t slow enough to matter unless your volumes are huge.</p>
+<hr>
+<h3 id="file-size-scaling">File Size Scaling<a href="#file-size-scaling" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>Throughput went down as file size grew. Gzip was slow the whole time. zstd-19 was even slower and I didn&rsquo;t run it for all file size, so it may have gone even more down.</p>
+<p>The others held up fairly well. Snappy stayed fastest, but none of them completely fell apart.</p>
+<p>Note: CPU was pinned at 100% during all runs. On a single-threaded, 16GB machine, there was probably some memory pressure too for the larger files. These results match what I’ve seen elsewhere but might be a bit exaggerated.</p>
+<p><img src="/posts/which-compression-algorithm-saves-most/image-2.png" alt="Compression Throughput vs File Size"></p>
+<hr>
+<h3 id="storage-cost-s3">Storage Cost (S3)<a href="#storage-cost-s3" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>S3 Standard pricing in eu-central-1 is $0.0235/GB. At 500TB/month, codec choice can have a significant (based on your budged) impact on the cost. But if you&rsquo;re only storing a few TB, this doesn’t matter much. At 100TB, you&rsquo;re looking at maybe a few hundred bucks.</p>
+<p>Snappy/LZ4 would cost around $10.7K/month. zstd-3 lands near $9.7K for 500TBs. zstd-19 saves a bit more, but the compute cost and latency make it hard to justify. gzip is in the same ballpark, and we’ve already covered its performance.</p>
+<p><img src="/posts/which-compression-algorithm-saves-most/image-3.png" alt="Projected Monthly S3 Cost by Codec at Scale"></p>
+<hr>
+<h2 id="what-to-pick">What to Pick?<a href="#what-to-pick" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p><strong>For streaming</strong>
+Snappy or LZ4. Fast compression and decompression. Compression ratio better than nothing.</p>
+<p><strong>For batch ETL or periodic jobs</strong>
+zstd-1 or zstd-3. Good balance between speed and size.</p>
+<p><strong>For archival</strong>
+zstd-9 if you care for small gains. zstd-19 if you’re archiving something you hope nobody ever reads again.</p>
+<hr>
+<h2 id="final-thoughts">Final Thoughts<a href="#final-thoughts" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>After my initial post, I assumed the real-life impact of LZ4 and zstd would be more obvious. But it turns out you need quite a bit of scale to feel it. In the future, I won’t be so quick to dismiss Snappy as it has its place. But it’s not the only viable option there is.</p>
+<p>I&rsquo;d also like to benchmark compute cost in the future and see whether using zstd at scale is actually worth it for batch processes or if the additional compute time eats up your storage savings.</p>
+<p>Also keep in mind that your mileage might vary based on your data, compression is about finding patters and if there&rsquo;s none, the result might be a larger file than you began with, so pick accordingly, maybe run a benchmark yourself.</p>
+<hr>
+<p>Thank you for reading.</p>
+
+      </div></div>
+
+  
+
+  
+    
+
+  
+</article>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    <div class="copyright">
+      <ul>
+        <li>© 2025 mamonas.dev</li>
+        <li><a href="https://www.linkedin.com/in/konstantinas-mamonas" target="_blank" class="social-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
+              <path d="M22.23 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.72V1.72C24 .77 23.21 0 22.23 0zM7.06 20.45h-3.5V8.9h3.5v11.55zM5.31 7.42c-1.15 0-2.08-.93-2.08-2.08s.93-2.08 2.08-2.08 2.08.93 2.08 2.08-.93 2.08-2.08 2.08zm15.14 13.03h-3.5v-5.5c0-1.31-.02-3-1.82-3-1.83 0-2.11 1.43-2.11 2.9v5.6h-3.5V8.9h3.36v1.54h.05c.47-.89 1.62-1.82 3.31-1.82 3.53 0 4.18 2.32 4.18 5.33v6.1z"/>
+          </svg>
+        </a></li>
+        <li><a href="https://github.com/KonMam" target="_blank" class="social-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-github" viewBox="0 0 16 16">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
+          </svg>
+        </a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+
+
+
+
+
+<script type="text/javascript" src="/bundle.min.js"></script>
+
+
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>
