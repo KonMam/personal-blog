@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Python on mamonas.dev</title>
+    <link>https://mamonas.dev/tags/python/</link>
+    <description>Recent content in Python on mamonas.dev</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 18 Aug 2025 21:41:41 +0300</lastBuildDate><atom:link href="https://mamonas.dev/tags/python/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>kafka-replay-cli: A Lightweight Kafka Replay &amp; Debugging Tool</title>
+      <link>https://mamonas.dev/posts/kafka-replay-cli/</link>
+      <pubDate>Mon, 18 Aug 2025 21:41:41 +0300</pubDate>
+      
+      <guid>https://mamonas.dev/posts/kafka-replay-cli/</guid>
+      <description>&lt;h2 id=&#34;project-links&#34;&gt;Project Links&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;GitHub&lt;/strong&gt;: &lt;a href=&#34;https://github.com/KonMam/kafka-replay-cli&#34;&gt;github.com/KonMam/kafka-replay-cli&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;PyPI&lt;/strong&gt;: &lt;a href=&#34;https://pypi.org/project/kafka-replay-cli/&#34;&gt;pypi.org/project/kafka-replay-cli&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;why-i-built-this&#34;&gt;Why I Built This&lt;/h2&gt;
+&lt;p&gt;I wanted more hands-on &lt;a href=&#34;https://kafka.apache.org/&#34;&gt;Kafka&lt;/a&gt; experience - that&amp;rsquo;s the gist of it. Before this, I’d dealt with a few producers/consumers here and there, read the docs, and studied Kafka’s architectural design principles (very insightful read if you are interested in that sort of thing: &lt;a href=&#34;https://kafka.apache.org/documentation/&#34;&gt;https://kafka.apache.org/documentation/&lt;/a&gt;).
+But there’s only so much you can learn with limited exposure and just reading, so I decided to spend some time tinkering and learning by doing.&lt;/p&gt;</description>
+      <content>&lt;h2 id=&#34;project-links&#34;&gt;Project Links&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;GitHub&lt;/strong&gt;: &lt;a href=&#34;https://github.com/KonMam/kafka-replay-cli&#34;&gt;github.com/KonMam/kafka-replay-cli&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;PyPI&lt;/strong&gt;: &lt;a href=&#34;https://pypi.org/project/kafka-replay-cli/&#34;&gt;pypi.org/project/kafka-replay-cli&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;why-i-built-this&#34;&gt;Why I Built This&lt;/h2&gt;
+&lt;p&gt;I wanted more hands-on &lt;a href=&#34;https://kafka.apache.org/&#34;&gt;Kafka&lt;/a&gt; experience - that&amp;rsquo;s the gist of it. Before this, I’d dealt with a few producers/consumers here and there, read the docs, and studied Kafka’s architectural design principles (very insightful read if you are interested in that sort of thing: &lt;a href=&#34;https://kafka.apache.org/documentation/&#34;&gt;https://kafka.apache.org/documentation/&lt;/a&gt;).
+But there’s only so much you can learn with limited exposure and just reading, so I decided to spend some time tinkering and learning by doing.&lt;/p&gt;
+&lt;h2 id=&#34;goals&#34;&gt;Goals&lt;/h2&gt;
+&lt;p&gt;There were a few things I wanted to achieve with this:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Get more Kafka experience - main goal.&lt;/li&gt;
+&lt;li&gt;Integrate &lt;a href=&#34;https://duckdb.org/&#34;&gt;DuckDB&lt;/a&gt; - for the past year, I have seen a lot of hype around it and have started using it for some ad-hoc analysis. I enjoy using it, so I wanted to find a place for it.&lt;/li&gt;
+&lt;li&gt;Have something to show at the end of it - meaning, find a real issue that people using Kafka might have and develop something around it, applying good practices.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;problem--mvp&#34;&gt;Problem &amp;amp; MVP&lt;/h2&gt;
+&lt;p&gt;I needed to find a problem I could so-called &amp;lsquo;solve,&amp;rsquo; even if it had been done before. After some careful Googling and ChatGPT-ing, &lt;strong&gt;Kafka message replay&lt;/strong&gt; came up as something people either struggle with or need heavy tools to handle. The tool should be useful for someone who needs to reprocess events with filters or transformations, debugging, or migrating data between topics.&lt;/p&gt;
+&lt;p&gt;The initial MVP I scoped was simple:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Basic replay of messages with filters.&lt;/li&gt;
+&lt;li&gt;Ability to dump Kafka topic data.&lt;/li&gt;
+&lt;li&gt;Query dumped data.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I wanted it lightweight, scriptable, and easy to use - no streaming engine, web UI, or over-engineering.&lt;/p&gt;
+&lt;h2 id=&#34;architecture&#34;&gt;Architecture&lt;/h2&gt;
+&lt;p&gt;The first decision I had to make was whether to use Python or Golang.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Arguments for Python&lt;/strong&gt; - I have the most experience with it and expected it would be easier and faster to develop.
+&lt;strong&gt;Arguments for Golang&lt;/strong&gt; - In the long run, it would most likely be more performant. I would get more familiar with Golang.&lt;/p&gt;
+&lt;p&gt;Due to my decision to have something tangible in a few days, I went with Python. Since it is a small tool and I didn’t know how much use it would get, I preferred not to worry about making it as performant as possible - premature optimization is the root of all evil, after all.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Tools used for this project:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Kafka - the core thing I wanted to learn. Using the &lt;code&gt;confluent_kafka&lt;/code&gt; Python package, as it had all the features I needed.&lt;/li&gt;
+&lt;li&gt;DuckDB - see above.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://typer.tiangolo.com/&#34;&gt;Typer&lt;/a&gt; - a library for building CLI applications. I had never used it before but liked the look and ergonomics it offered.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://arrow.apache.org/docs/python/parquet.html&#34;&gt;PyArrow for Parquet&lt;/a&gt; - efficient storage; I’m used to working with it, and DuckDB can read from it. For alternatives could have used JSON or Avro, but JSON is inefficient for larger data volumes. Avro - might add support in the future.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;features&#34;&gt;Features&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Dump Kafka topics into Parquet files&lt;/li&gt;
+&lt;li&gt;Replay messages from Parquet back into Kafka&lt;/li&gt;
+&lt;li&gt;Filter replays by timestamp range and key&lt;/li&gt;
+&lt;li&gt;Optional throttling during replay&lt;/li&gt;
+&lt;li&gt;Apply custom transform hooks to modify or skip messages&lt;/li&gt;
+&lt;li&gt;Preview replays without sending messages using &lt;code&gt;--dry-run&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Control output verbosity with &lt;code&gt;--verbose&lt;/code&gt; and &lt;code&gt;--quiet&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Query message dumps with DuckDB SQL&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;lessons-learned&#34;&gt;Lessons Learned&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;Kafka&lt;/strong&gt; - Not as intimidating as expected and quite enjoyable. Both the official Kafka CLI tools and the Python integrations are mature.
+&lt;strong&gt;DuckDB&lt;/strong&gt; - Currently limited use in the project, but good for what it does. I might add more use for it in the future or remove it to reduce bloat if it isn’t utilized.
+&lt;strong&gt;Typer&lt;/strong&gt; - Enjoyed working with it a lot. Super easy to get a CLI tool going.
+&lt;strong&gt;Testing&lt;/strong&gt; - Used &lt;code&gt;pytest&lt;/code&gt;. For unit tests, I didn’t want Kafka running for each test, so I used &lt;code&gt;MagicMock&lt;/code&gt; and &lt;code&gt;monkeypatch&lt;/code&gt; to simulate real objects - techniques I’ll keep in my pocket for future. For integration testing, I spun up a Docker container with a Kafka broker to test real usage of the CLI using &lt;code&gt;subprocess&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Main takeaway:&lt;/strong&gt;
+It’s important to figure out your goals and think about the architecture before you start mashing on the keyboard. Deciding the project scope and dependencies early let me focus on the main features. It’s always a balancing act: what’s core, what’s nice to have, and how much time you want to spend.&lt;/p&gt;
+&lt;h2 id=&#34;outcome--reflection&#34;&gt;Outcome &amp;amp; Reflection&lt;/h2&gt;
+&lt;p&gt;Did I get more Kafka experience? Yes.
+Does the tool do what I set out to make it do? Yes.
+Is it the best thing since sliced bread? Highly unlikely.
+Are there better tools for this use case? Probably.&lt;/p&gt;
+&lt;p&gt;At the end of the day, this was a learning experience and I had fun. If someone uses it - great. If no one does - also great, it just means that I didn&amp;rsquo;t spend enough time researching real usage problems.&lt;/p&gt;
+&lt;h2 id=&#34;installation--usage&#34;&gt;Installation &amp;amp; Usage&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;pip install kafka-replay-cli
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;kafka-replay-cli dump --help
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;kafka-replay-cli replay --help
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;p&gt;Thank you for reading.&lt;/p&gt;
+</content>
+    </item>
+    
+  </channel>
+</rss>

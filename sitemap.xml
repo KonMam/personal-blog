@@ -2,10 +2,64 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://mamonas.dev/about/</loc>
-    <lastmod>2025-08-18T20:27:27+03:00</lastmod>
+    <loc>https://mamonas.dev/tags/compression/</loc>
+    <lastmod>2025-08-18T21:45:14+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/posts/compression-algorithms-you-probably-inherited/</loc>
+    <lastmod>2025-08-18T21:45:14+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/tags/data-engineering/</loc>
+    <lastmod>2025-08-18T21:45:14+03:00</lastmod>
   </url><url>
     <loc>https://mamonas.dev/</loc>
+    <lastmod>2025-08-18T21:45:14+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/tags/performance/</loc>
+    <lastmod>2025-08-18T21:45:14+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/posts/</loc>
+    <lastmod>2025-08-18T21:45:14+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/tags/</loc>
+    <lastmod>2025-08-18T21:45:14+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/tags/duckdb/</loc>
+    <lastmod>2025-08-18T21:43:23+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/posts/duckdb-when-you-dont-need-spark/</loc>
+    <lastmod>2025-08-18T21:43:23+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/tags/sql/</loc>
+    <lastmod>2025-08-18T21:43:23+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/tags/cli/</loc>
+    <lastmod>2025-08-18T21:41:41+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/tags/kafka/</loc>
+    <lastmod>2025-08-18T21:41:41+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/posts/kafka-replay-cli/</loc>
+    <lastmod>2025-08-18T21:41:41+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/tags/python/</loc>
+    <lastmod>2025-08-18T21:41:41+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/posts/kafka-producers-explained/</loc>
+    <lastmod>2025-08-18T21:39:05+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/tags/messaging/</loc>
+    <lastmod>2025-08-18T21:39:05+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/tags/producers/</loc>
+    <lastmod>2025-08-18T21:39:05+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/tags/consumers/</loc>
+    <lastmod>2025-08-18T21:30:08+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/posts/kafka-consumers-explained/</loc>
+    <lastmod>2025-08-18T21:30:08+03:00</lastmod>
+  </url><url>
+    <loc>https://mamonas.dev/about/</loc>
     <lastmod>2025-08-18T20:27:27+03:00</lastmod>
   </url><url>
     <loc>https://mamonas.dev/tags/architecture/</loc>
@@ -14,16 +68,7 @@
     <loc>https://mamonas.dev/posts/how-kafka-achieves-high-throughput/</loc>
     <lastmod>2025-08-18T20:13:35+03:00</lastmod>
   </url><url>
-    <loc>https://mamonas.dev/tags/kafka/</loc>
-    <lastmod>2025-08-18T20:13:35+03:00</lastmod>
-  </url><url>
-    <loc>https://mamonas.dev/tags/performance/</loc>
-    <lastmod>2025-08-18T20:13:35+03:00</lastmod>
-  </url><url>
-    <loc>https://mamonas.dev/posts/</loc>
-    <lastmod>2025-08-18T20:13:35+03:00</lastmod>
-  </url><url>
-    <loc>https://mamonas.dev/tags/</loc>
+    <loc>https://mamonas.dev/tags/throughput/</loc>
     <lastmod>2025-08-18T20:13:35+03:00</lastmod>
   </url><url>
     <loc>https://mamonas.dev/categories/</loc>
