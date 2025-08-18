@@ -1,12 +1,26 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>My New Hugo Site</title>
+    <title>mamonas.dev</title>
     <link>https://mamonas.dev/</link>
-    <description>Recent content on My New Hugo Site</description>
+    <description>Recent content on mamonas.dev</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en-us</language>
-    <lastBuildDate>Mon, 18 Aug 2025 20:13:35 +0300</lastBuildDate><atom:link href="https://mamonas.dev/index.xml" rel="self" type="application/rss+xml" />
+    <language>en</language>
+    <lastBuildDate>Mon, 18 Aug 2025 20:27:27 +0300</lastBuildDate><atom:link href="https://mamonas.dev/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>About</title>
+      <link>https://mamonas.dev/about/</link>
+      <pubDate>Mon, 18 Aug 2025 20:27:27 +0300</pubDate>
+      
+      <guid>https://mamonas.dev/about/</guid>
+      <description>&lt;p&gt;&lt;strong&gt;My name is Konstantinas&lt;/strong&gt;, and I like exploring new ideas and writing about them. With a technical background, I often dive into systems, tools, and ways to make things work better, though I don’t limit myself only to that.&lt;/p&gt;
+&lt;p&gt;Outside of the technical world, I enjoy single player games such as &lt;em&gt;Skyrim&lt;/em&gt;, &lt;em&gt;The Witcher&lt;/em&gt;, &lt;em&gt;Elden Ring&lt;/em&gt;, and &lt;em&gt;Clair Obscur: Expedition 33&lt;/em&gt;. I also read a lot of fantasy and science fiction, with favorites including Brandon Sanderson’s &lt;em&gt;Cosmere&lt;/em&gt; stories, James S. A. Corey’s &lt;em&gt;The Expanse&lt;/em&gt;, Liu Cixin’s &lt;em&gt;The Three Body Problem&lt;/em&gt;, and Andy Weir’s &lt;em&gt;Project Hail Mary&lt;/em&gt;.&lt;/p&gt;</description>
+      <content>&lt;p&gt;&lt;strong&gt;My name is Konstantinas&lt;/strong&gt;, and I like exploring new ideas and writing about them. With a technical background, I often dive into systems, tools, and ways to make things work better, though I don’t limit myself only to that.&lt;/p&gt;
+&lt;p&gt;Outside of the technical world, I enjoy single player games such as &lt;em&gt;Skyrim&lt;/em&gt;, &lt;em&gt;The Witcher&lt;/em&gt;, &lt;em&gt;Elden Ring&lt;/em&gt;, and &lt;em&gt;Clair Obscur: Expedition 33&lt;/em&gt;. I also read a lot of fantasy and science fiction, with favorites including Brandon Sanderson’s &lt;em&gt;Cosmere&lt;/em&gt; stories, James S. A. Corey’s &lt;em&gt;The Expanse&lt;/em&gt;, Liu Cixin’s &lt;em&gt;The Three Body Problem&lt;/em&gt;, and Andy Weir’s &lt;em&gt;Project Hail Mary&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;This blog is where I collect what I’m working on and what interests me. Sometimes that’s technical, sometimes not, but it always comes back to curiosity and learning.&lt;/p&gt;
+</content>
+    </item>
+    
     <item>
       <title>How Kafka Achieves High Throughput: A Breakdown of Its Log-Centric Architecture</title>
       <link>https://mamonas.dev/posts/how-kafka-achieves-high-throughput/</link>
