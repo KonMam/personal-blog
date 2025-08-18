@@ -2,3 +2,26 @@ baseURL = 'https://mamonas.dev/'
 languageCode = 'en-us'
 title = 'My New Hugo Site'
 theme = 're-terminal'
+
+[params]
+  # ["orange", "blue", "red", "green", "pink"]
+  themeColor = "green"
+
+[languages]
+  [languages.en]
+    title = "mamonas.dev"
+    languageName = "English"
+
+    [languages.en.params.logo]
+      logoText = "mamonas.dev"
+      logoHomeLink = "/"
+
+    [languages.en.menu]
+      [[languages.en.menu.main]]
+        identifier = "home"
+        name = "Home"
+        url = "/"
+      [[languages.en.menu.main]]
+        identifier = "about"
+        name = "About"
+        url = "/about"
