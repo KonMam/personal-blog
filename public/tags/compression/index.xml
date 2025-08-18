@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Compression on mamonas.dev</title>
+    <link>http://localhost:1313/tags/compression/</link>
+    <description>Recent content in Compression on mamonas.dev</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 18 Aug 2025 21:45:14 +0300</lastBuildDate><atom:link href="http://localhost:1313/tags/compression/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Compression Algorithms You Probably Inherited: gzip, Snappy, LZ4, zstd</title>
+      <link>http://localhost:1313/posts/compression-algorithms-you-probably-inherited/</link>
+      <pubDate>Mon, 18 Aug 2025 21:45:14 +0300</pubDate>
+      
+      <guid>http://localhost:1313/posts/compression-algorithms-you-probably-inherited/</guid>
+      <description>&lt;h2 id=&#34;you-might-be-using-the-wrong-compression-algorithm&#34;&gt;You Might Be Using The Wrong Compression Algorithm&lt;/h2&gt;
+&lt;p&gt;If you work in data engineering, you’ve probably used &lt;strong&gt;gzip&lt;/strong&gt;, &lt;strong&gt;Snappy&lt;/strong&gt;, &lt;strong&gt;LZ4&lt;/strong&gt;, or &lt;strong&gt;Zstandard (zstd)&lt;/strong&gt;. More likely - you inherited them. Either the person who set these defaults is long gone, there’s never enough time to revisit the choice, or things work well enough and you’d rather not duck around and find out otherwise.&lt;/p&gt;
+&lt;p&gt;Most engineers stick with the defaults. Changing them feels risky. And let’s be honest - many don’t really know what these algorithms do or why one was chosen in the first place.&lt;/p&gt;</description>
+      <content>&lt;h2 id=&#34;you-might-be-using-the-wrong-compression-algorithm&#34;&gt;You Might Be Using The Wrong Compression Algorithm&lt;/h2&gt;
+&lt;p&gt;If you work in data engineering, you’ve probably used &lt;strong&gt;gzip&lt;/strong&gt;, &lt;strong&gt;Snappy&lt;/strong&gt;, &lt;strong&gt;LZ4&lt;/strong&gt;, or &lt;strong&gt;Zstandard (zstd)&lt;/strong&gt;. More likely - you inherited them. Either the person who set these defaults is long gone, there’s never enough time to revisit the choice, or things work well enough and you’d rather not duck around and find out otherwise.&lt;/p&gt;
+&lt;p&gt;Most engineers stick with the defaults. Changing them feels risky. And let’s be honest - many don’t really know what these algorithms do or why one was chosen in the first place.&lt;/p&gt;
+&lt;p&gt;I’ve been that person myself: &lt;em&gt;&amp;ldquo;Oh, we’re using Snappy? OK.&amp;rdquo;&lt;/em&gt; Never thinking to ask why or what else we could use.&lt;/p&gt;
+&lt;p&gt;This post explains the most common compression algorithms, what makes them different, and when you should actually use each.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;why-compression-choices-matter&#34;&gt;Why Compression Choices Matter&lt;/h2&gt;
+&lt;p&gt;Compression decisions aren’t just about saving space. They directly impact:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Storage costs&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;CPU utilization&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Throughput&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Latency&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;In modern pipelines — Kafka, Parquet, column stores, data lakes - the wrong compression algorithm can degrade all of these.&lt;/p&gt;
+&lt;p&gt;Two metrics matter most:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Compression ratio&lt;/strong&gt;: How much smaller the data gets.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Throughput&lt;/strong&gt;: How quickly data can be compressed and decompressed.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Your workload - and whether you prioritize CPU, latency, or bandwidth - determines which trade-offs are acceptable.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;main-culprits&#34;&gt;Main Culprits&lt;/h2&gt;
+&lt;h3 id=&#34;gzip&#34;&gt;gzip&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;What it is&lt;/strong&gt;: Uses the DEFLATE algorithm (LZ77 + Huffman coding).&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Goal&lt;/strong&gt;: Good compression ratio. Compatibility.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Speed&lt;/strong&gt;: Slow to compress. Moderate decompression speed.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Strength&lt;/strong&gt;: Ubiquitous. Supported everywhere.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Weakness&lt;/strong&gt;: Outclassed in both speed and compression ratio by newer algorithms.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;When to use&lt;/strong&gt;: Archival, compatibility with legacy tools. Otherwise, avoid.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;snappy&#34;&gt;Snappy&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;What it is&lt;/strong&gt;: Developed by Google. Based on LZ77 without entropy coding.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Goal&lt;/strong&gt;: Maximize speed, not compression ratio.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Speed&lt;/strong&gt;: Very fast compression and decompression.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Strength&lt;/strong&gt;: Low CPU overhead. Stable. Production-proven at Google scale.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Weakness&lt;/strong&gt;: Larger compressed size than other options.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;When to use&lt;/strong&gt;: Real-time, low-CPU systems where latency matters more than storage. Or if you&amp;rsquo;re stuck with it.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;lz4&#34;&gt;LZ4&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;What it is&lt;/strong&gt;: LZ77-based. Prioritizes speed.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Goal&lt;/strong&gt;: Fast compression and decompression with moderate compression ratio.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Speed&lt;/strong&gt;: &amp;gt; 500 MB/s compression. GB/s decompression.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Strength&lt;/strong&gt;: Extremely fast. Low CPU usage.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Weakness&lt;/strong&gt;: Compression ratio lower than gzip or zstd.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;When to use&lt;/strong&gt;: High-throughput, low-latency systems. Datacenter transfers. OLAP engines (DuckDB, Cassandra).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;zstd-zstandard&#34;&gt;zstd (Zstandard)&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;What it is&lt;/strong&gt;: Developed by Facebook. Combines LZ77, Huffman coding, and FSE.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Goal&lt;/strong&gt;: High compression ratio with fast speed.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Speed&lt;/strong&gt;: Compression 500+ MB/s. Decompression ~1500+ MB/s.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Strength&lt;/strong&gt;: Tunable. Balances speed and compression. Strong performance across data types.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Weakness&lt;/strong&gt;: Slightly more CPU than LZ4/Snappy at default settings.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;When to use&lt;/strong&gt;: General-purpose. Parquet files. Kafka. Data transfers. Usually the best all-around choice.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;strengths-and-weaknesses-at-a-glance&#34;&gt;Strengths and Weaknesses (At a Glance)&lt;/h2&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+      &lt;tr&gt;
+          &lt;th&gt;Algorithm&lt;/th&gt;
+          &lt;th&gt;Compression Ratio&lt;/th&gt;
+          &lt;th&gt;Compression Speed&lt;/th&gt;
+          &lt;th&gt;Decompression Speed&lt;/th&gt;
+          &lt;th&gt;Best For&lt;/th&gt;
+      &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+      &lt;tr&gt;
+          &lt;td&gt;gzip&lt;/td&gt;
+          &lt;td&gt;Moderate&lt;/td&gt;
+          &lt;td&gt;Slow&lt;/td&gt;
+          &lt;td&gt;Moderate&lt;/td&gt;
+          &lt;td&gt;Archival, web content&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;Snappy&lt;/td&gt;
+          &lt;td&gt;Low&lt;/td&gt;
+          &lt;td&gt;Very Fast&lt;/td&gt;
+          &lt;td&gt;Very Fast&lt;/td&gt;
+          &lt;td&gt;Real-time, low-CPU systems&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;LZ4&lt;/td&gt;
+          &lt;td&gt;Moderate&lt;/td&gt;
+          &lt;td&gt;Extremely Fast&lt;/td&gt;
+          &lt;td&gt;Extremely Fast&lt;/td&gt;
+          &lt;td&gt;High-throughput, low-latency systems&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;zstd&lt;/td&gt;
+          &lt;td&gt;High&lt;/td&gt;
+          &lt;td&gt;Fast&lt;/td&gt;
+          &lt;td&gt;Fast&lt;/td&gt;
+          &lt;td&gt;General-purpose, Parquet, Kafka, data transfers&lt;/td&gt;
+      &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;real-world-scenarios-when-to-use-what&#34;&gt;Real-World Scenarios: When to Use What&lt;/h2&gt;
+&lt;h3 id=&#34;high-throughput-streaming-kafka&#34;&gt;High-throughput streaming (Kafka)&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Use&lt;/strong&gt;: zstd or LZ4&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Why&lt;/strong&gt;: zstd gives better compression with good speed. LZ4 if latency is critical and CPU is limited. Snappy is acceptable if inherited, but usually not optimal anymore.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;long-term-storage-parquet-s3&#34;&gt;Long-term storage (Parquet, S3)&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Use&lt;/strong&gt;: zstd&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Why&lt;/strong&gt;: Best compression ratio reduces storage cost and IO. Slight CPU trade-off is acceptable.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;low-latency-querying-duckdb-cassandra&#34;&gt;Low-latency querying (DuckDB, Cassandra)&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Use&lt;/strong&gt;: LZ4&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Why&lt;/strong&gt;: Prioritize decompression speed for fast queries. LZ4 is the common choice in OLAP engines.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;cpumemory-constrained-environments&#34;&gt;CPU/memory constrained environments&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Use&lt;/strong&gt;: Snappy or LZ4&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Why&lt;/strong&gt;: Low CPU overhead is more important than compression ratio. zstd can still be used at low compression levels if needed.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;fast-network-low-compression-benefit-datacenter-file-transfer&#34;&gt;Fast network, low compression benefit (datacenter file transfer)&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Use&lt;/strong&gt;: LZ4&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Why&lt;/strong&gt;: Minimal compression overhead. On fast networks, speed beats smaller file sizes.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;slow-network-or-internet-transfers&#34;&gt;Slow network or internet transfers&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Use&lt;/strong&gt;: zstd&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Why&lt;/strong&gt;: Better compression reduces transfer time despite slightly higher CPU cost.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;what-to-remember&#34;&gt;What to Remember&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;No algorithm is best for every workload.&lt;/li&gt;
+&lt;li&gt;zstd has become the Swiss Army knife of compression. Unless you have a good reason not to, it’s a smart pick.&lt;/li&gt;
+&lt;li&gt;LZ4 is unbeatable when speed matters more than compression.&lt;/li&gt;
+&lt;li&gt;Snappy is still acceptable in latency-sensitive, CPU-constrained setups but is generally being replaced.&lt;/li&gt;
+&lt;li&gt;gzip remains for legacy systems or when maximum compatibility is required.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;whats-underneath-the-hood&#34;&gt;What&amp;rsquo;s Underneath The Hood&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;LZ77&lt;/strong&gt; - Replaces repeated sequences of data with references to earlier copies in the stream (sliding window). &lt;a href=&#34;https://en.wikipedia.org/wiki/LZ77_and_LZ78&#34;&gt;Wikipedia&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Huffman Coding&lt;/strong&gt; - A method of assigning shorter codes to more frequent data patterns to save space. &lt;a href=&#34;https://en.wikipedia.org/wiki/Huffman_coding&#34;&gt;Wikipedia&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;FSE (Finite State Entropy)&lt;/strong&gt; - An advanced entropy coding method that efficiently compresses sequences by balancing speed and compression ratio. &lt;a href=&#34;https://facebook.github.io/zstd/&#34;&gt;Facebook’s zstd Manual&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Why it matters&lt;/strong&gt;
+Most compression algorithms combine finding patterns (LZ77) with efficient encoding (Huffman, FSE) to shrink data without losing information.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;closing-thoughts&#34;&gt;Closing Thoughts&lt;/h2&gt;
+&lt;p&gt;Compression choices tend to stick around. There’s rarely time to revisit legacy pipelines, and if something works, it’s easy to assume it’s good enough. But if you can make the time, you’re now better equipped to review your defaults (I know I am.) - and see if a different choice might better fit your needs.&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;Thank you for reading.&lt;/p&gt;
+</content>
+    </item>
+    
+  </channel>
+</rss>

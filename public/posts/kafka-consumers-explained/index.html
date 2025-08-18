@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  
+    <title>Kafka Consumers Explained: Pull, Offsets, and Parallelism :: mamonas.dev</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Understand how Kafka consumers work, from their pull-based data fetching and offset management to how consumer groups enable parallel processing and scalability. Explore different message delivery semantics." />
+<meta name="keywords" content="" />
+
+  <meta name="robots" content="noodp" />
+
+<link rel="canonical" href="http://localhost:1313/posts/kafka-consumers-explained/" />
+
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  <link rel="stylesheet" href="http://localhost:1313/styles.css">
+
+
+
+<link rel="stylesheet" href="http://localhost:1313/style.css">
+
+
+
+  <link rel="shortcut icon" href="http://localhost:1313/img/theme-colors/green.png">
+  <link rel="apple-touch-icon" href="http://localhost:1313/img/theme-colors/green.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Kafka Consumers Explained: Pull, Offsets, and Parallelism">
+<meta property="og:description" content="Understand how Kafka consumers work, from their pull-based data fetching and offset management to how consumer groups enable parallel processing and scalability. Explore different message delivery semantics." />
+<meta property="og:url" content="http://localhost:1313/posts/kafka-consumers-explained/" />
+<meta property="og:site_name" content="mamonas.dev" />
+
+  
+    <meta property="og:image" content="http://localhost:1313/img/favicon/green.png">
+  
+
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+
+
+  <meta property="article:published_time" content="2025-08-18 21:30:08 &#43;0300 EEST" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+</head>
+<body class="green">
+
+
+
+
+<div class="container center headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    mamonas.dev
+  </div>
+</a>
+
+    </div>
+    
+      <ul class="menu menu--mobile">
+  <li class="menu__trigger">Menu&nbsp;▾</li>
+  <li>
+    <ul class="menu__dropdown">
+      
+        
+          <li><a href="/about">About</a></li>
+        
+      
+        
+          <li><a href="/">Home</a></li>
+        
+      
+      
+    </ul>
+  </li>
+</ul>
+
+    
+    
+  </div>
+  
+    <nav class="navigation-menu">
+  <ul class="navigation-menu__inner menu--desktop">
+    
+      
+        
+          <li><a href="/about" >About</a></li>
+        
+      
+        
+          <li><a href="/" >Home</a></li>
+        
+      
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<article class="post">
+  <h1 class="post-title">
+    <a href="http://localhost:1313/posts/kafka-consumers-explained/">Kafka Consumers Explained: Pull, Offsets, and Parallelism</a>
+  </h1>
+  <div class="post-meta"><time class="post-date">2025-08-18</time>
+    
+</div>
+
+  
+    <span class="post-tags">
+      
+      #<a href="http://localhost:1313/tags/kafka/">kafka</a>&nbsp;
+      
+      #<a href="http://localhost:1313/tags/consumers/">consumers</a>&nbsp;
+      
+      #<a href="http://localhost:1313/tags/messaging/">messaging</a>&nbsp;
+      
+    </span>
+  
+  
+
+
+
+  
+
+  <div class="post-content"><div>
+        <p>Kafka is built for high throughput, scalability, and fault tolerance. At the core of this is its consumer model. Unlike traditional messaging systems, Kafka gives consumers full control over how they read data. This post explains how Kafka consumers work by focusing on three things: how they pull data, how offsets work, and how parallelism is achieved with consumer groups.</p>
+<hr>
+<h2 id="pulling-data-from-kafka">Pulling Data from Kafka<a href="#pulling-data-from-kafka" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>Kafka producers push data to brokers. Consumers pull data from brokers. This setup is intentional. It gives consumers control over how fast they process data.</p>
+<p>In push-based systems, if the producer is faster than the consumer, the consumer can get overwhelmed or crash. Kafka avoids this problem by letting consumers decide when to fetch data. This helps with backpressure and makes the system more reliable.</p>
+<p>Pulling also helps with batching. A consumer can fetch many messages in a single request. This reduces the number of network calls. In contrast, push systems must send each message one by one or hold back messages without knowing if the consumer is ready.</p>
+<p>One downside of pull-based systems is wasteful polling. A consumer might keep asking for data even if nothing is available. Kafka avoids this by letting the consumer wait until enough data is ready before responding. This keeps CPU usage low and throughput high.</p>
+<p>Kafka also avoids a model where brokers pull data from producers. That design would need every producer to store its own data. It would require more coordination and increase the risk of disk failure. Instead, Kafka stores data on the broker, where it can be managed and replicated more easily.</p>
+<hr>
+<h2 id="how-kafka-offsets-work">How Kafka Offsets Work<a href="#how-kafka-offsets-work" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>Kafka splits topics into partitions. Each message in a partition has a number called an offset. The offset marks the position of the message in the log.</p>
+<p>Offsets give consumers control. A consumer chooses where to start reading and can track what has already been processed. If a consumer crashes, it can pick up where it left off by using its last committed offset.</p>
+<p>Kafka does not track this progress for the consumer. The consumer is responsible for managing its own offsets. This is part of what makes Kafka scalable and efficient.</p>
+<p>By default, a consumer starts at offset zero. This means it will read all messages that are still available. It can also be configured to start at the latest offset to only read new data.</p>
+<p>Kafka only keeps data for a limited time. If a consumer tries to read from an offset that is too old, Kafka will return an error. In that case, the consumer must reset to the earliest or latest available offset.</p>
+<h3 id="key-terms">Key Terms<a href="#key-terms" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<ul>
+<li><strong>Offset</strong>: The position of a message in a partition.</li>
+<li><strong>Log End Offset</strong>: The offset where the next message will be written.</li>
+<li><strong>Committed Offset</strong>: The offset of the last message the consumer has finished processing.</li>
+</ul>
+<h3 id="delivery-options">Delivery Options<a href="#delivery-options" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<ul>
+<li><strong>At-most-once</strong>: The consumer commits the offset before processing. If it crashes during processing, the message is lost.</li>
+<li><strong>At-least-once</strong>: The consumer commits the offset after processing. If it crashes before committing, the message may be processed again.</li>
+<li><strong>Exactly-once</strong>: This uses Kafka transactions. The message and its offset are written together. If anything fails, nothing is committed. This guarantees no duplication and no loss.</li>
+</ul>
+<hr>
+<h2 id="parallelism-with-consumer-groups">Parallelism with Consumer Groups<a href="#parallelism-with-consumer-groups" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>Kafka uses consumer groups to scale out processing. A consumer group is a set of consumers working together to read from a topic.</p>
+<p>Kafka assigns each partition to only one consumer in the group. This avoids duplication and ensures order within each partition.</p>
+<p>When the group changes (for example, when consumers are added or removed), Kafka reassigns partitions to the available consumers.</p>
+<h3 id="examples">Examples<a href="#examples" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<ul>
+<li>100 partitions and 100 consumers: each consumer handles one partition.</li>
+<li>100 partitions and 50 consumers: each consumer handles two partitions.</li>
+<li>50 partitions and 100 consumers: only 50 consumers do work, the rest are idle.</li>
+</ul>
+<p>Kafka does not let multiple consumers read from the same partition in the same group. This would require the broker to manage shared state, which adds complexity. Instead, Kafka puts the responsibility on the consumer to track offsets. This makes the broker faster and simpler.</p>
+<p>The number of partitions controls how much you can scale out. More partitions allow for more parallelism. Choosing the right number of partitions is important for performance and resource usage.</p>
+<hr>
+<h2 id="conclusion">Conclusion<a href="#conclusion" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>Kafka gives consumers control over how they pull data, where they start, and how they scale. Pull-based reads avoid overload. Offsets make it easy to recover from failure. Consumer groups allow you to scale out processing.</p>
+<p>This design makes Kafka fast, reliable, and efficient at any scale.</p>
+<hr>
+<h2 id="appendix-quick-reference">Appendix: Quick Reference<a href="#appendix-quick-reference" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<ul>
+<li><strong>Partition</strong>: A subset of a topic. Used for parallel processing and message ordering.</li>
+<li><strong>Offset</strong>: A number showing a message’s position in a partition.</li>
+<li><strong>Consumer Group</strong>: A set of consumers that share the work of reading from a topic.</li>
+<li><strong>Rebalancing</strong>: The process where Kafka reassigns partitions when consumers join or leave a group.</li>
+<li><strong>Delivery Types</strong>:
+<ul>
+<li><em>At-most-once</em>: Fast, but may lose messages.</li>
+<li><em>At-least-once</em>: Reliable, but may duplicate messages.</li>
+<li><em>Exactly-once</em>: Most accurate, but needs Kafka transactions.</li>
+</ul>
+</li>
+</ul>
+
+      </div></div>
+
+  
+
+  
+    
+
+  
+</article>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    <div class="copyright">
+      <ul>
+        <li>© 2025 mamonas.dev</li>
+        <li><a href="https://www.linkedin.com/in/konstantinas-mamonas" target="_blank" class="social-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
+              <path d="M22.23 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.72V1.72C24 .77 23.21 0 22.23 0zM7.06 20.45h-3.5V8.9h3.5v11.55zM5.31 7.42c-1.15 0-2.08-.93-2.08-2.08s.93-2.08 2.08-2.08 2.08.93 2.08 2.08-.93 2.08-2.08 2.08zm15.14 13.03h-3.5v-5.5c0-1.31-.02-3-1.82-3-1.83 0-2.11 1.43-2.11 2.9v5.6h-3.5V8.9h3.36v1.54h.05c.47-.89 1.62-1.82 3.31-1.82 3.53 0 4.18 2.32 4.18 5.33v6.1z"/>
+          </svg>
+        </a></li>
+        <li><a href="https://github.com/KonMam" target="_blank" class="social-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-github" viewBox="0 0 16 16">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
+          </svg>
+        </a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+
+
+
+
+
+<script type="text/javascript" src="/bundle.min.js"></script>
+
+
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>
