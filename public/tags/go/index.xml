@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Go on mamonas.dev</title>
+    <link>http://localhost:1313/tags/go/</link>
+    <description>Recent content in Go on mamonas.dev</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Tue, 26 Aug 2025 21:06:08 +0300</lastBuildDate><atom:link href="http://localhost:1313/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Building a Generative Art System in Go</title>
+      <link>http://localhost:1313/posts/building-a-generative-art-system-in-go/</link>
+      <pubDate>Tue, 26 Aug 2025 21:06:08 +0300</pubDate>
+      
+      <guid>http://localhost:1313/posts/building-a-generative-art-system-in-go/</guid>
+      <description>&lt;h1 id=&#34;building-a-generative-art-system-in-go&#34;&gt;Building a Generative Art System in Go&lt;/h1&gt;
+&lt;h2 id=&#34;1-what-is-generative-art&#34;&gt;1. What is Generative Art?&lt;/h2&gt;
+&lt;p&gt;Generative art shifts the focus from drawing images to designing systems. Instead of sketching directly, you define algorithms, randomness, and rules, then let the system produce the output. For me what makes it interesting is the fact that you don’t just create one piece, but a machine capable of generating infinite variations.&lt;/p&gt;
+&lt;p&gt;This post walks through how I approached building such a system in Go, you can find it &lt;a href=&#34;https://github.com/KonMam/go-genart&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;</description>
+      <content>&lt;h1 id=&#34;building-a-generative-art-system-in-go&#34;&gt;Building a Generative Art System in Go&lt;/h1&gt;
+&lt;h2 id=&#34;1-what-is-generative-art&#34;&gt;1. What is Generative Art?&lt;/h2&gt;
+&lt;p&gt;Generative art shifts the focus from drawing images to designing systems. Instead of sketching directly, you define algorithms, randomness, and rules, then let the system produce the output. For me what makes it interesting is the fact that you don’t just create one piece, but a machine capable of generating infinite variations.&lt;/p&gt;
+&lt;p&gt;This post walks through how I approached building such a system in Go, you can find it &lt;a href=&#34;https://github.com/KonMam/go-genart&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;h2 id=&#34;2-architecture-and-contracts&#34;&gt;2. Architecture and Contracts&lt;/h2&gt;
+&lt;p&gt;One thing I learnt when starting any project is that it is good to take some time and think beyond the first few steps and and try to design it to be enjoyable to work with if I needed to add more functionality. This saves a lot of refactoring time.
+To keep engines swappable and avoid tangling geometry, color, and rendering, I sketched out a few strict contracts.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;The Engine&lt;/strong&gt;
+An engine is just an algorithm. It takes randomness and parameters and returns a &lt;code&gt;Scene&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Engine&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;interface&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;Name&lt;/span&gt;() &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;Generate&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;ctx&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;context&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Context&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;rng&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;rand&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Rand&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;params&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;map&lt;/span&gt;[&lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;]&lt;span style=&#34;color:#66d9ef&#34;&gt;float64&lt;/span&gt;) (&lt;span style=&#34;color:#a6e22e&#34;&gt;Scene&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;error&lt;/span&gt;)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;The Scene&lt;/strong&gt;
+A scene is not pixels but geometry and color information:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Scene&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;Items&lt;/span&gt; []&lt;span style=&#34;color:#a6e22e&#34;&gt;Item&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This separation makes rendering independent. The same scene can go to PNG, SVG, PDF, or even a plotter without changing the engine.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;The Palette&lt;/strong&gt;
+A palette supplies colors. Engines don’t worry about color theory:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Palette&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;interface&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;Colors&lt;/span&gt;() []&lt;span style=&#34;color:#a6e22e&#34;&gt;core&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;RGBA&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;Pick&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;rng&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;rand&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Rand&lt;/span&gt;) &lt;span style=&#34;color:#a6e22e&#34;&gt;core&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;RGBA&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Engines generate geometry, palettes provide color, renderers handle pixels. Each can evolve independently.&lt;/p&gt;
+&lt;h2 id=&#34;3-geometric-primitives&#34;&gt;3. Geometric Primitives&lt;/h2&gt;
+&lt;p&gt;Before noise and turbulence, I needed fundamentals. The &lt;code&gt;geom&lt;/code&gt; package holds:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Vec2&lt;/strong&gt;: a 2D vector type with operations like add, scale, rotate.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Shapes&lt;/strong&gt;: functions such as &lt;code&gt;Polygon(cx, cy, r, n)&lt;/code&gt; or &lt;code&gt;Circle(cx, cy, r)&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Transforms&lt;/strong&gt;: reusable translate, rotate, scale helpers.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;With these, the system could already produce scenes like a single circle or square, rendered cleanly to PNG. Not exciting, but a proof the architecture worked end-to-end.&lt;/p&gt;
+&lt;img src=&#34;square.png&#34; alt=&#34;Square&#34; width=&#34;200&#34;&gt;
+&lt;img src=&#34;circle.png&#34; alt=&#34;Circle&#34; width=&#34;200&#34;&gt;
+&lt;h2 id=&#34;4-noise&#34;&gt;4. Noise&lt;/h2&gt;
+&lt;p&gt;Plain randomness jumps too sharply. For natural patterns, you want smooth randomness where nearby coordinates produce similar values. Noise functions like Simplex or Perlin solve this.&lt;/p&gt;
+&lt;p&gt;I wrapped noise in a simple interface:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ScalarField2D&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;interface&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;At&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;x&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;y&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;float64&lt;/span&gt;) &lt;span style=&#34;color:#66d9ef&#34;&gt;float64&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;With this abstraction, engines can sample fields without caring how they’re generated. From there:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Remap values from &lt;code&gt;[-1,1]&lt;/code&gt; into useful ranges like &lt;code&gt;[0,1]&lt;/code&gt; for opacity or &lt;code&gt;[0,360]&lt;/code&gt; for angles.&lt;/li&gt;
+&lt;li&gt;Compute gradients to turn noise into vector fields. Walking along gradients produces flow-like motion; walking perpendicular produces contour lines.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Noise is the key ingredient for organic complexity.&lt;/p&gt;
+&lt;h2 id=&#34;5-flow-fields&#34;&gt;5. Flow Fields&lt;/h2&gt;
+&lt;p&gt;The &lt;code&gt;flowfield&lt;/code&gt; engine uses noise gradients to drive thousands of particles.&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Overlay a grid on the canvas.&lt;/li&gt;
+&lt;li&gt;At each grid point, compute a vector from noise.&lt;/li&gt;
+&lt;li&gt;Drop particles randomly.&lt;/li&gt;
+&lt;li&gt;Move each step using the vector at its location, drawing as it goes.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The output depends on the noise:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Flow Waves&lt;/strong&gt;: smooth Simplex noise → long sweeping curves.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Flow Clouds&lt;/strong&gt;: turbulent noise → chaotic clusters, smoke-like.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The rules are simple, but the paths look hand-crafted.&lt;/p&gt;
+&lt;h2 id=&#34;6-the-blackhole-engine&#34;&gt;6. The Blackhole Engine&lt;/h2&gt;
+&lt;p&gt;Another early engine was &lt;code&gt;blackhole&lt;/code&gt;. It starts with concentric circles, then lets noise distort them into collapsing rings.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Core idea:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Subdivide each circle into angular steps.&lt;/li&gt;
+&lt;li&gt;For each step, take the base radius and add a noise-driven offset.&lt;/li&gt;
+&lt;li&gt;Clamp to a minimum radius to preserve the central hole.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;r&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;base&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;amp&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;noise&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;At&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;theta&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;freq&lt;/span&gt;, float64(&lt;span style=&#34;color:#a6e22e&#34;&gt;i&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;density&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;r&lt;/span&gt; &amp;lt; &lt;span style=&#34;color:#a6e22e&#34;&gt;hole&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;r&lt;/span&gt; = &lt;span style=&#34;color:#a6e22e&#34;&gt;hole&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Artifacts showed up early: straight bands, jagged edges. Fixes included randomizing the start angle per circle, adding alpha jitter so overlaps blend, and enabling supersampling. The end result looks like an accretion disk — structured but turbulent.&lt;/p&gt;
+&lt;h2 id=&#34;7-monochromatic-palettes&#34;&gt;7. Monochromatic Palettes&lt;/h2&gt;
+&lt;p&gt;Hard-coded palettes quickly became a bottleneck, so I added monochromatic generation. Starting from a base RGB color:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Convert to HSL.&lt;/li&gt;
+&lt;li&gt;Fix the hue.&lt;/li&gt;
+&lt;li&gt;Generate variations by tweaking saturation and lightness.&lt;/li&gt;
+&lt;li&gt;Convert back to RGB.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The result is a palette of harmonious colors. Complex geometry benefits from a controlled scheme. From the CLI:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;-palette mono -palette-base &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;0.2,0.4,0.7&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now any engine can instantly take on a new mood by switching the base color.&lt;/p&gt;
+&lt;h2 id=&#34;8-config-driven-runs&#34;&gt;8. Config-Driven Runs&lt;/h2&gt;
+&lt;p&gt;As engines gained parameters, CLI flags became messy. I switched to config files. Runs now look like:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;{
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;engine&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;blackhole&amp;#34;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;seed&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;42&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;width&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;1024&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;height&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;1024&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;palette&amp;#34;&lt;/span&gt;: {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;mono&amp;#34;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;base&amp;#34;&lt;/span&gt;: [&lt;span style=&#34;color:#ae81ff&#34;&gt;0.2&lt;/span&gt;,&lt;span style=&#34;color:#ae81ff&#34;&gt;0.4&lt;/span&gt;,&lt;span style=&#34;color:#ae81ff&#34;&gt;0.7&lt;/span&gt;,&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;]
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  },
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;params&amp;#34;&lt;/span&gt;: {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;amp&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;1.2&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;density&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;0.3&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;After execution the tool writes back the resolved config, making experiments reproducible and shareable.&lt;/p&gt;
+&lt;h2 id=&#34;9-animation&#34;&gt;9. Animation&lt;/h2&gt;
+&lt;p&gt;Adding animation required only an orchestration layer. Engines and renderers stayed unchanged.&lt;/p&gt;
+&lt;p&gt;Configs gained an &lt;code&gt;animation&lt;/code&gt; block:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;animation&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;:&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;duration&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;fps&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;20&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;easing&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;cosine&amp;#34;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;vary&amp;#34;&lt;/span&gt;: {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;amp&amp;#34;&lt;/span&gt;: [&lt;span style=&#34;color:#ae81ff&#34;&gt;0.9&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;1.1&lt;/span&gt;],
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;palette.base&amp;#34;&lt;/span&gt;: [[&lt;span style=&#34;color:#ae81ff&#34;&gt;0.2&lt;/span&gt;,&lt;span style=&#34;color:#ae81ff&#34;&gt;0.4&lt;/span&gt;,&lt;span style=&#34;color:#ae81ff&#34;&gt;0.7&lt;/span&gt;,&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;],[&lt;span style=&#34;color:#ae81ff&#34;&gt;0.8&lt;/span&gt;,&lt;span style=&#34;color:#ae81ff&#34;&gt;0.3&lt;/span&gt;,&lt;span style=&#34;color:#ae81ff&#34;&gt;0.2&lt;/span&gt;,&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;]]
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The system interpolates these parameters across frames, producing GIFs or MP4s with the same reproducibility as static runs.&lt;/p&gt;
+&lt;h2 id=&#34;10-whats-next&#34;&gt;10. What’s Next&lt;/h2&gt;
+&lt;p&gt;The base system is in place. Next steps:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Engines like reaction-diffusion, L-systems, Voronoi.&lt;/li&gt;
+&lt;li&gt;More noise types such as Worley (cellular) or Curl (divergence-free).&lt;/li&gt;
+&lt;li&gt;Output formats like SVG for vectors or MP4 for smoother animations.&lt;/li&gt;
+&lt;li&gt;An interactive UI for real-time exploration.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The architecture makes these extensions straightforward. What comes next is simply running experiments and seeing what emerges.&lt;/p&gt;
+</content>
+    </item>
+    
+  </channel>
+</rss>

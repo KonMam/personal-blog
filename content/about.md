@@ -8,4 +8,4 @@ draft = false
 
 Outside of the technical world, I enjoy single player games such as *Skyrim*, *The Witcher*, *Elden Ring*, and *Clair Obscur: Expedition 33*. I also read a lot of fantasy and science fiction, with favorites including Brandon Sanderson’s *Cosmere* stories, James S. A. Corey’s *The Expanse*, Liu Cixin’s *The Three Body Problem*, and Andy Weir’s *Project Hail Mary*.
 
-This blog is where I collect what I’m working on and what interests me. Sometimes that’s technical, sometimes not, but it always comes back to curiosity and learning.
+This blog is where I collect what I’m working on and what interests me. Sometimes that’s technical, sometimes not.

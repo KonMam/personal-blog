@@ -6,7 +6,147 @@
     <description>Recent content in Tags on mamonas.dev</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 18 Aug 2025 20:13:35 +0300</lastBuildDate><atom:link href="http://localhost:1313/tags/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 26 Aug 2025 21:06:08 +0300</lastBuildDate><atom:link href="http://localhost:1313/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Generative Art</title>
+      <link>http://localhost:1313/tags/generative-art/</link>
+      <pubDate>Tue, 26 Aug 2025 21:06:08 +0300</pubDate>
+      
+      <guid>http://localhost:1313/tags/generative-art/</guid>
+      <description></description>
+      <content></content>
+    </item>
+    
+    <item>
+      <title>Go</title>
+      <link>http://localhost:1313/tags/go/</link>
+      <pubDate>Tue, 26 Aug 2025 21:06:08 +0300</pubDate>
+      
+      <guid>http://localhost:1313/tags/go/</guid>
+      <description></description>
+      <content></content>
+    </item>
+    
+    <item>
+      <title>Benchmarking</title>
+      <link>http://localhost:1313/tags/benchmarking/</link>
+      <pubDate>Mon, 18 Aug 2025 22:04:52 +0300</pubDate>
+      
+      <guid>http://localhost:1313/tags/benchmarking/</guid>
+      <description></description>
+      <content></content>
+    </item>
+    
+    <item>
+      <title>Compression</title>
+      <link>http://localhost:1313/tags/compression/</link>
+      <pubDate>Mon, 18 Aug 2025 22:04:52 +0300</pubDate>
+      
+      <guid>http://localhost:1313/tags/compression/</guid>
+      <description></description>
+      <content></content>
+    </item>
+    
+    <item>
+      <title>Data-Engineering</title>
+      <link>http://localhost:1313/tags/data-engineering/</link>
+      <pubDate>Mon, 18 Aug 2025 22:04:52 +0300</pubDate>
+      
+      <guid>http://localhost:1313/tags/data-engineering/</guid>
+      <description></description>
+      <content></content>
+    </item>
+    
+    <item>
+      <title>Performance</title>
+      <link>http://localhost:1313/tags/performance/</link>
+      <pubDate>Mon, 18 Aug 2025 21:45:14 +0300</pubDate>
+      
+      <guid>http://localhost:1313/tags/performance/</guid>
+      <description></description>
+      <content></content>
+    </item>
+    
+    <item>
+      <title>Duckdb</title>
+      <link>http://localhost:1313/tags/duckdb/</link>
+      <pubDate>Mon, 18 Aug 2025 21:43:23 +0300</pubDate>
+      
+      <guid>http://localhost:1313/tags/duckdb/</guid>
+      <description></description>
+      <content></content>
+    </item>
+    
+    <item>
+      <title>Sql</title>
+      <link>http://localhost:1313/tags/sql/</link>
+      <pubDate>Mon, 18 Aug 2025 21:43:23 +0300</pubDate>
+      
+      <guid>http://localhost:1313/tags/sql/</guid>
+      <description></description>
+      <content></content>
+    </item>
+    
+    <item>
+      <title>Cli</title>
+      <link>http://localhost:1313/tags/cli/</link>
+      <pubDate>Mon, 18 Aug 2025 21:41:41 +0300</pubDate>
+      
+      <guid>http://localhost:1313/tags/cli/</guid>
+      <description></description>
+      <content></content>
+    </item>
+    
+    <item>
+      <title>Kafka</title>
+      <link>http://localhost:1313/tags/kafka/</link>
+      <pubDate>Mon, 18 Aug 2025 21:41:41 +0300</pubDate>
+      
+      <guid>http://localhost:1313/tags/kafka/</guid>
+      <description></description>
+      <content></content>
+    </item>
+    
+    <item>
+      <title>Python</title>
+      <link>http://localhost:1313/tags/python/</link>
+      <pubDate>Mon, 18 Aug 2025 21:41:41 +0300</pubDate>
+      
+      <guid>http://localhost:1313/tags/python/</guid>
+      <description></description>
+      <content></content>
+    </item>
+    
+    <item>
+      <title>Messaging</title>
+      <link>http://localhost:1313/tags/messaging/</link>
+      <pubDate>Mon, 18 Aug 2025 21:39:05 +0300</pubDate>
+      
+      <guid>http://localhost:1313/tags/messaging/</guid>
+      <description></description>
+      <content></content>
+    </item>
+    
+    <item>
+      <title>Producers</title>
+      <link>http://localhost:1313/tags/producers/</link>
+      <pubDate>Mon, 18 Aug 2025 21:39:05 +0300</pubDate>
+      
+      <guid>http://localhost:1313/tags/producers/</guid>
+      <description></description>
+      <content></content>
+    </item>
+    
+    <item>
+      <title>Consumers</title>
+      <link>http://localhost:1313/tags/consumers/</link>
+      <pubDate>Mon, 18 Aug 2025 21:30:08 +0300</pubDate>
+      
+      <guid>http://localhost:1313/tags/consumers/</guid>
+      <description></description>
+      <content></content>
+    </item>
+    
     <item>
       <title>Architecture</title>
       <link>http://localhost:1313/tags/architecture/</link>
@@ -18,21 +158,11 @@
     </item>
     
     <item>
-      <title>Kafka</title>
-      <link>http://localhost:1313/tags/kafka/</link>
+      <title>Throughput</title>
+      <link>http://localhost:1313/tags/throughput/</link>
       <pubDate>Mon, 18 Aug 2025 20:13:35 +0300</pubDate>
       
-      <guid>http://localhost:1313/tags/kafka/</guid>
-      <description></description>
-      <content></content>
-    </item>
-    
-    <item>
-      <title>Performance</title>
-      <link>http://localhost:1313/tags/performance/</link>
-      <pubDate>Mon, 18 Aug 2025 20:13:35 +0300</pubDate>
-      
-      <guid>http://localhost:1313/tags/performance/</guid>
+      <guid>http://localhost:1313/tags/throughput/</guid>
       <description></description>
       <content></content>
     </item>

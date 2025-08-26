@@ -8,7 +8,7 @@
     <language>en</language>
     <lastBuildDate>Mon, 18 Aug 2025 21:43:23 +0300</lastBuildDate><atom:link href="http://localhost:1313/tags/duckdb/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Duckdb When You Dont Need Spark</title>
+      <title>DuckDB: When You Don’t Need Spark (But Still Need SQL)</title>
       <link>http://localhost:1313/posts/duckdb-when-you-dont-need-spark/</link>
       <pubDate>Mon, 18 Aug 2025 21:43:23 +0300</pubDate>
       

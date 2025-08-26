@@ -2,10 +2,79 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>http://localhost:1313/about/</loc>
-    <lastmod>2025-08-18T20:27:27+03:00</lastmod>
+    <loc>http://localhost:1313/posts/building-a-generative-art-system-in-go/</loc>
+    <lastmod>2025-08-26T21:06:08+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/generative-art/</loc>
+    <lastmod>2025-08-26T21:06:08+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/go/</loc>
+    <lastmod>2025-08-26T21:06:08+03:00</lastmod>
   </url><url>
     <loc>http://localhost:1313/</loc>
+    <lastmod>2025-08-26T21:06:08+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/posts/</loc>
+    <lastmod>2025-08-26T21:06:08+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/</loc>
+    <lastmod>2025-08-26T21:06:08+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/benchmarking/</loc>
+    <lastmod>2025-08-18T22:04:52+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/compression/</loc>
+    <lastmod>2025-08-18T22:04:52+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/data-engineering/</loc>
+    <lastmod>2025-08-18T22:04:52+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/posts/which-compression-algorithm-saves-most/</loc>
+    <lastmod>2025-08-18T22:04:52+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/posts/compression-algorithms-you-probably-inherited/</loc>
+    <lastmod>2025-08-18T21:45:14+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/performance/</loc>
+    <lastmod>2025-08-18T21:45:14+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/duckdb/</loc>
+    <lastmod>2025-08-18T21:43:23+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/posts/duckdb-when-you-dont-need-spark/</loc>
+    <lastmod>2025-08-18T21:43:23+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/sql/</loc>
+    <lastmod>2025-08-18T21:43:23+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/cli/</loc>
+    <lastmod>2025-08-18T21:41:41+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/kafka/</loc>
+    <lastmod>2025-08-18T21:41:41+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/posts/kafka-replay-cli/</loc>
+    <lastmod>2025-08-18T21:41:41+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/python/</loc>
+    <lastmod>2025-08-18T21:41:41+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/posts/kafka-producers-explained/</loc>
+    <lastmod>2025-08-18T21:39:05+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/messaging/</loc>
+    <lastmod>2025-08-18T21:39:05+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/producers/</loc>
+    <lastmod>2025-08-18T21:39:05+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/consumers/</loc>
+    <lastmod>2025-08-18T21:30:08+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/posts/kafka-consumers-explained/</loc>
+    <lastmod>2025-08-18T21:30:08+03:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/about/</loc>
     <lastmod>2025-08-18T20:27:27+03:00</lastmod>
   </url><url>
     <loc>http://localhost:1313/tags/architecture/</loc>
@@ -14,16 +83,7 @@
     <loc>http://localhost:1313/posts/how-kafka-achieves-high-throughput/</loc>
     <lastmod>2025-08-18T20:13:35+03:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/kafka/</loc>
-    <lastmod>2025-08-18T20:13:35+03:00</lastmod>
-  </url><url>
-    <loc>http://localhost:1313/tags/performance/</loc>
-    <lastmod>2025-08-18T20:13:35+03:00</lastmod>
-  </url><url>
-    <loc>http://localhost:1313/posts/</loc>
-    <lastmod>2025-08-18T20:13:35+03:00</lastmod>
-  </url><url>
-    <loc>http://localhost:1313/tags/</loc>
+    <loc>http://localhost:1313/tags/throughput/</loc>
     <lastmod>2025-08-18T20:13:35+03:00</lastmod>
   </url><url>
     <loc>http://localhost:1313/categories/</loc>

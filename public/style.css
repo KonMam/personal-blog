@@ -13,3 +13,10 @@
   vertical-align: middle;
   fill: currentColor;
 }
+
+.image-row {
+  display: flex;
+  justify-content: center; /* horizontal centering */
+  align-items: center;     /* vertical centering */
+  gap: 20px;               /* spacing between images */
+}

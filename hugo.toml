@@ -25,3 +25,9 @@ theme = 're-terminal'
         identifier = "about"
         name = "About"
         url = "/about"
+
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
