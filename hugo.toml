@@ -25,3 +25,8 @@ theme = 're-terminal'
         identifier = "about"
         name = "About"
         url = "/about"
+
+[services]
+  [services.googleAnalytics]
+    id = "G-F0SL3JQ5SY"
+
