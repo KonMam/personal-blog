@@ -25,3 +25,5 @@ theme = 're-terminal'
         identifier = "about"
         name = "About"
         url = "/about"
+
+googleAnalytics = "G-F0SL3JQ5SY"
