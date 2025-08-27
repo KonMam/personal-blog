@@ -26,7 +26,11 @@ theme = 're-terminal'
         name = "About"
         url = "/about"
 
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
 [services]
   [services.googleAnalytics]
     id = "G-F0SL3JQ5SY"
-
