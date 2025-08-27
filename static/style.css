@@ -20,3 +20,56 @@
   align-items: center;     /* vertical centering */
   gap: 20px;               /* spacing between images */
 }
+
+.post {
+    padding: 10px 0;
+    margin: 10px auto;
+}
+
+.post-content {
+  margin-top: 15px;
+}
+
+.headings--one-size h1:not(first-child) {
+  margin-top: 15px;
+}
+
+ @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&display=swap');
+
+:root {
+    --accent: #00b4d8 !important;
+    --color-background-dark: #00132f;
+    --color-text-light: #ade8f4;
+}
+
+body {
+    font-family: 'IBM Plex Mono', monospace;
+    background-color: var(--color-background-dark);
+    color: var(--color-text-light);
+}
+
+.post > div:last-of-type {
+  display: flex;
+  width: fit-content;
+}
+
+a.read-more {
+    margin: 5px auto;
+    font-size: 1.4rem;
+}
+
+a.read-more:hover {
+    margin: 5px auto;
+    font-size: 1.4rem;
+}
+
+.menu__dropdown {
+    background: var(--color-background-dark);
+    color: var(--color-text-light);
+    border-color: var(--color-text-light);
+    --shadow-color: color-mix(in srgb, var(--color-background-dark) transparent 20%);
+}
+
+.menu__dropdown a {
+  color: var(--color-text-light);
+}

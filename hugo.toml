@@ -5,7 +5,7 @@ theme = 're-terminal'
 
 [params]
   # ["orange", "blue", "red", "green", "pink"]
-  themeColor = "green"
+  themeColor = "blue"
 
 [languages]
   [languages.en]
