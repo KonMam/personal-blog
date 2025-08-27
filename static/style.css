@@ -48,10 +48,7 @@ body {
     color: var(--color-text-light);
 }
 
-.post > div:last-of-type {
-  display: flex;
-  width: fit-content;
-}
+
 
 a.read-more {
     margin: 5px auto;
