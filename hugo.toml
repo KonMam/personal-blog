@@ -1,7 +1,9 @@
 baseURL = 'https://mamonas.dev/'
 languageCode = 'en-us'
-title = 'My New Hugo Site'
+title = 'Konstantinas Mamonas - Personal Blog'
 theme = 're-terminal'
+author = "Konstantinas Mamonas"
+keywords = "Konstantinas Mamonas, personal blog, software engineering, technology, programming"
 
 [params]
   # ["orange", "blue", "red", "green", "pink"]
