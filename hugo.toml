@@ -33,6 +33,9 @@ keywords = "Konstantinas Mamonas, personal blog, software engineering, technolog
     [markup.goldmark.renderer]
       unsafe = true
 
+  [markup.highlight]
+    noClasses = false
+
 [services]
   [services.googleAnalytics]
     id = "G-F0SL3JQ5SY"
