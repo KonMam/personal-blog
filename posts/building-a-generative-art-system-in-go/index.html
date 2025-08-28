@@ -540,12 +540,9 @@ As generative art in a lot of cases is about complex geometry, minimal color pal
 </span></span></code></pre></div><p>My hope was to generate a smooth pullsing blackhole.</p>
 <div class="image-row">
   
-  <div class="lazy-video-container" style="position: relative; width: 400px; height: 400px;">
-    <img src="blackhole_new_first_frame.webp" alt="Loading video..." style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
+  <div class="lazy-video-container" style="display: flex; justify-content: center; align-items: center; width: 100%; max-width: 400px; margin: 0 auto;">
     <video
-      width="400"
-      height="400"
-      style="position: absolute; top: 0; left: 0; opacity: 0; transition: opacity 0.5s;"
+      style="opacity: 0; transition: opacity 0.5s; width: 100%; height: auto;"
       loop
       muted
       playsinline
@@ -571,10 +568,6 @@ As generative art in a lot of cases is about complex geometry, minimal color pal
       video.load();
       video.oncanplaythrough = () => {
         video.style.opacity = 1;
-        const img = video.previousElementSibling;
-        if (img) {
-          img.style.opacity = 0;
-        }
       };
     });
   });
