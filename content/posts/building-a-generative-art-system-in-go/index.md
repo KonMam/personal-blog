@@ -273,9 +273,7 @@ Configs gained an `animation` block in which both parametters and colors could b
 My hope was to generate a smooth pullsing blackhole. 
 
 <div class="image-row">
-  <a href="blackhole_new.gif" target="_blank">
-    <img src="blackhole_new.gif" alt="GIF Black Hole" width="400">
-  </a>
+  {{< lazy-video width="400" height="400" placeholder="blackhole_new_first_frame.webp" mp4="blackhole_new.mp4" >}}
 </div>
 
 This is not exactly there yet, the changes to the engine influence the render too quickly, but I think with some tweaking it could get there.

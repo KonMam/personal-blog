@@ -4,11 +4,10 @@
 {{ $image := .Page.Resources.GetMatch $src }}
 
 {{ with $image }}
-  {{ $resized := .Resize (printf "%sx" $width) }}
-  {{ $webp := .Resize (printf "%sx webp" $width) }}
+  {{ $webp := .Resize (printf "%sx webp Lanczos q100" $width) }}
   <picture>
     <source srcset="{{ $webp.RelPermalink }}" type="image/webp">
-    <img src="{{ $resized.RelPermalink }}" alt="{{ $alt }}" width="{{ $width }}">
+    <img src="{{ .RelPermalink }}" alt="{{ $alt }}" width="{{ $width }}">
   </picture>
 {{ else }}
   <!-- Image not found -->
