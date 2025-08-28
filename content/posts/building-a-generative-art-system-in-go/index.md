@@ -108,8 +108,8 @@ The output depends on the noise:
 Still need to work some more on the parameters to get them looking right, but it's a good start:
 
 <div class="image-row">
-  {{< image src="flow_waves.png" alt="Flow Waves" width="400" >}}
-  {{< image src="flow_clouds.png" alt="Flow Clouds" width="400" >}}
+  {{< image src="flow_waves.png" alt="Flow Waves" width="600" renderWidth="400" >}}
+  {{< image src="flow_clouds.png" alt="Flow Clouds" width="600" renderWidth="400" >}}
 </div>
 
 ## 6. The Blackhole Engine
