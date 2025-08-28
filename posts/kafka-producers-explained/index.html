@@ -6,12 +6,17 @@
   
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
 <meta name="description" content="Dive into Kafka producers, exploring how they handle message partitioning, serialization, and batching for optimal throughput. Understand delivery guarantees, idempotent producers, and transactional writes for reliable and exactly-once message delivery." />
 <meta name="keywords" content="" />
-
-  <meta name="robots" content="noodp" />
-
 <link rel="canonical" href="https://mamonas.dev/posts/kafka-producers-explained/" />
+
+
+
+  <meta name="robots" content="index, follow" />
+
+
 
 
       <script async src="https://www.googletagmanager.com/gtag/js?id=G-F0SL3JQ5SY"></script>
@@ -37,22 +42,17 @@
   
   
   
-  
   <link rel="stylesheet" href="https://mamonas.dev/styles.css">
 
 
 
-<link rel="stylesheet" href="https://mamonas.dev/style.css">
+
+     
+     <link rel="preload" href="/css/style.min.css" as="style">
+     <link rel="stylesheet" href="/css/style.min.css" as="style">
 
 
-
-  <link rel="shortcut icon" href="https://mamonas.dev/img/theme-colors/blue.png">
-  <link rel="apple-touch-icon" href="https://mamonas.dev/img/theme-colors/blue.png">
-
-
-
-<meta name="twitter:card" content="summary" />
-
+<link rel="icon" type="image/png" sizes="32x32" href="https://mamonas.dev/img/favicon-32x32.png">
 
 
 <meta property="og:locale" content="en" />
@@ -78,30 +78,12 @@
 
 
 
-
-
-
-      <script async src="https://www.googletagmanager.com/gtag/js?id=G-F0SL3JQ5SY"></script>
-      <script>
-        var doNotTrack = false;
-        if ( false ) {
-          var dnt = (navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack);
-          var doNotTrack = (dnt == "1" || dnt == "yes");
-        }
-        if (!doNotTrack) {
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-F0SL3JQ5SY');
-        }
-      </script>
 <meta name="description" content="The personal blog of Konstantinas Mamonas, a software engineer writing about technology, programming, and other interests.">
 <meta property="og:title" content="Konstantinas Mamonas - Personal Blog">
 <meta property="og:description" content="The personal blog of Konstantinas Mamonas, a software engineer writing about technology, programming, and other interests.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://mamonas.dev/posts/kafka-producers-explained/">
 <meta property="og:image" content="/img/tn.png">
-
 
 
   
@@ -234,7 +216,7 @@
 </ul>
 <p>Kafka does not interpret or modify message content; it just stores and transmits byte arrays. Producers are responsible for serializing messages before sending them.</p>
 <p><strong>Example (Python):</strong></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>producer <span style="color:#f92672">=</span> KafkaProducer(value_serializer<span style="color:#f92672">=</span><span style="color:#66d9ef">lambda</span> v: json<span style="color:#f92672">.</span>dumps(v)<span style="color:#f92672">.</span>encode(<span style="color:#e6db74">&#39;utf-8&#39;</span>))
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">producer</span> <span class="o">=</span> <span class="n">KafkaProducer</span><span class="p">(</span><span class="n">value_serializer</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
 </span></span></code></pre></div><p>Efficient serialization improves throughput and reduces broker load. Avoid inefficient formats like uncompressed JSON unless specifically required by system constraints.</p>
 <hr>
 <h2 id="batching-and-compression-optimizing-throughput">Batching and Compression: Optimizing Throughput<a href="#batching-and-compression-optimizing-throughput" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
