@@ -43,13 +43,8 @@
      <link rel="stylesheet" href="{{ $minifiedStyle.RelPermalink }}" as="style">
 {{- end }}
 
-{{/* Icons */}}
-{{ if isset $.Site.Params "favicon" }}
-  <link rel="shortcut icon" href="{{ $.Site.Params.favicon | absURL }}">
-{{ else }}
-  <link rel="shortcut icon" href="{{ printf "img/theme-colors/%s.png" (or .Params.color $.Site.Params.ThemeColor | default "orange") | absURL }}">
-  <link rel="apple-touch-icon" href="{{ printf "img/theme-colors/%s.png" (or .Params.color $.Site.Params.ThemeColor | default "orange") | absURL }}">
-{{ end }}
+{{/* Favicon */}}
+<link rel="icon" type="image/png" sizes="32x32" href="{{ "/img/favicon-32x32.png" | absURL }}">
 
 {{/* Open Graph Data */}}
 <meta property="og:locale" content="{{ $.Site.Language.Lang }}" />
