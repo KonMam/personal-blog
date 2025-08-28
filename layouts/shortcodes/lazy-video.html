@@ -1,0 +1,40 @@
+<!-- layouts/shortcodes/lazy-video.html -->
+<div class="lazy-video-container" style="position: relative; width: {{ .Get "width" }}px; height: {{ .Get "height" }}px;">
+  <img src="{{ .Get "placeholder" }}" alt="Loading video..." style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
+  <video
+    width="{{ .Get "width" }}"
+    height="{{ .Get "height" }}"
+    style="position: absolute; top: 0; left: 0; opacity: 0; transition: opacity 0.5s;"
+    loop
+    muted
+    playsinline
+    autoplay
+    data-src-mp4="{{ .Get "mp4" }}"
+  >
+  </video>
+</div>
+
+<script>
+window.addEventListener('load', function() {
+  const videos = document.querySelectorAll('.lazy-video-container video');
+  videos.forEach(video => {
+    const mp4Src = video.getAttribute('data-src-mp4');
+
+    if (mp4Src) {
+      const sourceMp4 = document.createElement('source');
+      sourceMp4.setAttribute('src', mp4Src);
+      sourceMp4.setAttribute('type', 'video/mp4');
+      video.appendChild(sourceMp4);
+    }
+
+    video.load();
+    video.oncanplaythrough = () => {
+      video.style.opacity = 1;
+      const img = video.previousElementSibling;
+      if (img) {
+        img.style.opacity = 0;
+      }
+    };
+  });
+});
+</script>

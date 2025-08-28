@@ -1,0 +1,196 @@
+.footer .copyright ul {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.social-icon svg {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  fill: currentColor;
+}
+
+.image-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+.post {
+  padding: 10px 0;
+  margin: 10px auto;
+}
+
+.post-content {
+  margin-top: 15px;
+}
+
+.headings--one-size h1:not(first-child) {
+  margin-top: 15px;
+}
+
+/* Consolidated :root variables */
+:root {
+  --accent: rgb(57, 152, 236) !important;
+  --color-background-dark: #0f1620;
+  --color-text-light: #aecfdf;
+
+  --syntax-func-color: color-mix(in srgb, var(--accent) 70%, #999 30%);
+  --syntax-var-color: color-mix(in srgb, var(--accent) 90%, transparent);
+  --syntax-punctuation-color: white;
+  --syntax-value-color: color-mix(in srgb, var(--accent), white);
+  --syntax-comment-color: rgba(255, 255, 255, 0.3);
+  --syntax-code-copy-button-background: hsla(0, 0%, 87.8%, 0.2);
+  --syntax-code-copy-button-color: #bbb;
+  --syntax-code-copy-button-box-shadow-color: rgba(0, 0, 0, 0.2);
+  --syntax-code-border-color: rgba(255, 255, 255, 0.1);
+}
+
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background-color: var(--color-background-dark);
+  color: var(--color-text-light);
+}
+
+a.read-more {
+  margin: 5px auto;
+  font-size: 1.4rem;
+}
+
+a.read-more:hover {
+  margin: 5px auto;
+  font-size: 1.4rem;
+}
+
+.menu__dropdown {
+  background: var(--color-background-dark);
+  color: var(--color-text-light);
+  border-color: var(--color-text-light);
+  --shadow-color: color-mix(in srgb, var(--color-background-dark) transparent 20%);
+}
+
+.menu__dropdown a {
+  color: var(--color-text-light);
+}
+
+code, kbd {
+  font-family: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+}
+
+/* Code Toolbar and Syntax Highlighting */
+.code-toolbar {
+  --code-margin: 10px; /* KEPT AT 10px as per user's request */
+  position: relative;
+  margin: var(--code-margin) 0;
+  padding: 20px;
+  border: 1px solid var(--syntax-code-border-color);
+}
+
+code[class*="language-"],
+pre[class*="language-"] {
+  color: #ccc; /* Base text color */
+  background: #2d2d2d; /* Base background color */
+}
+
+/* Overrides from syntax.scss */
+code.language-css,
+code.language-scss,
+.token.boolean,
+.token.string,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.language-scss .token.string,
+.style .token.string,
+.token.attr-value,
+.token.keyword,
+.token.control,
+.token.directive,
+.token.statement,
+.token.regex,
+.token.atrule,
+.token.number,
+.token.inserted,
+.token.important {
+  color: var(--syntax-value-color, color-mix(in srgb, var(--accent), white)) !important;
+}
+
+.token.tag-id,
+.token.atrule-id,
+.token.operator,
+.token.unit,
+.token.placeholder,
+.token.variable,
+.token.tag,
+.token.attr-name,
+.token.namespace,
+.token.deleted,
+.token.property,
+.token.class-name,
+.token.constant,
+.token.symbol {
+  color: var(--syntax-var-color, color-mix(in srgb, var(--accent) 90%, transparent)) !important;
+}
+
+.token.property,
+.token.function,
+.token.function-name,
+.token.deleted,
+code[class*="language-"],
+.command-line-prompt>span:before {
+  color: var(--syntax-func-color, color-mix(in srgb, var(--accent) 70%, #999 30%)) !important;
+}
+
+.token.selector,
+.token.tag,
+.token.punctuation {
+  color: var(--syntax-punctuation-color);
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: var(--syntax-comment-color) !important;
+}
+
+.token.namespace {
+  opacity: 0.7 !important;
+}
+
+/* Chroma classes mapping to theme colors */
+.kd { /* Keyword */
+  color: var(--syntax-value-color) !important;
+}
+.c, .c1 { /* Comment */
+  color: var(--syntax-comment-color) !important;
+}
+.s, .s1, .s2, .s_ { /* String */
+  color: var(--syntax-value-color) !important;
+}
+.mi, .mf { /* Number */
+  color: var(--syntax-value-color) !important;
+}
+.p { /* Punctuation */
+  color: var(--syntax-punctuation-color) !important;
+}
+.nf { /* Function Name */
+  color: var(--syntax-func-color) !important;
+}
+.nv { /* Variable Name */
+  color: var(--syntax-var-color) !important;
+}
+.o { /* Operator */
+  color: var(--syntax-var-color) !important;
+}
+.kt { /* Type */
+  color: #cc99cd !important;
+}
+.nx { /* Name.Other (like 'Engine') */
+  color: var(--syntax-func-color) !important;
+}

@@ -1,7 +1,7 @@
-+++
-title = "Building a Generative Art System in Go"
-date = "2025-08-26T21:06:08+03:00"
-tags = ["go", "generative art"]
++++ 
+title = "Building a Generative Art System in Go" 
+date = "2025-08-26T21:06:08+03:00" 
+tags = ["go", "generative art"] 
 description = """
 Generative art shifts the focus from drawing images to designing systems. Instead of sketching directly, you define algorithms, randomness, and rules, then let the system produce the output. For me what makes it interesting is the fact that you don’t just create one piece, but a machine capable of generating infinite variations.
 """
@@ -62,12 +62,8 @@ Before noise and turbulence, I needed fundamentals. The `geom` package holds:
 With these, I could already produce scenes like a single circle or square, rendered cleanly to PNG. Even if it doesn't look too exciting, I was pleased that the approach worked.
 
 <div class="image-row">
-  <a href="square.png" target="_blank">
-    <img src="square.png" alt="Square" width="400">
-  </a>
-  <a href="circle.png" target="_blank">
-    <img src="circle.png" alt="Circle" width="400">
-  </a>
+  {{< image src="square.png" alt="Square" width="400" >}}
+  {{< image src="circle.png" alt="Circle" width="400" >}}
 </div>
 
 ## 4. Noise
@@ -77,9 +73,7 @@ To start with I created a wrapper around [ojrac/opensimplex-go](https://github.c
 
 This is what Simplex noise looks like:
 <div class="image-row">
-  <a href="simplex-noise.png" target="_blank">
-    <img src="simplex-noise.png" alt="Simplex Noise" width="200">
-  </a>
+  {{< image src="simplex-noise.png" alt="Simplex Noise" width="200" >}}
 </div>
 
 I outputted noise in a simple interface, which I can reuse for different Noise algorithms.
@@ -114,12 +108,8 @@ The output depends on the noise:
 Still need to work some more on the parameters to get them looking right, but it's a good start:
 
 <div class="image-row">
-  <a href="flow_waves.png" target="_blank">
-    <img src="flow_waves.png" alt="Flow Waves" width="400">
-  </a>
-  <a href="flow_clouds.png" target="_blank">
-    <img src="flow_clouds.png" alt="Flow Clouds" width="400">
-  </a>
+  {{< image src="flow_waves.png" alt="Flow Waves" width="600" renderWidth="400" >}}
+  {{< image src="flow_clouds.png" alt="Flow Clouds" width="600" renderWidth="400" >}}
 </div>
 
 ## 6. The Blackhole Engine
@@ -128,9 +118,7 @@ Next I decided to try tackling something more ambitious. In [jdxyw/generativeart
 
 One of those was the **Blackhole**. It was majestic.
 <div class="image-row">
-  <a href="jdxyw_blackhole.png" target="_blank">
-    <img src="jdxyw_blackhole.png" alt="JDXYW Blackhole" width="400">
-  </a>
+  {{< image src="jdxyw_blackhole.png" alt="JDXYW Blackhole" width="400" >}}
 </div>
 
 The engine starts with concentric circles, then lets noise distort them into collapsing rings.
@@ -160,15 +148,9 @@ Artifacts showed up early: straight bands, jagged edges.
 
 
 <div class="image-row">
-  <a href="artefact_1.png" target="_blank">
-    <img src="artefact_1.png" alt="Artefact" width="200">
-  </a>
-  <a href="artefact_2.png" target="_blank">
-    <img src="artefact_2.png" alt="Artefact" width="200">
-  </a>
-  <a href="artefact_3.png" target="_blank">
-    <img src="artefact_3.png" alt="Artefact" width="200">
-  </a>
+  {{< image src="artefact_1.png" alt="Artefact" width="200" >}}
+  {{< image src="artefact_2.png" alt="Artefact" width="200" >}}
+  {{< image src="artefact_3.png" alt="Artefact" width="200" >}}
 </div>
 
 Fixes included randomizing the start angle per circle, adding alpha jitter so overlaps blend, and enabling supersampling. 
@@ -176,9 +158,7 @@ Fixes included randomizing the start angle per circle, adding alpha jitter so ov
 After some trial and error I managed to get this result:
 
 <div class="image-row">
-  <a href="first_blackhole.png" target="_blank">
-    <img src="first_blackhole.png" alt="First Black Hole" width="400">
-  </a>
+  {{< image src="first_blackhole.png" alt="First Black Hole" width="400" >}}
 </div>
 
 The blackhole is more turbulent and not as smooth/blended as the inspiration, but I think this is what makes generative art so interesting, endless possibilities.
@@ -219,15 +199,9 @@ With this all I needed to do was give some base color in the config and the rest
 As generative art in a lot of cases is about complex geometry, minimal color palettes give another dimension for tweaking without taking away from the core.
 
 <div class="image-row">
-  <a href="blackhole_mono1.png" target="_blank">
-    <img src="blackhole_mono1.png" alt="Monochromatic Blackhole" width="300">
-  </a>
-  <a href="blackhole_mono2.png" target="_blank">
-    <img src="blackhole_mono2.png" alt="Monochromatic Blackhole" width="300">
-  </a>
-  <a href="blackhole_mono3.png" target="_blank">
-    <img src="blackhole_mono3.png" alt="Monochromatic Blackhole" width="300">
-  </a>
+  {{< image src="blackhole_mono1.png" alt="Monochromatic Blackhole" width="300" >}}
+  {{< image src="blackhole_mono2.png" alt="Monochromatic Blackhole" width="300" >}}
+  {{< image src="blackhole_mono3.png" alt="Monochromatic Blackhole" width="300" >}}
 </div>
 
 ## 8. Config-Driven Runs
@@ -299,9 +273,7 @@ Configs gained an `animation` block in which both parametters and colors could b
 My hope was to generate a smooth pullsing blackhole. 
 
 <div class="image-row">
-  <a href="blackhole_new.gif" target="_blank">
-    <img src="blackhole_new.gif" alt="GIF Black Hole" width="400">
-  </a>
+  {{< lazy-video width="400" height="400" placeholder="blackhole_new_first_frame.webp" mp4="blackhole_new.mp4" >}}
 </div>
 
 This is not exactly there yet, the changes to the engine influence the render too quickly, but I think with some tweaking it could get there.

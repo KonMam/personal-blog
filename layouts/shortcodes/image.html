@@ -1,0 +1,15 @@
+{{ $src := .Get "src" }}
+{{ $alt := .Get "alt" }}
+{{ $width := .Get "width" }}
+{{ $renderWidth := .Get "renderWidth" | default $width }}
+{{ $image := .Page.Resources.GetMatch $src }}
+
+{{ with $image }}
+  {{ $webp := .Resize (printf "%sx webp Lanczos q100" $width) }}
+  <picture>
+    <source srcset="{{ $webp.RelPermalink }}" type="image/webp">
+    <img src="{{ .RelPermalink }}" alt="{{ $alt }}" width="{{ $renderWidth }}" loading="lazy">
+  </picture>
+{{ else }}
+  <!-- Image not found -->
+{{ end }}
