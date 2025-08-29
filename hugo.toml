@@ -1,7 +1,7 @@
 baseURL = 'https://mamonas.dev/'
 languageCode = 'en-us'
 title = 'Konstantinas Mamonas - Personal Blog'
-theme = 're-terminal'
+theme = 'Syl'
 author = "Konstantinas Mamonas"
 keywords = "Konstantinas Mamonas, personal blog, software engineering, technology, programming"
 
