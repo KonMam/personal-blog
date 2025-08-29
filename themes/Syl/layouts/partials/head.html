@@ -83,5 +83,8 @@
   <link href="{{ .RelPermalink }}" rel="alternate" type="application/json" title="{{ $.Site.Title }}" />
 {{ end }}
 
-{{/* Extended head section*/}}
-{{ partial "extended_head.html" . }}
+<meta name="description" content="The personal blog of Konstantinas Mamonas, a software engineer writing about technology, programming, and other interests.">
+<meta property="og:title" content="Konstantinas Mamonas - Personal Blog">
+<meta property="og:description" content="The personal blog of Konstantinas Mamonas, a software engineer writing about technology, programming, and other interests.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ .Permalink }}">

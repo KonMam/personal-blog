@@ -1,7 +1,7 @@
 baseURL = 'https://mamonas.dev/'
 languageCode = 'en-us'
 title = 'Konstantinas Mamonas - Personal Blog'
-theme = 're-terminal'
+theme = 'Syl'
 author = "Konstantinas Mamonas"
 keywords = "Konstantinas Mamonas, personal blog, software engineering, technology, programming"
 
@@ -41,4 +41,9 @@ keywords = "Konstantinas Mamonas, personal blog, software engineering, technolog
     id = "G-F0SL3JQ5SY"
 
 [minify]
+  minifyOutput = true
   disableCSS = false
+
+[minify.tdewolff.html]
+  keepWhitespace = false
+  keepComments = false
