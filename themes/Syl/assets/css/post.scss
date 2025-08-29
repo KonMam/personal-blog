@@ -155,4 +155,9 @@ figure:has(.post-cover) {
 a.read-more {
   margin: 5px auto;
   font-size: 1.4rem;
+
+  &:hover {
+    margin: 5px auto;
+    font-size: 1.4rem;
+  }
 }
