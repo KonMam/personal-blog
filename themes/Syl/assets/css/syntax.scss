@@ -1,3 +1,19 @@
+/* Code Toolbar and Syntax Highlighting */
+.code-toolbar {
+  --code-margin: 10px; /* KEPT AT 10px as per user's request */
+  position: relative;
+  margin: var(--code-margin) 0;
+  padding: 20px;
+  border: 1px solid var(--syntax-code-border-color);
+}
+
+code[class*="language-"],
+pre[class*="language-"] {
+  color: #ccc; /* Base text color */
+  background: #2d2d2d; /* Base background color */
+}
+
+/* Overrides from syntax.scss */
 code.language-css,
 code.language-scss,
 .token.boolean,
@@ -61,6 +77,38 @@ code[class*="language-"],
 
 .token.namespace {
   opacity: 0.7 !important;
+}
+
+/* Chroma classes mapping to theme colors */
+.kd { /* Keyword */
+  color: var(--syntax-value-color) !important;
+}
+.c, .c1 { /* Comment */
+  color: var(--syntax-comment-color) !important;
+}
+.s, .s1, .s2, .s_ { /* String */
+  color: var(--syntax-value-color) !important;
+}
+.mi, .mf { /* Number */
+  color: var(--syntax-value-color) !important;
+}
+.p { /* Punctuation */
+  color: var(--syntax-punctuation-color) !important;
+}
+.nf { /* Function Name */
+  color: var(--syntax-func-color) !important;
+}
+.nv { /* Variable Name */
+  color: var(--syntax-var-color) !important;
+}
+.o { /* Operator */
+  color: var(--syntax-var-color) !important;
+}
+.kt { /* Type */
+  color: #cc99cd !important;
+}
+.nx { /* Name.Other (like 'Engine') */
+  color: var(--syntax-func-color) !important;
 }
 
 pre[data-line] {

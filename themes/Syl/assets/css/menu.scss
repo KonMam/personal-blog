@@ -105,6 +105,10 @@
       display: flex;
     }
 
+    a {
+      color: var(--color-text-light);
+    }
+
     >li {
       flex: 0 0 auto;
 

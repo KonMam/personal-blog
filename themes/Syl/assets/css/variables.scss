@@ -1,10 +1,14 @@
 :root {
+  --accent: rgb(57, 152, 236) !important;
+  --color-background-dark: #0f1620;
+  --color-text-light: #aecfdf;
+
   --accent-contrast-color: black;
   --article-link-color: var(inherit);
-  --background: color-mix(in srgb, var(--accent) 2%, #1d1e28 98%);
+  --background: var(--color-background-dark);
   --border-color: rgba(255, 255, 255, 0.1);
-  --color: white;
-  --menu-color: white;
+  --color: var(--color-text-light);
+  --menu-color: var(--color-text-light);
 
   // Use in code syntax highlighting
   --syntax-func-color: color-mix(in srgb, var(--accent) 70%, #999 30%);
