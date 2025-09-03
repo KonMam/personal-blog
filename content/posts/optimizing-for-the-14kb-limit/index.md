@@ -128,6 +128,10 @@ I was honestly surprised with the results:
 <div class="image-row">
   {{< image src="home_page.png" alt="home page" width="800" renderWidth="600" >}}
 </div>
+<br>
+<div class="image-row">
+  {{< image src="google_pageview.png" alt="generative art" width="800" renderWidth="600" >}}
+</div>
 
 * Previous post went from 15 MB to 17.38 KB on the initial load and 600 KB with every asset loaded. **I'll call it a win.**
 
