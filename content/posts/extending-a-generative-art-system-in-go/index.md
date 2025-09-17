@@ -30,7 +30,7 @@ At a high level, the algorithm works like this:
 
 My implementation can be found [here](https://github.com/KonMam/go-genart), it mostly follows the same steps just using my internal packages.
 
-The output below adhered to the rules, but the first results felt flat—technically correct, but artistically underwhelming.
+The output below adhered to the rules, but the first results felt flat, technically correct, but artistically underwhelming.
 
 <div class="image-row">
   {{< image src="perlinpearls.png" alt="Perlin Pearls 1" width="600" renderWidth="400" >}}
@@ -38,7 +38,7 @@ The output below adhered to the rules, but the first results felt flat—technic
 
 ### More Color Palettes
 
-After experimenting with Perlin Pearls, I quickly realized that monochromatic palettes weren’t doing the visuals justice. The structures were interesting, but the single-hue approach flattened the results. To push the system further, I added support for more complex palettes—specifically *split-complementary* and *analogous*, both drawn directly from color theory.
+After experimenting with Perlin Pearls, I quickly realized that monochromatic palettes weren’t doing the visuals justice. The structures were interesting, but the single hue approach flattened the results. To push the system further, I added support for more complex palettes, specifically *split-complementary* and *analogous*, both drawn directly from color theory.
 
 ### Split Complementary
 
@@ -108,7 +108,7 @@ And to end with this engine, here is my current favorite image using it:
 
 After building Perlin Pearls, I wanted to break away from pure reimplementation and experiment with something original.
 
-The vision was to take the perlin pearls and instead of placing them in a random location, doing a swirl of small pearls starting at the center of the image. To do this, I used the golden angle (about 137.5°) which is a special number found in nature — it spaces things evenly, like sunflower seeds or pinecone spirals.
+The vision was to take the perlin pearls and instead of placing them in a random location, doing a swirl of small pearls starting at the center of the image. To do this, I used the golden angle (about 137.5°) which is a special number found in nature, it spaces things evenly, like sunflower seeds or pinecone spirals.
 
 The rest of the engine stayed largely the same (Perlin-driven dots inside circles), but the new arrangement completely changed the feel.
 
