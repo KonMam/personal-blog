@@ -59,6 +59,12 @@
     {{ $pageCover = .RelPermalink }}
   {{ end }}
   <meta property="og:image" content="{{ $pageCover | absURL }}">
+{{ else if (isset .Params "images") }}
+  {{ $pageImage := index .Params.images 0 }}
+  {{ with (.Resources.GetMatch $pageImage) }}
+    {{ $pageImage = .RelPermalink }}
+  {{ end }}
+  <meta property="og:image" content="{{ $pageImage | absURL }}">
 {{ else }}
   {{ if isset $.Site.Params "favicon" }}
     <meta property="og:image" content="{{ $.Site.Params.favicon | absURL }}">
