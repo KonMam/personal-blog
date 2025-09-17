@@ -60,11 +60,12 @@
   {{ end }}
   <meta property="og:image" content="{{ $pageCover | absURL }}">
 {{ else if (isset .Params "images") }}
-  {{ $pageImage := index .Params.images 0 }}
-  {{ with (.Resources.GetMatch $pageImage) }}
-    {{ $pageImage = .RelPermalink }}
+  {{ $pageImageName := index .Params.images 0 }}
+  {{ with .Resources.GetMatch $pageImageName }}
+    {{ $image := .Resize (printf "%dx" (div .Width 2)) }}
+    {{ $webpImage := $image.Process "webp" }}
+    <meta property="og:image" content="{{ $webpImage.Permalink }}">
   {{ end }}
-  <meta property="og:image" content="{{ $pageImage | absURL }}">
 {{ else }}
   {{ if isset $.Site.Params "favicon" }}
     <meta property="og:image" content="{{ $.Site.Params.favicon | absURL }}">
