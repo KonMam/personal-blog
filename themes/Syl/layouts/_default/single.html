@@ -15,8 +15,6 @@
     {{- with .Params.Author -}}
       <span class="post-author">{{ . }}</span>
     {{- end -}}
-    <!-- comments counter -->
-    {{ partial "comments_counter.html" . }}
     <span class="post-reading-time">{{ .ReadingTime }} min read</span>
   </div>
 

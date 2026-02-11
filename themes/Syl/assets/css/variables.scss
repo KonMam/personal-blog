@@ -1,14 +1,10 @@
 :root {
   --accent: #6C8CFF;
-  --color-background-dark: #111118;
-  --color-text-light: #b8bcc8;
-
   --accent-contrast-color: black;
-  --article-link-color: var(inherit);
-  --background: var(--color-background-dark);
+  --background: #111118;
   --border-color: rgba(255, 255, 255, 0.08);
-  --color: var(--color-text-light);
-  --menu-color: var(--color-text-light);
+  --color: #b8bcc8;
+  --menu-color: #b8bcc8;
 
   // Syntax highlighting
   --syntax-func-color: color-mix(in srgb, var(--accent) 70%, #999 30%);
@@ -16,14 +12,6 @@
   --syntax-punctuation-color: #d4d4d8;
   --syntax-value-color: color-mix(in srgb, var(--accent), white);
   --syntax-comment-color: rgba(255, 255, 255, 0.3);
-  --syntax-line-highlight-mix: color-mix(in srgb, var(--accent) 90%, #999 10%);
-  --syntax-line-highlight-background-color: hsla(24, 20%, 50%, 0.4);
-  --syntax-line-highlight-color: hsl(24, 20%, 95%);
-  --syntax-line-highlight-box-shadow: white;
-  --syntax-code-border-color: rgba(255, 255, 255, 0.08);
-  --syntax-code-copy-button-background: hsla(0, 0%, 87.8%, 0.2);
-  --syntax-code-copy-button-color: #bbb;
-  --syntax-code-copy-button-box-shadow-color: rgba(0, 0, 0, 0.2);
 
   // Card variables
   --card-background: rgba(255, 255, 255, 0.03);
@@ -34,7 +22,6 @@
 
 [data-theme="light"] {
   --accent-contrast-color: white;
-  --article-link-color: var(inherit);
   --background: #ffffff;
   --border-color: rgba(0, 0, 0, 0.08);
   --color: #1a1a2e;
@@ -46,14 +33,6 @@
   --syntax-value-color: color-mix(in srgb, var(--accent), black);
   --syntax-punctuation-color: #3f3f46;
   --syntax-comment-color: rgba(0, 0, 0, 0.35);
-  --syntax-line-highlight-mix: color-mix(in srgb, var(--accent) 90%, #000 10%);
-  --syntax-line-highlight-background-color: hsla(336, 20%, 50%, 0.4);
-  --syntax-line-highlight-color: hsl(336, 20%, 95%);
-  --syntax-line-highlight-box-shadow: black;
-  --syntax-code-border-color: rgba(0, 0, 0, 0.08);
-  --syntax-code-copy-button-background: hsla(360, 0%, 87.8%, 0.2);
-  --syntax-code-copy-button-color: #444;
-  --syntax-code-copy-button-box-shadow-color: rgba(255, 255, 255, 0.2);
 
   // Card variables
   --card-background: white;
@@ -62,8 +41,5 @@
   --card-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-// Native CSS Variable aren't supported in a combination with MEDIA QUERIES. Wait for a new standard https://drafts.csswg.org/css-env-1/
-// --phone: "max-width: 684px";
-// --tablet: "max-width: 900px";
 $phone: 684px;
 $tablet: 900px;

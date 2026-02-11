@@ -15,10 +15,6 @@
   }
 }
 
-.posts {
-  width: 100%;
-}
-
 .post {
   width: 100%;
   text-align: left;
@@ -96,23 +92,6 @@
     border-radius: 8px;
     overflow: hidden;
   }
-
-}
-
-.post--regulation {
-  h1 {
-    justify-content: center;
-  }
-
-  h2 {
-    justify-content: center;
-    margin-bottom: 10px;
-
-    & + h2 {
-      margin-top: -10px;
-      margin-bottom: 20px;
-    }
-  }
 }
 
 .hanchor {
@@ -134,22 +113,11 @@ h1:hover a, h2:hover a, h3:hover a, h4:hover a {
 figure:has(.post-cover) {
   margin: 40px 0;
 
-
   & > .post-cover {
     margin: 0;
   }
 
   & > figcaption {
     margin-top: 0;
-  }
-}
-
-a.read-more {
-  margin: 5px auto;
-  font-size: 1.4rem;
-
-  &:hover {
-    margin: 5px auto;
-    font-size: 1.4rem;
   }
 }

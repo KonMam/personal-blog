@@ -1,13 +1,11 @@
 {{ define "main" }}
 <article class="about">
-  <div class="about__header">
-    <h1 class="about__title">{{ .Title }}</h1>
-    <p class="about__subtitle">Software engineer, writer, explorer of ideas</p>
+  <h1 class="about__title">{{ .Title }}</h1>
+  <div class="about__intro">
+    <img src="{{ "about-photo-cropped.jpeg" | absURL }}" alt="Konstantinas Mamonas" class="about__photo">
   </div>
-
   <div class="about__content">
     {{ .Content }}
   </div>
-
 </article>
 {{ end }}

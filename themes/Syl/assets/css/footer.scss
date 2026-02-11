@@ -35,15 +35,6 @@
       margin: 0;
     }
 
-    &--user {
-      margin: auto;
-      text-align: center;
-    }
-
-    & > *:first-child:not(:only-child) {
-      margin-right: 10px;
-    }
-
     span {
       white-space: nowrap;
     }

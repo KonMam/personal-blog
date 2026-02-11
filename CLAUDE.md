@@ -42,7 +42,7 @@ hugo                     # Build to ./public
 ├── themes/Syl/            # Custom theme
 │   ├── archetypes/posts.md
 │   ├── assets/
-│   │   ├── css/           # SCSS source files
+│   │   ├── css/           # SCSS source files (14 files, ~1100 lines total)
 │   │   │   ├── style.scss       # Entry point (imports all partials)
 │   │   │   ├── variables.scss   # Dark + light theme vars (data-theme), card vars, breakpoints
 │   │   │   ├── color/           # Color variants (blue, orange, red, green, pink)
@@ -56,12 +56,11 @@ hugo                     # Build to ./public
 │   │   │   ├── terms.scss       # Taxonomy list (pill cards)
 │   │   │   ├── pagination.scss  # Post navigation
 │   │   │   ├── footer.scss      # Footer (centered)
-│   │   │   ├── prism.scss       # Prism syntax highlighting + light mode overrides
-│   │   │   └── syntax.scss, code.scss, buttons.scss, ...
+│   │   │   ├── buttons.scss     # Base button styles (used by pagination)
+│   │   │   └── syntax.scss      # Chroma syntax highlighting (Hugo built-in)
 │   │   └── js/
 │   │       ├── menu.js          # Mobile menu toggle
-│   │       ├── theme-toggle.js  # Dark/light mode toggle with localStorage
-│   │       └── banner.js        # Dismissible banner
+│   │       └── theme-toggle.js  # Dark/light mode toggle with localStorage
 │   ├── layouts/
 │   │   ├── _default/
 │   │   │   ├── baseof.html   # Root template (head, body, container, data-theme)
@@ -75,9 +74,8 @@ hugo                     # Build to ./public
 │   │   │   ├── footer.html   # Copyright + social icons + JS bundle
 │   │   │   ├── post-card.html # Card partial (badge, title, date, description — no covers)
 │   │   │   ├── comments.html  # giscus integration with theme sync
-│   │   │   └── cover, pagination, mobile-menu, logo, ...
-│   │   └── shortcodes/       # Theme shortcodes (image, figure, code, prismjs)
-│   └── 404.html
+│   │   │   └── cover, pagination, mobile-menu, logo
+│   └── 404.html              # Modern 404 page (.not-found styles)
 ├── static/                # Static assets served as-is
 ├── data/                  # Hugo data files
 ├── i18n/                  # Translation strings
