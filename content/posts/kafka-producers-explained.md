@@ -3,6 +3,7 @@ title = "Kafka Producers Explained: Partitioning, Batching, and Reliability"
 date = "2025-08-18T21:39:05+03:00"
 description = "Dive into Kafka producers, exploring how they handle message partitioning, serialization, and batching for optimal throughput. Understand delivery guarantees, idempotent producers, and transactional writes for reliable and exactly-once message delivery."
 tags = ["kafka", "producers", "messaging"]
+categories = ["tech"]
 draft = false
 +++
 

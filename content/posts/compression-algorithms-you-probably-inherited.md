@@ -3,6 +3,7 @@ title = "Compression Algorithms You Probably Inherited: gzip, Snappy, LZ4, zstd"
 date = "2025-08-18T21:45:14+03:00"
 description = "A deep dive into common compression algorithms like gzip, Snappy, LZ4, and zstd, explaining their trade-offs in speed, compression ratio, and ideal use cases for data engineering pipelines."
 tags = ["compression", "data-engineering", "performance"]
+categories = ["tech"]
 draft = false
 +++
 

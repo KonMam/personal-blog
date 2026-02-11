@@ -5,6 +5,10 @@ theme = 'Syl'
 author = "Konstantinas Mamonas"
 keywords = "Konstantinas Mamonas, personal blog, software engineering, technology, programming"
 
+[taxonomies]
+  tag = "tags"
+  category = "categories"
+
 [params]
   # ["orange", "blue", "red", "green", "pink"]
   themeColor = "blue"
@@ -23,6 +27,10 @@ keywords = "Konstantinas Mamonas, personal blog, software engineering, technolog
         identifier = "home"
         name = "Home"
         url = "/"
+      [[languages.en.menu.main]]
+        identifier = "categories"
+        name = "Categories"
+        url = "/categories"
       [[languages.en.menu.main]]
         identifier = "about"
         name = "About"

@@ -1,7 +1,8 @@
 +++
 title = "Extending a Generative Art System in Go" 
 date = "2025-09-17T09:00:11+03:00"
-tags = ["go", "generative art"] 
+tags = ["go", "generative art"]
+categories = ["tech"]
 description = """
 A follow-up on building a generative art system in Go, showcasing new engines like Perlin Pearls, Swirl, and Cells, along with expanded color palettes to create richer, more varied generative artworks.
 """

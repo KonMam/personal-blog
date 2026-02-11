@@ -3,6 +3,7 @@ title = "Kafka Consumers Explained: Pull, Offsets, and Parallelism"
 date = "2025-08-18T21:30:08+03:00"
 description = "Understand how Kafka consumers work, from their pull-based data fetching and offset management to how consumer groups enable parallel processing and scalability. Explore different message delivery semantics."
 tags = ["kafka", "consumers", "messaging"]
+categories = ["tech"]
 draft = false
 +++
 

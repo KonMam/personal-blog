@@ -1,7 +1,8 @@
 +++ 
 title = "Optimizing for the 14KB Limit" 
 date = "2025-09-03T08:14:08+03:00" 
-tags = ["web", "performance"] 
+tags = ["web", "performance"]
+categories = ["tech"]
 description = """
 Took on the challenge of shrinking my site as much as possible. From trimming scripts to rethinking images, I learned a lot about where the real weight comes from, and how far optimization can go.
 """

@@ -3,6 +3,7 @@ title = "kafka-replay-cli: A Lightweight Kafka Replay & Debugging Tool"
 date = "2025-08-18T21:41:41+03:00"
 description = "Introducing `kafka-replay-cli`, a lightweight Python tool for Kafka message replay and debugging. Learn about its features for dumping, replaying, and querying Kafka data, and the architectural decisions behind its development."
 tags = ["kafka", "cli", "python"]
+categories = ["tech"]
 draft = false
 +++
 

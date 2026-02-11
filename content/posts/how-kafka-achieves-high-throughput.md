@@ -3,6 +3,7 @@ title = "How Kafka Achieves High Throughput: A Breakdown of Its Log-Centric Arch
 date = "2025-08-18T20:13:35+03:00"
 description = "Discover the core architectural decisions and OS-level optimizations that enable Apache Kafka's exceptional high throughput, including append-only logs, sequential I/O, zero-copy transfers, and message batching."
 tags = ["kafka", "throughput", "architecture"]
+categories = ["tech"]
 draft = false
 +++
 

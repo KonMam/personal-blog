@@ -68,7 +68,8 @@ hugo                     # Build to ./public
 ## Configuration (hugo.toml)
 
 - **Theme color:** `blue` (options: orange, blue, red, green, pink, paper)
-- **Menu:** Home (`/`), About (`/about`)
+- **Taxonomies:** `tags` and `categories` (auto-generates `/categories/` and `/tags/` listing pages)
+- **Menu:** Home (`/`), Categories (`/categories`), About (`/about`)
 - **Markup:** Goldmark with `unsafe = true` (allows raw HTML in markdown), CSS-based syntax highlighting (`noClasses = false`)
 - **Minification:** Enabled for output HTML and CSS
 
@@ -81,6 +82,7 @@ hugo                     # Build to ./public
 title = "My Post Title"
 date = "2025-08-26T21:06:08+03:00"
 tags = ["go", "generative art"]
+categories = ["tech"]
 description = """
 Multi-line description used for SEO and post previews.
 """
