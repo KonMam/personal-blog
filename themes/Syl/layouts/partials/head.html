@@ -19,9 +19,6 @@
   <meta name="robots" content="index, follow" />
 {{ end }}
 
-<!-- {{/* Google Analytics */}} -->
-<!-- {{ partial "google_analytics.html" . }} -->
-
 {{/* Theme Stylesheets */}}
 {{ $defaultStylesTemplate := resources.Get "css/style.scss" }}
 {{ $defaultStyles := $defaultStylesTemplate | resources.ExecuteAsTemplate "main.scss" .}}
@@ -93,9 +90,3 @@
 {{ with .OutputFormats.Get "json" }}
   <link href="{{ .RelPermalink }}" rel="alternate" type="application/json" title="{{ $.Site.Title }}" />
 {{ end }}
-
-<meta name="description" content="The personal blog of Konstantinas Mamonas, a software engineer writing about technology, programming, and other interests.">
-<meta property="og:title" content="Konstantinas Mamonas - Personal Blog">
-<meta property="og:description" content="The personal blog of Konstantinas Mamonas, a software engineer writing about technology, programming, and other interests.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="{{ .Permalink }}">

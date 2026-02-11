@@ -27,14 +27,17 @@ keywords = "Konstantinas Mamonas, personal blog, software engineering, technolog
         identifier = "home"
         name = "Home"
         url = "/"
-      [[languages.en.menu.main]]
-        identifier = "categories"
-        name = "Categories"
-        url = "/categories"
+        weight = 1
       [[languages.en.menu.main]]
         identifier = "about"
         name = "About"
         url = "/about"
+        weight = 2
+      [[languages.en.menu.main]]
+        identifier = "categories"
+        name = "Categories"
+        url = "/categories"
+        weight = 3
 
 [markup]
   [markup.goldmark]
@@ -43,10 +46,6 @@ keywords = "Konstantinas Mamonas, personal blog, software engineering, technolog
 
   [markup.highlight]
     noClasses = false
-
-[services]
-  [services.googleAnalytics]
-    id = "G-F0SL3JQ5SY"
 
 [minify]
   minifyOutput = true
