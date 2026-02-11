@@ -51,11 +51,20 @@
     color: var(--color);
   }
 
-  &__date {
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 0.85rem;
     color: color-mix(in srgb, var(--color), transparent 40%);
-    display: block;
     margin-bottom: 8px;
+  }
+
+  &__reading-time {
+    &::before {
+      content: "\00B7";
+      margin-right: 8px;
+    }
   }
 
   &__description {

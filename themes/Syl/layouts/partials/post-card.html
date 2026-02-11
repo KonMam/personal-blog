@@ -5,7 +5,10 @@
         <span class="post-card__badge">{{ index . 0 }}</span>
       {{ end }}
       <h2 class="post-card__title">{{ .Title | markdownify }}</h2>
-      <time class="post-card__date">{{ .Date.Format "Jan 2, 2006" }}</time>
+      <div class="post-card__meta">
+        <time class="post-card__date">{{ .Date.Format "Jan 2, 2006" }}</time>
+        <span class="post-card__reading-time">{{ .ReadingTime }} min read</span>
+      </div>
       {{ if .Description }}
         <p class="post-card__description">{{ .Description | plainify | truncate 120 }}</p>
       {{ end }}
