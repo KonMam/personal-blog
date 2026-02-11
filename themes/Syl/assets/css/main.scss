@@ -1,5 +1,6 @@
 html {
   box-sizing: border-box;
+  scroll-behavior: smooth;
 }
 
 *,
@@ -312,4 +313,32 @@ sup {
   justify-content: center;
   align-items: center;
   gap: 20px;
+}
+
+.not-found {
+  text-align: center;
+  padding: 80px 0;
+
+  &__code {
+    font-size: 4rem;
+    font-weight: 700;
+    margin: 0 0 8px;
+    color: var(--color);
+  }
+
+  &__message {
+    font-size: 1.1rem;
+    color: color-mix(in srgb, var(--color), transparent 40%);
+    margin: 0 0 24px;
+  }
+
+  &__link {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 0.95rem;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }

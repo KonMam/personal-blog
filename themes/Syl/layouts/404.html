@@ -1,10 +1,7 @@
 {{ define "main" }}
-  <div class="post">
-    <h1 class="post-title">404 — {{ $.Site.Params.missingContentMessage | default "Page not found..." }}</h1>
-
-    <div class="post-content">
-      <a href="{{ "/" | absURL }}">{{ $.Site.Params.missingBackButtonLabel | default "Back to home page" }}&nbsp;→</a>
-    </div>
-
-  </div>
+<div class="not-found">
+  <h1 class="not-found__code">404</h1>
+  <p class="not-found__message">This page doesn't exist.</p>
+  <a href="{{ "/" | absURL }}" class="not-found__link">Back to home &rarr;</a>
+</div>
 {{ end }}
