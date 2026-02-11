@@ -7,9 +7,11 @@ Personal blog at [mamonas.dev](https://mamonas.dev/) built with Hugo. Source cod
 ## Tech Stack
 
 - **Hugo** v0.154.4 extended (darwin/arm64, Homebrew)
-- **Theme:** Syl (custom theme, modified from re-terminal)
+- **Theme:** Syl (custom theme, heavily modernized from re-terminal)
+- **Font:** Inter (Google Fonts)
 - **Hosting:** Cloudflare Pages
-- **Analytics:** Google Analytics (`G-F0SL3JQ5SY`)
+- **Analytics:** Cloudflare Web Analytics (server-side, no client JS)
+- **Comments:** giscus (GitHub Discussions-backed)
 
 ## Key Commands
 
@@ -25,13 +27,15 @@ hugo                     # Build to ./public
 ```
 ├── hugo.toml              # Site configuration
 ├── content/
-│   ├── about.md           # About page
+│   ├── about.md           # About page (uses layout = "about")
 │   └── posts/             # Blog posts (page bundles)
 │       └── my-post/
 │           ├── index.md   # Post content
-│           ├── cover.png  # Cover image
 │           └── *.png/mp4  # Post assets (images, videos)
 ├── layouts/
+│   ├── about.html         # Custom About page layout
+│   ├── _default/
+│   │   └── terms.html     # Project-level taxonomy list override
 │   └── shortcodes/        # Project-level shortcode overrides
 │       ├── image.html     # WebP-converting image shortcode
 │       └── lazy-video.html # Lazy-loaded autoplay video
@@ -40,23 +44,38 @@ hugo                     # Build to ./public
 │   ├── assets/
 │   │   ├── css/           # SCSS source files
 │   │   │   ├── style.scss       # Entry point (imports all partials)
-│   │   │   ├── variables.scss   # Dark theme CSS vars + breakpoints
-│   │   │   ├── variables-light.scss
-│   │   │   ├── color/           # Color variants (blue, orange, red, green, pink, paper)
-│   │   │   ├── main.scss, post.scss, header.scss, ...
-│   │   │   └── syntax.scss, prism.scss, code.scss
+│   │   │   ├── variables.scss   # Dark + light theme vars (data-theme), card vars, breakpoints
+│   │   │   ├── color/           # Color variants (blue, orange, red, green, pink)
+│   │   │   ├── main.scss        # Base styles, typography, blockquotes, tables, code, container
+│   │   │   ├── post.scss        # Post title, meta, tags (pills), content links, cover
+│   │   │   ├── cards.scss       # Homepage/listing card grid
+│   │   │   ├── header.scss      # Header layout, inline nav, theme toggle
+│   │   │   ├── menu.scss        # Mobile menu dropdown
+│   │   │   ├── logo.scss        # Logo styling
+│   │   │   ├── about.scss       # About page styles
+│   │   │   ├── terms.scss       # Taxonomy list (pill cards)
+│   │   │   ├── pagination.scss  # Post navigation
+│   │   │   ├── footer.scss      # Footer (centered)
+│   │   │   ├── prism.scss       # Prism syntax highlighting + light mode overrides
+│   │   │   └── syntax.scss, code.scss, buttons.scss, ...
 │   │   └── js/
-│   │       ├── banner.js
-│   │       └── menu.js
+│   │       ├── menu.js          # Mobile menu toggle
+│   │       ├── theme-toggle.js  # Dark/light mode toggle with localStorage
+│   │       └── banner.js        # Dismissible banner
 │   ├── layouts/
 │   │   ├── _default/
-│   │   │   ├── baseof.html   # Root template (head, body, container)
-│   │   │   ├── index.html    # Homepage
+│   │   │   ├── baseof.html   # Root template (head, body, container, data-theme)
+│   │   │   ├── index.html    # Homepage (card grid, no title)
 │   │   │   ├── single.html   # Single post
-│   │   │   ├── list.html     # List pages
-│   │   │   ├── term.html     # Taxonomy term
-│   │   │   └── terms.html    # Taxonomy list
-│   │   ├── partials/         # header, footer, head, menu, cover, pagination, ...
+│   │   │   ├── list.html     # List pages (card grid)
+│   │   │   └── term.html     # Taxonomy term (card grid)
+│   │   ├── partials/
+│   │   │   ├── head.html     # Meta tags, FOUC prevention, fonts, OG tags, stylesheets
+│   │   │   ├── header.html   # Logo + inline nav + theme toggle (single row)
+│   │   │   ├── footer.html   # Copyright + social icons + JS bundle
+│   │   │   ├── post-card.html # Card partial (badge, title, date, description — no covers)
+│   │   │   ├── comments.html  # giscus integration with theme sync
+│   │   │   └── cover, pagination, mobile-menu, logo, ...
 │   │   └── shortcodes/       # Theme shortcodes (image, figure, code, prismjs)
 │   └── 404.html
 ├── static/                # Static assets served as-is
@@ -67,11 +86,52 @@ hugo                     # Build to ./public
 
 ## Configuration (hugo.toml)
 
-- **Theme color:** `blue` (options: orange, blue, red, green, pink, paper)
-- **Taxonomies:** `tags` and `categories` (auto-generates `/categories/` and `/tags/` listing pages)
-- **Menu:** Home (`/`), Categories (`/categories`), About (`/about`)
-- **Markup:** Goldmark with `unsafe = true` (allows raw HTML in markdown), CSS-based syntax highlighting (`noClasses = false`)
+- **Theme color:** `blue` (accent: `#6C8CFF` muted indigo)
+- **Taxonomies:** `tags` and `categories`
+- **Menu:** Home (weight 1), About (weight 2), Categories (weight 3) — rendered inline in header
+- **Markup:** Goldmark with `unsafe = true`, CSS-based syntax highlighting (`noClasses = false`)
 - **Minification:** Enabled for output HTML and CSS
+
+## Design System
+
+### Dark/Light Mode
+
+- Controlled via `data-theme` attribute on `<html>` (`dark` or `light`)
+- FOUC prevention: inline `<script>` in `<head>` reads `localStorage('theme')` or `prefers-color-scheme` before paint
+- Toggle button in header with sun/moon SVG icons
+- `theme-toggle.js` handles click, localStorage persistence, and OS preference changes
+- All colors use CSS custom properties defined in `variables.scss` under `:root` (dark) and `[data-theme="light"]`
+- giscus comments theme syncs via `postMessage` API with a `MutationObserver`
+
+### Color Palette
+
+- **Accent:** `#6C8CFF` (muted indigo/periwinkle)
+- **Dark background:** `#111118`
+- **Dark text:** `#b8bcc8` (neutral cool gray)
+- **Light background:** `#ffffff`
+- **Light text:** `#1a1a2e` (dark navy)
+- **Borders:** `rgba(255,255,255,0.08)` dark / `rgba(0,0,0,0.08)` light
+
+### Typography
+
+- **Font:** Inter (400, 500, 600, 700) via Google Fonts
+- **Body:** 1rem, line-height 1.7
+- **Headings:** h1 1.5rem → h2 1.25rem → h3 1.1rem → h4-h6 1rem
+- **Logo:** 1.2rem bold
+- **Inline code:** monospace, subtle `var(--border-color)` background, rounded corners
+- **Code blocks:** subtle background fill, 1px border, `border-radius: 8px`
+
+### Components
+
+- **Cards:** used on homepage, list, and term pages. Background `var(--card-background)`, 1px border, 8px radius, hover lift + shadow. Text-only (no cover images).
+- **Tags:** pill-style with rounded background, displayed on single post pages
+- **Terms:** flex-wrap grid of pill cards with post count
+- **Blockquotes:** `border-left: 3px solid var(--accent)`, no prompt symbol
+- **Tables:** solid borders with `var(--border-color)`, no accent coloring on headers
+- **Figcaptions:** italic, muted text — no background
+- **Article links:** accent colored with subtle underline, stronger on hover
+- **Post meta:** muted text with `·` (middle dot) separator
+- **Pagination:** card-style buttons with hover lift
 
 ## Content Authoring
 
@@ -88,13 +148,10 @@ Multi-line description used for SEO and post previews.
 """
 # Optional fields:
 # author = ""
-# cover = ""
-# coverCaption = ""
 # keywords = ["", ""]
-# showFullContent = false
 # readingTime = false
 # hideComments = false
-# color = ""  # per-post color override
+# layout = "about"  # for custom layouts
 +++
 ```
 
@@ -104,7 +161,6 @@ Each post lives in its own directory under `content/posts/`:
 ```
 content/posts/my-post-slug/
 ├── index.md    # Post content
-├── cover.png   # Cover image (referenced in front matter)
 └── *.png       # Images referenced via shortcodes
 ```
 
@@ -114,29 +170,11 @@ content/posts/my-post-slug/
 ```
 {{</* image src="my-image.png" alt="description" width="800" renderWidth="600" */>}}
 ```
-- `src`: filename in the page bundle
-- `width`: resize width for WebP conversion
-- `renderWidth`: displayed width (defaults to `width`)
 
 **`lazy-video`** — Lazy-loaded autoplay video:
 ```
 {{</* lazy-video mp4="video.mp4" width="600" */>}}
 ```
-
-## Theme Architecture (Syl)
-
-### Template Hierarchy
-
-`baseof.html` → defines the HTML shell with `{{ block "main" }}` and `{{ block "footer" }}`. Child templates (`index.html`, `single.html`, `list.html`) fill the `main` block.
-
-### SCSS Structure
-
-Entry point is `style.scss`, which conditionally imports `variables.scss` (dark) or `variables-light.scss` (paper theme), then all component partials. Color variants in `color/` override `--accent` via CSS custom properties. Breakpoints: `$phone: 684px`, `$tablet: 900px`.
-
-### JS Assets
-
-- `menu.js` — Mobile menu toggle
-- `banner.js` — Dismissible banner
 
 ## Deployment
 
@@ -148,3 +186,4 @@ Code is on GitHub (`git@github.com:KonMam/personal-blog.git`). Deployed via Clou
 - [Hugo Templating](https://gohugo.io/templates/)
 - [Cloudflare Pages](https://developers.cloudflare.com/pages/)
 - [Sass/SCSS Reference](https://sass-lang.com/documentation/)
+- [giscus](https://giscus.app/) — GitHub Discussions-backed comments
