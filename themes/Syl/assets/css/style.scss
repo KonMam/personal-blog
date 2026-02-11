@@ -1,10 +1,6 @@
 $centerTheme: {{ if $.Site.Params.CenterTheme }}center{{ else }}flex-start{{ end }};
 
-{{ if in (slice "paper") $.Site.Params.ThemeColor }}
-@import "variables-light";
-{{ else }}
 @import "variables";
-{{ end }}
 
 
 @import "buttons";
@@ -15,6 +11,7 @@ $centerTheme: {{ if $.Site.Params.CenterTheme }}center{{ else }}flex-start{{ end
 @import "logo";
 @import "main";
 @import "post";
+@import "cards";
 @import "pagination";
 @import "footer";
 @import "banner";

@@ -1,0 +1,14 @@
+<article class="post-card">
+  <a href="{{ .Permalink }}" class="post-card__link">
+    <div class="post-card__body">
+      {{ with .Params.categories }}
+        <span class="post-card__badge">{{ index . 0 }}</span>
+      {{ end }}
+      <h2 class="post-card__title">{{ .Title | markdownify }}</h2>
+      <time class="post-card__date">{{ .Date.Format "Jan 2, 2006" }}</time>
+      {{ if .Description }}
+        <p class="post-card__description">{{ .Description | plainify | truncate 120 }}</p>
+      {{ end }}
+    </div>
+  </a>
+</article>

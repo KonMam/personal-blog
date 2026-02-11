@@ -17,18 +17,34 @@
     display: flex;
     flex: 1;
 
-    &:after {
-      content: '';
-      background: repeating-linear-gradient(90deg, var(--accent), var(--accent) 2px, transparent 0, transparent 10px);
-      display: block;
-      width: 100%;
-      right: 10px;
-    }
-
     a {
       flex: 0 0 auto;
       max-width: 100%;
       text-decoration: none;
     }
+  }
+}
+
+button.theme-toggle {
+  background: none;
+  border: none;
+  color: var(--color);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  margin-left: 10px;
+  box-shadow: none;
+
+  &:hover {
+    background: none;
+    opacity: 1;
+  }
+
+  svg {
+    display: block;
   }
 }

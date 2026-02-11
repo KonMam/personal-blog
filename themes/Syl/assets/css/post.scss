@@ -30,13 +30,13 @@
   }
 
   &-meta {
-    font-size: 1rem;
+    font-size: 0.9rem;
     margin-bottom: 10px;
-    color: color-mix(in srgb, var(--accent), transparent 30%);
+    color: color-mix(in srgb, var(--color), transparent 40%);
 
     & > *:not(:first-child) {
       &::before {
-        content: "::";
+        content: "\00B7";
         display: inline-block;
         margin: 0 8px;
       }
@@ -44,21 +44,9 @@
   }
 
   &-title {
-    --border: 3px dotted var(--accent);
-    position: relative;
-    color: var(--accent);
+    color: var(--color);
     margin: 0 0 15px;
-    padding-bottom: 15px;
-    border-bottom: var(--border);
-
-    &:after {
-      content: '';
-      position: absolute;
-      bottom: 2px;
-      display: block;
-      width: 100%;
-      border-bottom: var(--border);
-    }
+    padding-bottom: 0;
 
     a {
       text-decoration: none;
@@ -66,46 +54,49 @@
   }
 
   &-tags {
-    display: block;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
     margin-bottom: 20px;
-    font-size: 1rem;
-    opacity: .5;
 
     a {
       text-decoration: none;
+      font-size: 0.8rem;
+      padding: 3px 10px;
+      border-radius: 99px;
+      background: var(--border-color);
+      color: color-mix(in srgb, var(--color), transparent 20%);
+      transition: background 0.2s;
+
+      &:hover {
+        background: color-mix(in srgb, var(--accent), transparent 80%);
+      }
     }
   }
 
   &-content {
     margin-top: 30px;
-    
+
     & a {
-      color: var(--article-link-color);
+      color: var(--accent);
+      text-decoration-color: color-mix(in srgb, var(--accent), transparent 60%);
+      text-underline-offset: 2px;
+
+      &:hover {
+        text-decoration-color: var(--accent);
+      }
     }
   }
 
   &-cover {
-    border: 20px solid var(--accent);
+    border: none;
     background: transparent;
     margin: 40px 0;
-    padding: 20px;
-
-    @media (max-width: $phone) {
-      padding: 10px;
-      border-width: 10px;
-    }
+    padding: 0;
+    border-radius: 8px;
+    overflow: hidden;
   }
 
-  ul {
-    list-style: none;
-
-    li:not(:empty):before {
-      content: '-';
-      position: absolute;
-      left: -20px;
-      color: var(--accent);
-    }
-  }
 }
 
 .post--regulation {
@@ -136,7 +127,8 @@ h1:hover a, h2:hover a, h3:hover a, h4:hover a {
 }
 
 .footnotes {
-  color: color-mix(in srgb, var(--accent), transparent 50%);
+  color: color-mix(in srgb, var(--color), transparent 40%);
+  font-size: 0.9rem;
 }
 
 figure:has(.post-cover) {

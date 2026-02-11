@@ -6,12 +6,13 @@
         {{ . }}
       </div>
     {{ end }}
-    <ul>
+    <div class="terms-grid">
       {{ range .Data.Terms.Alphabetical }}
-        <li>
-          <a class="terms-title" href="{{ .Page.RelPermalink }}">{{ .Page.Title | default .Page.Name }} [{{ .Count }}]</a>
-        </li>
+        <a class="terms-card" href="{{ .Page.RelPermalink }}">
+          <span class="terms-card__name">{{ .Page.Title | default .Page.Name }}</span>
+          <span class="terms-card__count">{{ .Count }}</span>
+        </a>
       {{ end }}
-    </ul>
+    </div>
   </div>
 {{ end }}

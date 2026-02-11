@@ -11,9 +11,9 @@ html {
 body {
   margin: 0;
   padding: 0;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   font-size: 1rem;
-  line-height: 1.54;
+  line-height: 1.7;
   letter-spacing: -0.02em;
   background-color: var(--background);
   color: var(--color);
@@ -106,12 +106,12 @@ figure {
   }
 
   figcaption {
-    font-size: 14px;
-    padding: 5px 10px;
+    font-size: 0.85rem;
+    padding: 8px 0;
     margin-top: 5px;
-    background: var(--accent);
-    color: var(--accent-contrast-color);
-    /* opacity: .8; */
+    background: none;
+    color: color-mix(in srgb, var(--color), transparent 40%);
+    font-style: italic;
 
     &.left {
       text-align: left;
@@ -130,11 +130,12 @@ figure {
 code, kbd {
   font-family: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
   font-feature-settings: normal;
-  background: color-mix(in srgb, var(--accent), transparent 80%);
-  color: var(--accent);
-  padding: 1px 6px;
+  background: var(--border-color);
+  color: inherit;
+  padding: 2px 6px;
   margin: 0 2px;
-  font-size: .95rem;
+  border-radius: 4px;
+  font-size: .9rem;
 
   code, kbd {
     background: transparent;
@@ -144,12 +145,13 @@ code, kbd {
 }
 
 pre {
-  background: transparent !important;
+  background: color-mix(in srgb, var(--color), transparent 95%) !important;
   padding: 20px;
   margin: 10px 0;
-  font-size: .95rem !important;
+  font-size: .9rem !important;
   overflow: auto;
-  border: 1px solid rgba(255, 255, 255, .1);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
 
   + pre {
     border-top: 0;
@@ -171,10 +173,9 @@ pre {
 }
 
 blockquote {
-  border-top: 1px solid var(--accent);
-  border-bottom: 1px solid var(--accent);
+  border-left: 3px solid var(--accent);
   margin: 40px 0;
-  padding: 25px;
+  padding: 0 25px;
 
   @media (max-width: $phone) {
     padding-right: 0;
@@ -188,37 +189,13 @@ blockquote {
     margin-bottom: 0;
   }
 
-  p {
-    position: relative;
-  }
-
-  p:first-of-type:before {
-    content: '>';
-    display: block;
-    position: absolute;
-    left: -25px;
-    color: var(--accent);
-  }
-
   &.twitter-tweet {
     position: relative;
     background: color-mix(in srgb, var(--accent), transparent 90%);
     font: inherit;
     color: inherit;
     border: 1px solid var(--accent);
-    padding-top: 60px;
-
-    p:before {
-      content: '';
-    }
-
-    &:before {
-      content: '> From Twitter:';
-      position: absolute;
-      top: 20px;
-      color: var(--accent);
-      font-weight: bold;
-    }
+    border-left: 3px solid var(--accent);
 
     a {
       color: var(--accent);
@@ -236,12 +213,13 @@ table {
 table,
 th,
 td {
-  border: 1px dashed var(--accent);
+  border: 1px solid var(--border-color);
   padding: 10px;
 }
 
 th {
-  color: var(--accent);
+  color: var(--color);
+  font-weight: 600;
 }
 
 ul,
@@ -297,10 +275,8 @@ mark {
   display: flex;
   flex-direction: column;
   padding: 40px;
-  max-width: 864px;
+  max-width: 960px;
   min-height: 100vh;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-
   &.full,
   &.center {
     border: none;
