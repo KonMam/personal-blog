@@ -1,9 +1,6 @@
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 
 {{/* SEO Meta Tags */}}
 <meta name="description" content="{{ if .IsHome }}{{ $.Site.Params.Subtitle }}{{ else if .Description}}{{ .Description | plainify }}{{ else }}{{ .Summary | plainify }}{{ end }}" />
@@ -45,7 +42,10 @@
 {{- end }}
 
 {{/* Favicon */}}
+<link rel="icon" type="image/svg+xml" href="{{ "/favicon.svg" | absURL }}">
 <link rel="icon" type="image/png" sizes="32x32" href="{{ "/img/favicon-32x32.png" | absURL }}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ "/img/favicon-16x16.png" | absURL }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ "/img/apple-touch-icon.png" | absURL }}">
 
 {{/* Open Graph Data */}}
 <meta property="og:locale" content="{{ $.Site.Language.Lang }}" />
