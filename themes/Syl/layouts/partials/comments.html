@@ -1,25 +1,34 @@
-<div class="giscus-wrapper">
-  <script src="https://giscus.app/client.js"
-          data-repo="KonMam/personal-blog"
-          data-repo-id="R_kgDOPgBYvg"
-          data-category="Announcements"
-          data-category-id="DIC_kwDOPgBYvs4C2PNg"
-          data-mapping="pathname"
-          data-strict="1"
-          data-reactions-enabled="1"
-          data-emit-metadata="0"
-          data-input-position="bottom"
-          data-theme="dark"
-          data-lang="en"
-          crossorigin="anonymous"
-          async>
-  </script>
-</div>
+<div class="giscus-wrapper" id="comments"></div>
 <script>
 (function() {
+  var loaded = false;
+  var wrapper = document.getElementById('comments');
+
   function getGiscusTheme() {
     return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
   }
+
+  function loadGiscus() {
+    if (loaded) return;
+    loaded = true;
+    var script = document.createElement('script');
+    script.src = 'https://giscus.app/client.js';
+    script.setAttribute('data-repo', 'KonMam/personal-blog');
+    script.setAttribute('data-repo-id', 'R_kgDOPgBYvg');
+    script.setAttribute('data-category', 'Announcements');
+    script.setAttribute('data-category-id', 'DIC_kwDOPgBYvs4C2PNg');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '1');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', getGiscusTheme());
+    script.setAttribute('data-lang', 'en');
+    script.setAttribute('crossorigin', 'anonymous');
+    script.async = true;
+    wrapper.appendChild(script);
+  }
+
   function setGiscusTheme(theme) {
     var iframe = document.querySelector('iframe.giscus-frame');
     if (iframe) {
@@ -29,12 +38,22 @@
       );
     }
   }
-  // Watch for theme changes
-  var observer = new MutationObserver(function() {
+
+  // Lazy load when user scrolls near comments
+  var observer = new IntersectionObserver(function(entries) {
+    if (entries[0].isIntersecting) {
+      loadGiscus();
+      observer.disconnect();
+    }
+  }, { rootMargin: '200px' });
+  observer.observe(wrapper);
+
+  // Sync theme changes
+  var themeObserver = new MutationObserver(function() {
     setGiscusTheme(getGiscusTheme());
   });
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-  // Set initial theme once giscus loads
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
   window.addEventListener('message', function(e) {
     if (e.origin === 'https://giscus.app' && e.data && e.data.giscus) {
       setGiscusTheme(getGiscusTheme());

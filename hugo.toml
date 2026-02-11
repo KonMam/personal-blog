@@ -1,4 +1,5 @@
 baseURL = 'https://mamonas.dev/'
+enableRobotsTXT = true
 languageCode = 'en-us'
 title = 'Konstantinas Mamonas - Personal Blog'
 theme = 'Syl'
