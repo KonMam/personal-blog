@@ -3,6 +3,7 @@ title = "Which Compression Saves the Most Storage $? (gzip, Snappy, LZ4, zstd)"
 date = "2025-08-18T22:04:52+03:00"
 description = "A detailed comparison of gzip, Snappy, LZ4, and zstd compression algorithms, analyzing their impact on storage savings, performance, and cost based on real-world data benchmarks."
 tags = ["compression", "benchmarking", "data-engineering"]
+categories = ["tech"]
 draft = false
 +++
 

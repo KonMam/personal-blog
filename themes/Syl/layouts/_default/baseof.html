@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ $.Site.Language }}">
+<html lang="{{ $.Site.Language }}" data-theme="dark">
 <head>
   {{ block "title" . }}
     <title>{{ if .IsHome }}{{ $.Site.Title }}{{ else }}{{ .Title }} :: {{ $.Site.Title }}{{ end }}</title>
@@ -30,7 +30,7 @@
 
 {{ $container := cond ($.Site.Params.FullWidthTheme | default false) "container full" (cond ($.Site.Params.CenterTheme | default true) "container center" "container") }}
 
-<div class="{{- $container -}}{{- cond ($.Site.Params.oneHeadingSize | default true) " headings--one-size" "" }}">
+<div class="{{- $container -}}">
 
   {{ partial "header.html" . }}
 

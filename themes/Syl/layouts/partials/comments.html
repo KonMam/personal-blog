@@ -1,8 +1,63 @@
-<!--
-To add comments section, please create `layouts/partials/comments.html` in your
-Hugo directory and insert:
+<div class="giscus-wrapper" id="comments"></div>
+<script>
+(function() {
+  var loaded = false;
+  var wrapper = document.getElementById('comments');
 
-{{ template "_internal/disqus.html" . }}
+  function getGiscusTheme() {
+    return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  }
 
-or whatever comment engine you want -> https://gohugo.io/content-management/comments/#readout
--->
+  function loadGiscus() {
+    if (loaded) return;
+    loaded = true;
+    var script = document.createElement('script');
+    script.src = 'https://giscus.app/client.js';
+    script.setAttribute('data-repo', 'KonMam/personal-blog');
+    script.setAttribute('data-repo-id', 'R_kgDOPgBYvg');
+    script.setAttribute('data-category', 'Announcements');
+    script.setAttribute('data-category-id', 'DIC_kwDOPgBYvs4C2PNg');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '1');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', getGiscusTheme());
+    script.setAttribute('data-lang', 'en');
+    script.setAttribute('crossorigin', 'anonymous');
+    script.async = true;
+    wrapper.appendChild(script);
+  }
+
+  function setGiscusTheme(theme) {
+    var iframe = document.querySelector('iframe.giscus-frame');
+    if (iframe) {
+      iframe.contentWindow.postMessage(
+        { giscus: { setConfig: { theme: theme } } },
+        'https://giscus.app'
+      );
+    }
+  }
+
+  // Lazy load when user scrolls near comments
+  var observer = new IntersectionObserver(function(entries) {
+    if (entries[0].isIntersecting) {
+      loadGiscus();
+      observer.disconnect();
+    }
+  }, { rootMargin: '200px' });
+  observer.observe(wrapper);
+
+  // Sync theme changes
+  var themeObserver = new MutationObserver(function() {
+    setGiscusTheme(getGiscusTheme());
+  });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  window.addEventListener('message', function(e) {
+    if (e.origin === 'https://giscus.app' && e.data && e.data.giscus) {
+      setGiscusTheme(getGiscusTheme());
+    }
+  });
+})();
+</script>

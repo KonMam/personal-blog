@@ -1,7 +1,8 @@
 +++ 
 title = "Building a Generative Art System in Go" 
 date = "2025-08-26T21:06:08+03:00" 
-tags = ["go", "generative art"] 
+tags = ["go", "generative art"]
+categories = ["tech"]
 description = """
 Generative art shifts the focus from drawing images to designing systems. Instead of sketching directly, you define algorithms, randomness, and rules, then let the system produce the output. For me what makes it interesting is the fact that you don’t just create one piece, but a machine capable of generating infinite variations.
 """

@@ -11,24 +11,70 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 24px;
   }
 
   &__logo {
     display: flex;
-    flex: 1;
-
-    &:after {
-      content: '';
-      background: repeating-linear-gradient(90deg, var(--accent), var(--accent) 2px, transparent 0, transparent 10px);
-      display: block;
-      width: 100%;
-      right: 10px;
-    }
+    flex-shrink: 0;
 
     a {
       flex: 0 0 auto;
       max-width: 100%;
       text-decoration: none;
     }
+  }
+
+  &__nav {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-left: auto;
+
+    a {
+      text-decoration: none;
+      font-size: 0.9rem;
+      color: var(--color);
+      opacity: 0.6;
+      transition: opacity 0.2s;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: $phone) {
+      display: none;
+    }
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+}
+
+button.theme-toggle {
+  background: none;
+  border: none;
+  color: var(--color);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  margin-left: 10px;
+  box-shadow: none;
+
+  &:hover {
+    background: none;
+    opacity: 1;
+  }
+
+  svg {
+    display: block;
   }
 }

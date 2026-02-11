@@ -3,6 +3,7 @@ title = "DuckDB: When You Don’t Need Spark (But Still Need SQL)"
 date = "2025-08-18T21:43:23+03:00"
 description = "Explore DuckDB, an in-process SQL OLAP database, as a powerful alternative to Spark for local data analytics. Learn how it achieves high performance, manages large datasets, and its ideal use cases for data engineering."
 tags = ["duckdb", "sql", "data-engineering"]
+categories = ["tech"]
 draft = false
 +++
 

@@ -1,5 +1,7 @@
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+<link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
 
 {{/* SEO Meta Tags */}}
 <meta name="description" content="{{ if .IsHome }}{{ $.Site.Params.Subtitle }}{{ else if .Description}}{{ .Description | plainify }}{{ else }}{{ .Summary | plainify }}{{ end }}" />
@@ -15,9 +17,6 @@
   <meta name="robots" content="index, follow" />
 {{ end }}
 
-<!-- {{/* Google Analytics */}} -->
-<!-- {{ partial "google_analytics.html" . }} -->
-
 {{/* Theme Stylesheets */}}
 {{ $defaultStylesTemplate := resources.Get "css/style.scss" }}
 {{ $defaultStyles := $defaultStylesTemplate | resources.ExecuteAsTemplate "main.scss" .}}
@@ -30,7 +29,7 @@
 {{ else }}
   {{ $colorCss := resources.Get (printf "css/color/%s.scss" ($.Site.Params.ThemeColor | default "blue")) }}
   {{ $css := slice $colorCss $defaultStyles | resources.Concat "css/base.scss" }}
-  {{ $options := (dict "transpiler" "libsass" "targetPath" "styles.css" "outputStyle" "compressed" "enableSourceMap" true "precision" 6 "includePaths" (slice "node_modules")) }}
+  {{ $options := (dict "transpiler" "libsass" "targetPath" "styles.css" "outputStyle" "compressed" "enableSourceMap" false "precision" 6 "includePaths" (slice "node_modules")) }}
   {{ $styles := $css | css.Sass $options }}
   <link rel="stylesheet" href="{{ $styles.Permalink }}">
 {{ end }}
@@ -44,7 +43,10 @@
 {{- end }}
 
 {{/* Favicon */}}
+<link rel="icon" type="image/svg+xml" href="{{ "/favicon.svg" | absURL }}">
 <link rel="icon" type="image/png" sizes="32x32" href="{{ "/img/favicon-32x32.png" | absURL }}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ "/img/favicon-16x16.png" | absURL }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ "/img/apple-touch-icon.png" | absURL }}">
 
 {{/* Open Graph Data */}}
 <meta property="og:locale" content="{{ $.Site.Language.Lang }}" />
@@ -89,9 +91,3 @@
 {{ with .OutputFormats.Get "json" }}
   <link href="{{ .RelPermalink }}" rel="alternate" type="application/json" title="{{ $.Site.Title }}" />
 {{ end }}
-
-<meta name="description" content="The personal blog of Konstantinas Mamonas, a software engineer writing about technology, programming, and other interests.">
-<meta property="og:title" content="Konstantinas Mamonas - Personal Blog">
-<meta property="og:description" content="The personal blog of Konstantinas Mamonas, a software engineer writing about technology, programming, and other interests.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="{{ .Permalink }}">

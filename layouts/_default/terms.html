@@ -1,0 +1,18 @@
+{{ define "main" }}
+  <div class="terms">
+    <h1>{{ .Title }}</h1>
+    {{ with .Content }}
+      <div class="index-content">
+        {{ . }}
+      </div>
+    {{ end }}
+    <div class="terms-grid">
+      {{ range .Data.Terms.Alphabetical }}
+        <a class="terms-card" href="{{ .Page.RelPermalink }}">
+          <span class="terms-card__name">{{ .Page.Title | default .Page.Name }}</span>
+          <span class="terms-card__count">{{ .Count }}</span>
+        </a>
+      {{ end }}
+    </div>
+  </div>
+{{ end }}
