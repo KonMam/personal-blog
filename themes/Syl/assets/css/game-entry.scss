@@ -50,11 +50,13 @@
   }
 
   @media (max-width: $phone) {
+    flex-direction: column;
     gap: 1rem;
     padding: 1rem;
 
     &__cover {
-      width: 100px;
+      width: 40%;
+      align-self: center;
     }
 
     &__title {
