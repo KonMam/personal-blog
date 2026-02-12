@@ -1,0 +1,64 @@
+.game-entry {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  background: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  transition: box-shadow 0.2s;
+
+  &__cover {
+    flex-shrink: 0;
+    width: 150px;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: 6px;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__title {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    font-size: 1.25rem;
+  }
+
+  &__playtime {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--accent);
+
+    &::before {
+      content: "\00B7";
+      margin: 0 6px;
+    }
+  }
+
+  @media (max-width: $phone) {
+    gap: 1rem;
+    padding: 1rem;
+
+    &__cover {
+      width: 100px;
+    }
+
+    &__title {
+      font-size: 1.1rem;
+    }
+  }
+}

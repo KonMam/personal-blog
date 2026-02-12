@@ -1,0 +1,12 @@
+<div class="game-entry">
+  <div class="game-entry__cover">
+    {{ $res := .Page.Resources.GetMatch (.Get "cover") }}
+    {{ with $res }}
+      <img src="{{ .RelPermalink }}" alt="{{ $.Get "title" }} cover art" loading="lazy" width="150">
+    {{ end }}
+  </div>
+  <div class="game-entry__body">
+    <h3 class="game-entry__title">{{ .Get "title" }}{{ with .Get "playtime" }} <span class="game-entry__playtime">{{ . }}</span>{{ end }}</h3>
+    {{ .Inner | markdownify }}
+  </div>
+</div>
