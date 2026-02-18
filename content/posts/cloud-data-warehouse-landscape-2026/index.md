@@ -24,6 +24,34 @@ draft = true
 [data-theme="dark"] .platform-logo {
   filter: brightness(0) invert(1);
 }
+details.note {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 16px 0 24px;
+  background: color-mix(in srgb, var(--color), transparent 97%);
+}
+details.note summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--color), transparent 35%);
+  user-select: none;
+  list-style: none;
+}
+details.note summary::before {
+  content: "▶ ";
+  font-size: 0.7rem;
+}
+details.note[open] summary::before {
+  content: "▼ ";
+}
+details.note p {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--color), transparent 30%);
+  margin: 12px 0 0;
+  line-height: 1.6;
+}
 </style>
 
 A few years ago, picking a cloud data warehouse was not much of a decision. Snowflake if you could afford it, BigQuery if you were on Google Cloud, Redshift if you were deep in AWS. The rest were either niche or still maturing.
@@ -123,7 +151,7 @@ The oldest of the main three, and it shows in parts of its design.
 
 Redshift started as a provisioned MPP (Massively Parallel Processing) warehouse, meaning a distributed system where query work is split across many nodes simultaneously. You pick a node type and count, those nodes run around the clock, and you pay hourly whether you're using them or not. Amazon added Redshift Serverless more recently, billing by RPU-hour (Redshift Processing Unit, their measure of compute capacity) so you only pay for what you use.
 
-Redshift Spectrum lets you query S3 files directly without loading data into Redshift first. Lake Formation and Glue integration is tight if you're already deep in AWS. It's less polished than the other two, but reserved instance discounts on provisioned clusters can make it the cheapest option when your workload is stable and predictable.
+Redshift Spectrum lets you query S3 files directly without loading data into Redshift first. Lake Formation and Glue integration is tight if you're already deep in AWS. Reserved instance discounts on provisioned clusters can make it the cheapest option when your workload is stable and predictable. If you're not already committed to AWS, that's not a compelling reason to start here.
 
 Serverless pricing is $0.375/RPU-hour, provisioned pricing varies heavily by node type ([Redshift pricing](https://aws.amazon.com/redshift/pricing/)).
 
@@ -185,15 +213,17 @@ The trade-off is operational complexity: cluster sizing, autoscaling, caching st
 
 ## Cost at a Fixed Workload
 
-To make this concrete, I estimated monthly costs for a mid-sized workload:
+To get a directional sense of relative costs, I estimated monthly spend for a fixed workload. These are order-of-magnitude comparisons, not a budget. The actual number for your situation depends on runtime, concurrency, and configuration choices that vary significantly by team. Use these to understand which pricing models favor which workload patterns, not to forecast a bill.
+
+The assumed workload:
 
 - 10TB stored
 - 500GB scanned per day (~15TB/month)
 - ~100 queries/day, a mix of short lookups and longer aggregations
 
-For scan-priced systems (BigQuery), the primary cost driver is bytes processed. For warehouse-priced systems (Snowflake, Databricks, Redshift), it's wall-clock runtime × warehouse size. The same workload hits each pricing model differently.
+One thing that makes these hard to compare directly: for scan-priced systems (BigQuery), the primary cost driver is bytes processed; for warehouse-priced systems (Snowflake, Databricks, Redshift), it's wall-clock runtime × warehouse size. The same workload hits each pricing model differently.
 
-Prices sourced from each platform's public pricing pages as of early 2026. Verify before making any real decisions since these change.
+Prices from each platform's public pricing pages as of early 2026.
 
 | Platform | Storage/month | Compute/month | ~Total/month |
 |---|---|---|---|
@@ -205,7 +235,12 @@ Prices sourced from each platform's public pricing pages as of early 2026. Verif
 | ClickHouse Cloud | ~$50-100 | ~$100-200 | **$150-300** |
 | DuckDB | $0 | $0 | **$0** |
 
+<details class="note">
+<summary>How these numbers were estimated</summary>
+
 A few caveats worth being upfront about. The Snowflake estimate assumes an X-Small warehouse (1 credit/hour), auto-suspend enabled after a few minutes of inactivity, and single-user sequential queries. The wide range reflects whether your queries run for 2 hours a day or 8. Turn off auto-suspend and leave a warehouse running overnight, and the number climbs fast. Databricks ranges similarly, with the upper bound representing heavier or longer SQL sessions. BigQuery's compute number assumes clean date-partitioned tables: unpartitioned scans on large tables could multiply that several times. Databricks and DuckDB assume you bring your own S3. The Fabric estimate assumes F4 for light concurrency; F8 for a small analyst team with overlapping usage windows. ClickHouse Cloud storage costs vary by tier and replication setup, so the storage column there is a rough allocation. These are estimates, not quotes.
+
+</details>
 
 Concurrency changes the picture significantly. These estimates model one user running queries sequentially. In practice, if ten analysts are querying at the same time, Snowflake scales by adding warehouse clusters (each cluster multiplies cost), BigQuery absorbs concurrent queries but slot reservations become attractive, and DuckDB is single-process and will queue concurrent requests. What looks cheap at single-user scale can look very different under real team workloads.
 
@@ -235,11 +270,9 @@ The broader picture: BigQuery can significantly undercut Snowflake for bursty wo
 
 ## Final Thoughts
 
-The obvious-choice era is over. Iceberg made data portable, DuckDB made local analytics viable, and the managed platforms have all closed the gap on each other's weaknesses. The decision now is less about which platform is best and more about which trade-offs fit your workload, team, and existing cloud provider.
+The obvious-choice era is over. Iceberg made data portable, DuckDB made local analytics viable, and the managed platforms have each addressed their weakest spots. The decision now is less about which platform is best and more about which trade-offs fit your workload, team, and existing cloud provider.
 
-One thing I'd think about before picking anything is where your data lives and whether you want it to stay portable.
-
-Worth keeping an eye on: Iceberg adoption is accelerating and more engines are adding support. DuckLake is a new entrant in the open catalog space. If it matures, it could make DuckDB a viable multi-user data lake without touching a managed warehouse. The pressure is toward commoditized compute sitting on top of open storage, which is good for buyers and bad for anyone whose business model depends on proprietary formats.
+Worth keeping an eye on: Iceberg adoption is accelerating and more engines are adding support. The pressure is toward commoditized compute sitting on top of open storage, which is good for buyers and bad for anyone whose business model depends on proprietary formats.
 
 ---
 
