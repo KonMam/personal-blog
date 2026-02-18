@@ -28,7 +28,7 @@ draft = true
 
 A few years ago, picking a cloud data warehouse was not much of a decision. Snowflake if you could afford it, BigQuery if you were on Google Cloud, Redshift if you were deep in AWS. The rest were either niche or still maturing.
 
-That's no longer true. Open table formats like Apache Iceberg removed what used to be hard vendor lock-in, new entrants matured, and the "just use Snowflake" default has real challengers at every price point.
+That's no longer true. Open table formats like Apache Iceberg removed storage lock-in, new entrants matured, and the "just use Snowflake" default has real challengers at every price point.
 
 This post covers the main platforms, what they actually cost at a fixed workload, and what I'd pick for different situations.
 
@@ -36,11 +36,9 @@ This post covers the main platforms, what they actually cost at a fixed workload
 
 ## What Changed: The Open Format Shift
 
-To understand why there's suddenly so much competition, you need to understand what the big warehouses were selling.
-
 Traditional warehouses stored your data in their own proprietary formats. A columnar format stores data column-by-column rather than row-by-row, which makes aggregations much faster since queries only read the columns they need. Snowflake's format was good: automatic micro-partitioning (splitting data into small chunks with metadata about each, so queries can skip irrelevant chunks entirely), compression, clustering. But your data lived inside Snowflake. Migrating away was painful by design.
 
-[Apache Iceberg](https://iceberg.apache.org/) changed that. It's an open table format that sits on top of object storage like S3 or GCS (services like Amazon S3 that store files at massive scale, cheaply). Your data stays as [Parquet](https://parquet.apache.org/) files (an open columnar file format widely used in data engineering) in your own storage bucket, with an Iceberg metadata layer on top that adds schema evolution (adding or renaming columns without breaking existing queries), time travel (querying data as it looked at a past point in time), and partition pruning (skipping irrelevant data chunks during a query).
+[Apache Iceberg](https://iceberg.apache.org/) changed that. It's an open table format that sits on top of object storage (S3, GCS). Your data stays as [Parquet](https://parquet.apache.org/) files (an open columnar file format widely used in data engineering) in your own storage bucket, with an Iceberg metadata layer on top that adds schema evolution (adding or renaming columns without breaking existing queries), time travel (querying data as it looked at a past point in time), and richer metadata that enables engines to prune partitions and files efficiently.
 
 The key shift: any query engine that supports Iceberg can read your data. Snowflake, Databricks, Spark, Trino, DuckDB. You're not locked into one vendor's runtime.
 
@@ -99,11 +97,11 @@ Worth being precise about what Iceberg actually changes: it removes storage lock
 
 <h3 class="platform-heading"><img src="snowflake.svg" class="platform-logo" alt=""> Snowflake</h3>
 
-The benchmark everything else gets compared against.
+The benchmark most teams still compare against.
 
 Compute runs on virtual warehouses, clusters that spin up on demand, run your queries, and bill by the second. Storage is billed separately per TB per month. This separation of compute and storage was Snowflake's core innovation when it launched: you can scale processing power independently from how much data you hold, without paying for idle capacity overnight. Pricing is in credits, which map to warehouse size and runtime. Credits cost roughly $2-4 each depending on cloud and tier, with storage around $23/TB/month ([Snowflake pricing](https://www.snowflake.com/en/data-cloud/pricing-options/)).
 
-Notable features worth knowing: Data Sharing, which lets you share live data with other Snowflake accounts without copying it, and Snowpark, which lets you run Python or Java directly inside Snowflake for data transformation without moving data out.
+Two differentiators: Data Sharing (live data shared with other Snowflake accounts, no copies) and Snowpark (run Python or Java directly in-warehouse without moving data out).
 
 The main complaints are cost predictability (a forgotten running warehouse will run up your bill quietly) and the fact that even with Iceberg support added later, Snowflake's native format remains proprietary.
 
@@ -131,7 +129,7 @@ Serverless pricing is $0.375/RPU-hour, provisioned pricing varies heavily by nod
 
 <h3 class="platform-heading"><img src="databricks.svg" class="platform-logo" alt=""> Databricks</h3>
 
-Databricks started as a data engineering and machine learning platform, but Databricks SQL has matured into a genuine competitor to Snowflake and BigQuery for SQL analytics workloads. It's a Lakehouse platform, a term they coined for combining the flexibility of a data lake (raw files in object storage) with the structure and performance of a data warehouse. The pitch is one place for data engineering, SQL analytics, machine learning, and streaming, all built on top of Delta Lake stored in your own object storage.
+Databricks started as a data engineering and machine learning platform, but Databricks SQL has matured into a genuine competitor to Snowflake and BigQuery for SQL analytics workloads. It's a Lakehouse platform, a term they coined for combining the flexibility of a data lake (raw files in object storage) with the structure and performance of a data warehouse. The pitch is a single platform for all of it, built on top of Delta Lake in your own object storage.
 
 Where Databricks SQL excels is when SQL is one part of a broader workflow that already involves Spark jobs, ML pipelines, or streaming. The shared data model means you're not copying data between systems. For purely SQL-focused teams with no ML ambitions, Snowflake or BigQuery will feel more streamlined, but Databricks SQL is no longer an awkward choice for analytics on its own.
 
@@ -141,13 +139,13 @@ Compute is billed in DBUs (Databricks Units), which represent processing capacit
 
 Microsoft Fabric is the successor to Azure Synapse Analytics. Synapse remains supported, but Microsoft has shifted its investment and roadmap to Fabric. If you're starting fresh on Azure today, Fabric is where you'd land.
 
-Fabric is a unified analytics platform in the same mold as Databricks: one product covering a SQL data warehouse, data engineering, real-time analytics, data pipelines, and Power BI, all on top of OneLake (Microsoft's unified storage layer, built on Azure Data Lake Storage Gen2 using Delta Lake and Parquet underneath). The SQL component is called Warehouse, and it's a proper T-SQL data warehouse. Because OneLake uses Delta Lake, your data lives in an open format other engines can read.
+Fabric is a unified analytics platform in the same mold as Databricks: one product covering a SQL data warehouse, data engineering, real-time analytics, data pipelines, and Power BI, all on top of OneLake (Microsoft's unified storage layer, built on Azure Data Lake Storage Gen2 using Delta Lake and Parquet underneath). The SQL component is called Warehouse, and it's a proper T-SQL data warehouse. Because OneLake uses Delta Lake, your data is stored in Delta/Parquet on ADLS Gen2, though cross-engine interoperability depends on how you catalog and govern it.
 
-Power BI integration is tighter here than anywhere else, which makes sense given it's the same company. For organizations already on Microsoft 365, identity and permissions integrate cleanly.
+Power BI integration is tighter here than anywhere else. For organizations already on Microsoft 365, identity and permissions integrate cleanly.
 
-Pricing is capacity-based. You purchase an F SKU billed by the hour, and all Fabric workloads share that capacity pool. F2 (the smallest) runs roughly $0.36/hour, F8 around $1.44/hour. Capacity can be paused when not in use, which is important for cost control. OneLake storage runs ~$0.023/GB/month ([Microsoft Fabric pricing](https://azure.microsoft.com/en-us/pricing/details/microsoft-fabric/)).
+Pricing is capacity-based. You purchase an F SKU billed by the hour, and all Fabric workloads share that capacity pool. F2 starts at roughly $0.36/hour, F8 around $1.44/hour. Capacity can be paused when not in use. OneLake storage runs ~$0.023/GB/month ([Microsoft Fabric pricing](https://azure.microsoft.com/en-us/pricing/details/microsoft-fabric/)).
 
-The downside is that Fabric is still maturing. It's a large product surface and some features that were stable in Synapse are newer here. Navigating it takes time.
+The downside: Fabric is still maturing, and some features that were stable in Synapse are newer here.
 
 ---
 
@@ -155,7 +153,7 @@ The downside is that Fabric is still maturing. It's a large product surface and 
 
 <h3 class="platform-heading"><img src="duckdb.svg" class="platform-logo" alt=""> DuckDB</h3>
 
-DuckDB is the most interesting development in analytics in recent years. It's an in-process OLAP database: OLAP (Online Analytical Processing) means designed for complex aggregations over large datasets, and in-process means no separate server, no cluster to manage, just a library you embed in your application or a binary you run locally. It can query Parquet files, CSV, JSON, and Iceberg tables directly from S3.
+DuckDB is the most interesting development in analytics in recent years. It's an in-process analytical database: no server, no cluster to manage, just a binary you run locally or a library you embed in an application. It can query Parquet files, CSV, JSON, and Iceberg tables directly from S3.
 
 ```sql
 -- DuckDB querying S3 directly, no warehouse required
@@ -167,13 +165,13 @@ ORDER BY year;
 
 For datasets that fit in memory, it's shockingly fast. For datasets that exceed memory, it has out-of-core execution that spills to disk gracefully. And it's free.
 
-I'd reach for DuckDB first for exploratory analysis, local development, or smaller datasets. The moment you need multiple users querying a shared dataset concurrently, petabyte-scale data, or centralized access control, you'll want something else. Two options exist for pushing that ceiling: [MotherDuck](https://motherduck.com/) is the managed cloud version that adds collaborative features without you managing infrastructure; [DuckLake](https://ducklake.select/) is a new open catalog format from the DuckDB team that lets multiple DuckDB instances share and write to the same dataset with ACID guarantees and time travel. DuckLake is still early but it's the open-format path: you bring your own storage, no managed service required. But it's remarkable how far plain DuckDB gets you before any of that matters ([DuckDB](https://duckdb.org/)).
+I'd reach for DuckDB first for exploratory analysis, local development, or smaller datasets. The moment you need multiple users querying a shared dataset concurrently, petabyte-scale data, or centralized access control, you'll want something else. Two options exist for pushing that ceiling. [MotherDuck](https://motherduck.com/) is the managed cloud version that adds collaborative features without you managing infrastructure. [DuckLake](https://ducklake.select/) is a new open catalog format from the DuckDB team that lets multiple DuckDB instances share and write to the same dataset with ACID guarantees and time travel. DuckLake is still early but it's the open-format path: you bring your own storage, no managed service required ([DuckDB](https://duckdb.org/)).
 
 <h3 class="platform-heading"><img src="clickhouse.svg" class="platform-logo" alt=""> ClickHouse</h3>
 
 ClickHouse is an open-source columnar database built for a specific workload: aggregations over huge volumes of event or time-series data. User behavior analytics, metrics pipelines, log analysis. For that use case, it's the fastest option available. For general-purpose warehousing with varied query patterns, it's less of a natural fit.
 
-Available self-hosted (free, but you manage the infrastructure) or as [ClickHouse Cloud](https://clickhouse.com/pricing) (managed). Data modeling has a learning curve compared to standard SQL warehouses, and the ecosystem is less mature than the commercial options, but the performance ceiling is hard to beat for its target workload.
+Available self-hosted or as [ClickHouse Cloud](https://clickhouse.com/pricing) (managed). Data modeling has a learning curve and the ecosystem is less mature than the commercial options, but for its target workload nothing here is faster.
 
 <h3 class="platform-heading"><img src="trino.svg" class="platform-logo" alt=""> Trino</h3>
 
@@ -181,7 +179,7 @@ Trino (formerly PrestoSQL) is a distributed SQL query engine. It doesn't store d
 
 If you already have data in Parquet on S3 and don't want to pay to load it into a proprietary warehouse, Trino is a compelling option. It also supports federated queries, meaning a single SQL statement that joins data from S3, a Postgres database, and a Kafka topic simultaneously, something the commercial warehouses can't do natively.
 
-The trade-off is operational complexity. You're running a cluster yourself, or using a managed offering like [Starburst](https://www.starburst.io/). Less polished than the commercial options, more control over your data ([Trino](https://trino.io/)).
+The trade-off is operational complexity: cluster sizing, autoscaling, caching strategy, and the security controls you'd get out of the box on a managed warehouse. Self-host or use a managed offering like [Starburst](https://www.starburst.io/) ([Trino](https://trino.io/)).
 
 ---
 
@@ -192,6 +190,8 @@ To make this concrete, I estimated monthly costs for a mid-sized workload:
 - 10TB stored
 - 500GB scanned per day (~15TB/month)
 - ~100 queries/day, a mix of short lookups and longer aggregations
+
+For scan-priced systems (BigQuery), the primary cost driver is bytes processed. For warehouse-priced systems (Snowflake, Databricks, Redshift), it's wall-clock runtime × warehouse size. The same workload hits each pricing model differently.
 
 Prices sourced from each platform's public pricing pages as of early 2026. Verify before making any real decisions since these change.
 
@@ -205,7 +205,7 @@ Prices sourced from each platform's public pricing pages as of early 2026. Verif
 | ClickHouse Cloud | ~$50-100 | ~$100-200 | **$150-300** |
 | DuckDB | $0 | $0 | **$0** |
 
-A few caveats worth being upfront about. The Snowflake estimate assumes an X-Small warehouse (1 credit/hour), auto-suspend enabled after a few minutes of inactivity, and single-user sequential queries. The wide range reflects whether your queries run for 2 hours a day or 8. Turn off auto-suspend and leave a warehouse running overnight, and the number climbs fast. Databricks ranges similarly, with the upper bound representing heavier or longer SQL sessions. BigQuery's compute number assumes clean date-partitioned tables: unpartitioned scans on large tables could multiply that several times. Databricks and DuckDB assume you bring your own S3. These are rough estimates, not quotes.
+A few caveats worth being upfront about. The Snowflake estimate assumes an X-Small warehouse (1 credit/hour), auto-suspend enabled after a few minutes of inactivity, and single-user sequential queries. The wide range reflects whether your queries run for 2 hours a day or 8. Turn off auto-suspend and leave a warehouse running overnight, and the number climbs fast. Databricks ranges similarly, with the upper bound representing heavier or longer SQL sessions. BigQuery's compute number assumes clean date-partitioned tables: unpartitioned scans on large tables could multiply that several times. Databricks and DuckDB assume you bring your own S3. The Fabric estimate assumes F4 for light concurrency; F8 for a small analyst team with overlapping usage windows. ClickHouse Cloud storage costs vary by tier and replication setup, so the storage column there is a rough allocation. These are estimates, not quotes.
 
 Concurrency changes the picture significantly. These estimates model one user running queries sequentially. In practice, if ten analysts are querying at the same time, Snowflake scales by adding warehouse clusters (each cluster multiplies cost), BigQuery absorbs concurrent queries but slot reservations become attractive, and DuckDB is single-process and will queue concurrent requests. What looks cheap at single-user scale can look very different under real team workloads.
 
@@ -237,7 +237,7 @@ The broader picture: BigQuery can significantly undercut Snowflake for bursty wo
 
 The obvious-choice era is over. Iceberg made data portable, DuckDB made local analytics viable, and the managed platforms have all closed the gap on each other's weaknesses. The decision now is less about which platform is best and more about which trade-offs fit your workload, team, and existing cloud provider.
 
-One thing I'd think about before picking anything is where your data lives and whether you want it to stay portable. Iceberg makes that a real option now in a way it wasn't a few years ago.
+One thing I'd think about before picking anything is where your data lives and whether you want it to stay portable.
 
 Worth keeping an eye on: Iceberg adoption is accelerating and more engines are adding support. DuckLake is a new entrant in the open catalog space. If it matures, it could make DuckDB a viable multi-user data lake without touching a managed warehouse. The pressure is toward commoditized compute sitting on top of open storage, which is good for buyers and bad for anyone whose business model depends on proprietary formats.
 
