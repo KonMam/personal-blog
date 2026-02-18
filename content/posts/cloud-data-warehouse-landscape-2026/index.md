@@ -50,18 +50,18 @@ Snowflake eventually added Iceberg table support. When the market leader adopts 
 
 <figure class="center" style="width:100%;">
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 460" width="100%" aria-label="Iceberg ecosystem diagram">
-  <!-- Lines connect box edge to box edge, not center to center -->
+  <!-- Lines with 8px gap from each box edge -->
   <g stroke="currentColor" stroke-opacity="0.25" stroke-width="1.5" stroke-dasharray="5 4" fill="none">
-    <!-- Snowflake: center top edge → Snowflake bottom edge -->
-    <line x1="400" y1="208" x2="400" y2="73"/>
-    <!-- Databricks: center right edge → Databricks left edge -->
-    <line x1="470" y1="224" x2="535" y2="210"/>
-    <!-- Trino: center bottom edge → Trino top edge -->
-    <line x1="430" y1="272" x2="519" y2="367"/>
-    <!-- DuckDB: center bottom edge → DuckDB top edge -->
-    <line x1="370" y1="272" x2="281" y2="367"/>
-    <!-- Spark: center left edge → Spark right edge -->
-    <line x1="330" y1="224" x2="265" y2="210"/>
+    <!-- Snowflake: straight up -->
+    <line x1="400" y1="200" x2="400" y2="79"/>
+    <!-- Databricks: right, slightly up -->
+    <line x1="478" y1="222" x2="527" y2="212"/>
+    <!-- Trino: down-right diagonal -->
+    <line x1="436" y1="278" x2="514" y2="361"/>
+    <!-- DuckDB: down-left diagonal -->
+    <line x1="365" y1="278" x2="287" y2="361"/>
+    <!-- Spark: left, slightly up -->
+    <line x1="322" y1="222" x2="273" y2="212"/>
   </g>
   <!-- Object Storage center node -->
   <rect x="330" y="208" width="140" height="64" rx="8" fill="#6C8CFF" fill-opacity="0.12" stroke="#6C8CFF" stroke-width="1.5"/>
