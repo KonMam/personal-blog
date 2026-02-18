@@ -50,38 +50,43 @@ Snowflake eventually added Iceberg table support. When the market leader adopts 
 
 <figure class="center" style="width:100%;">
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 460" width="100%" aria-label="Iceberg ecosystem diagram">
-  <!-- Connection lines drawn first, behind boxes -->
+  <!-- Lines connect box edge to box edge, not center to center -->
   <g stroke="currentColor" stroke-opacity="0.25" stroke-width="1.5" stroke-dasharray="5 4" fill="none">
-    <line x1="400" y1="240" x2="400" y2="55"/>
-    <line x1="400" y1="240" x2="576" y2="183"/>
-    <line x1="400" y1="240" x2="509" y2="390"/>
-    <line x1="400" y1="240" x2="291" y2="390"/>
-    <line x1="400" y1="240" x2="224" y2="183"/>
+    <!-- Snowflake: center top edge → Snowflake bottom edge -->
+    <line x1="400" y1="208" x2="400" y2="73"/>
+    <!-- Databricks: center right edge → Databricks left edge -->
+    <line x1="470" y1="224" x2="535" y2="210"/>
+    <!-- Trino: center bottom edge → Trino top edge -->
+    <line x1="430" y1="272" x2="519" y2="367"/>
+    <!-- DuckDB: center bottom edge → DuckDB top edge -->
+    <line x1="370" y1="272" x2="281" y2="367"/>
+    <!-- Spark: center left edge → Spark right edge -->
+    <line x1="330" y1="224" x2="265" y2="210"/>
   </g>
-  <!-- Object storage center node -->
-  <rect x="310" y="208" width="180" height="64" rx="8" fill="#6C8CFF" fill-opacity="0.12" stroke="#6C8CFF" stroke-width="1.5"/>
+  <!-- Object Storage center node -->
+  <rect x="330" y="208" width="140" height="64" rx="8" fill="#6C8CFF" fill-opacity="0.12" stroke="#6C8CFF" stroke-width="1.5"/>
   <text x="400" y="232" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#6C8CFF">Object Storage</text>
   <text x="400" y="252" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6C8CFF" opacity="0.8">Parquet · Iceberg</text>
-  <!-- Snowflake -->
-  <rect x="335" y="32" width="130" height="46" rx="6" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.2" stroke-width="1"/>
-  <text x="400" y="53" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="currentColor">Snowflake</text>
-  <text x="400" y="69" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="currentColor" opacity="0.55">commercial warehouse</text>
-  <!-- Databricks -->
-  <rect x="511" y="160" width="130" height="46" rx="6" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.2" stroke-width="1"/>
-  <text x="576" y="181" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="currentColor">Databricks</text>
-  <text x="576" y="197" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="currentColor" opacity="0.55">lakehouse platform</text>
-  <!-- Trino -->
-  <rect x="444" y="367" width="130" height="46" rx="6" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.2" stroke-width="1"/>
-  <text x="509" y="388" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="currentColor">Trino</text>
-  <text x="509" y="404" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="currentColor" opacity="0.55">distributed query engine</text>
-  <!-- DuckDB -->
-  <rect x="226" y="367" width="130" height="46" rx="6" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.2" stroke-width="1"/>
-  <text x="291" y="388" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="currentColor">DuckDB</text>
-  <text x="291" y="404" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="currentColor" opacity="0.55">in-process analytics</text>
-  <!-- Apache Spark -->
-  <rect x="159" y="160" width="130" height="46" rx="6" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.2" stroke-width="1"/>
-  <text x="224" y="181" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="currentColor">Apache Spark</text>
-  <text x="224" y="197" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="currentColor" opacity="0.55">batch processing</text>
+  <!-- Snowflake: top center -->
+  <rect x="335" y="27" width="130" height="46" rx="6" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="400" y="48" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="currentColor">Snowflake</text>
+  <text x="400" y="64" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="currentColor" opacity="0.55">commercial warehouse</text>
+  <!-- Databricks: right -->
+  <rect x="535" y="172" width="130" height="46" rx="6" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="600" y="193" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="currentColor">Databricks</text>
+  <text x="600" y="209" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="currentColor" opacity="0.55">lakehouse platform</text>
+  <!-- Trino: bottom right -->
+  <rect x="475" y="367" width="130" height="46" rx="6" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="540" y="388" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="currentColor">Trino</text>
+  <text x="540" y="404" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="currentColor" opacity="0.55">distributed query engine</text>
+  <!-- DuckDB: bottom left -->
+  <rect x="195" y="367" width="130" height="46" rx="6" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="260" y="388" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="currentColor">DuckDB</text>
+  <text x="260" y="404" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="currentColor" opacity="0.55">in-process analytics</text>
+  <!-- Apache Spark: left -->
+  <rect x="135" y="172" width="130" height="46" rx="6" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="200" y="193" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="currentColor">Apache Spark</text>
+  <text x="200" y="209" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="currentColor" opacity="0.55">batch processing</text>
 </svg>
 <figcaption class="center">Any engine can read from the same data. Storage stays yours, compute is swappable.</figcaption>
 </figure>
