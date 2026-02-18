@@ -9,6 +9,23 @@ Cloud data warehouses have never had more competition. This post breaks down the
 draft = true
 +++
 
+<style>
+.platform-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.platform-logo {
+  height: 1.4rem;
+  width: auto;
+  flex-shrink: 0;
+  filter: brightness(0);
+}
+[data-theme="dark"] .platform-logo {
+  filter: brightness(0) invert(1);
+}
+</style>
+
 A few years ago, picking a cloud data warehouse was not much of a decision. Snowflake if you could afford it, BigQuery if you were on Google Cloud, Redshift if you were deep in AWS. The rest were either niche or still maturing.
 
 That's no longer true. Open table formats like Apache Iceberg removed what used to be hard vendor lock-in, new entrants matured, and the "just use Snowflake" default has real challengers at every price point.
@@ -31,13 +48,11 @@ The key shift: any query engine that supports Iceberg can read your data. Snowfl
 
 Snowflake eventually added Iceberg table support. When the market leader adopts the open standard, you know the standard won.
 
-<!-- VISUAL: diagram showing multiple query engines (Snowflake, Databricks, Trino, DuckDB) reading from the same Parquet/Iceberg files stored in S3 -->
-
 ---
 
 ## The Commercial Platforms
 
-### Snowflake
+<h3 class="platform-heading"><img src="snowflake.svg" class="platform-logo" alt=""> Snowflake</h3>
 
 The benchmark everything else gets compared against.
 
@@ -47,7 +62,7 @@ Notable features worth knowing: Data Sharing, which lets you share live data wit
 
 The main complaints are cost predictability (a forgotten running warehouse will run up your bill quietly) and the fact that even with Iceberg support added later, Snowflake's native format remains proprietary.
 
-### BigQuery
+<h3 class="platform-heading"><img src="googlebigquery.svg" class="platform-logo" alt=""> BigQuery</h3>
 
 Google's serverless data warehouse. No clusters to configure, no warehouses to size. You run a query, it runs, you get charged for how much data it scanned.
 
@@ -57,7 +72,7 @@ For predictable workloads, BigQuery offers flat-rate reservations where you buy 
 
 Storage runs $0.02/GB/month for active data, $0.01/GB/month for data untouched for 90+ days. Compute on-demand is $6.25/TB scanned ([BigQuery pricing](https://cloud.google.com/bigquery/pricing)).
 
-### Amazon Redshift
+<h3 class="platform-heading"><img src="amazonwebservices.svg" class="platform-logo" alt=""> Amazon Redshift</h3>
 
 The oldest of the main three, and it shows in parts of its design.
 
@@ -67,7 +82,7 @@ Redshift Spectrum lets you query S3 files directly without loading data into Red
 
 Serverless pricing is $0.375/RPU-hour, provisioned pricing varies heavily by node type ([Redshift pricing](https://aws.amazon.com/redshift/pricing/)).
 
-### Databricks
+<h3 class="platform-heading"><img src="databricks.svg" class="platform-logo" alt=""> Databricks</h3>
 
 Databricks is not a data warehouse. It's a Lakehouse platform, a term they coined for the idea of combining the flexibility of a data lake (raw files in object storage) with the structure and performance of a data warehouse. It tries to be one place for data engineering, SQL analytics, machine learning, and streaming, all built on top of Delta Lake stored in your own object storage.
 
@@ -75,7 +90,7 @@ If your team runs Spark jobs, trains ML models, and runs SQL analytics on the sa
 
 Compute is billed in DBUs (Databricks Units), which represent processing capacity per hour. DBU pricing varies by workload type (SQL Serverless, Jobs clusters, All-Purpose clusters) which makes cost estimation less straightforward than the other platforms. SQL Serverless runs roughly $0.22/DBU ([Databricks pricing](https://www.databricks.com/product/pricing)). Storage costs are whatever you pay for S3 or GCS, since your data lives there.
 
-### Azure Synapse Analytics
+<h3 class="platform-heading"><img src="azure.svg" class="platform-logo" alt=""> Azure Synapse Analytics</h3>
 
 Microsoft's data warehouse offering, and the right starting point if you're already invested in the Azure ecosystem.
 
@@ -89,7 +104,7 @@ The downside is that Synapse feels like several products assembled together rath
 
 ## The Open Source Alternatives
 
-### DuckDB
+<h3 class="platform-heading"><img src="duckdb.svg" class="platform-logo" alt=""> DuckDB</h3>
 
 DuckDB is the most interesting development in analytics in recent years. It's an in-process OLAP database: OLAP (Online Analytical Processing) means designed for complex aggregations over large datasets, and in-process means no separate server, no cluster to manage, just a library you embed in your application or a binary you run locally. It can query Parquet files, CSV, JSON, and Iceberg tables directly from S3.
 
@@ -105,13 +120,13 @@ For datasets that fit in memory, it's shockingly fast. For datasets that exceed 
 
 I'd reach for DuckDB first for exploratory analysis, local development, or smaller datasets. The moment you need multiple users querying a shared dataset concurrently, petabyte-scale data, or centralized access control, you'll want something else. But it's remarkable how far it gets you before that point ([DuckDB](https://duckdb.org/)).
 
-### ClickHouse
+<h3 class="platform-heading"><img src="clickhouse.svg" class="platform-logo" alt=""> ClickHouse</h3>
 
 ClickHouse is an open-source columnar database built for a specific workload: aggregations over huge volumes of event or time-series data. User behavior analytics, metrics pipelines, log analysis. For that use case, it's the fastest option available. For general-purpose warehousing with varied query patterns, it's less of a natural fit.
 
 Available self-hosted (free, but you manage the infrastructure) or as [ClickHouse Cloud](https://clickhouse.com/pricing) (managed). Data modeling has a learning curve compared to standard SQL warehouses, and the ecosystem is less mature than the commercial options, but the performance ceiling is hard to beat for its target workload.
 
-### Trino
+<h3 class="platform-heading"><img src="trino.svg" class="platform-logo" alt=""> Trino</h3>
 
 Trino (formerly PrestoSQL) is a distributed SQL query engine. It doesn't store data. It queries wherever your data already lives: S3, Iceberg tables, Hive Metastore (a metadata catalog used to track table schemas and file locations, originally from the Hadoop ecosystem), relational databases, Kafka. You bring the infrastructure, it brings the SQL.
 
@@ -130,8 +145,6 @@ To make this concrete, I estimated monthly costs for a mid-sized workload:
 - ~100 queries/day, a mix of short lookups and longer aggregations
 
 Prices sourced from each platform's public pricing pages as of early 2026. Verify before making any real decisions since these change.
-
-<!-- VISUAL: bar chart showing monthly cost estimates per platform, same data as the table below -->
 
 | Platform | Storage/month | Compute/month | ~Total/month |
 |---|---|---|---|
