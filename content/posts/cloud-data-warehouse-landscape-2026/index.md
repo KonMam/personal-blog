@@ -30,14 +30,19 @@ details.note {
   padding: 12px 16px;
   margin: 16px 0 24px;
   background: color-mix(in srgb, var(--color), transparent 97%);
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--color), transparent 30%);
+  line-height: 1.6;
 }
 details.note summary {
   cursor: pointer;
-  font-size: 0.85rem;
   font-weight: 500;
   color: color-mix(in srgb, var(--color), transparent 35%);
   user-select: none;
   list-style: none;
+}
+details.note summary::-webkit-details-marker {
+  display: none;
 }
 details.note summary::before {
   content: "▶ ";
@@ -47,10 +52,24 @@ details.note[open] summary::before {
   content: "▼ ";
 }
 details.note p {
-  font-size: 0.85rem;
-  color: color-mix(in srgb, var(--color), transparent 30%);
   margin: 12px 0 0;
-  line-height: 1.6;
+}
+.diagram-scroll {
+  width: 100%;
+}
+@media (max-width: 684px) {
+  .diagram-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .diagram-scroll svg {
+    min-width: 600px;
+  }
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 </style>
 
@@ -74,6 +93,7 @@ The key shift: any query engine that supports Iceberg can read your data. Snowfl
 
 Snowflake eventually added Iceberg table support. When the market leader adopts the open standard, you know the standard won.
 
+<div class="diagram-scroll">
 <figure class="center" style="width:100%;">
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 460" width="100%" aria-label="Iceberg ecosystem diagram">
   <!-- Lines with 8px gap from each box edge -->
@@ -116,6 +136,7 @@ Snowflake eventually added Iceberg table support. When the market leader adopts 
 </svg>
 <figcaption class="center">Any engine can read from the same data. Storage stays yours, compute is swappable.</figcaption>
 </figure>
+</div>
 
 Worth being precise about what Iceberg actually changes: it removes storage lock-in. You can move your Parquet files to a different engine without reformatting data. What it doesn't change is governance lock-in (each platform has its own catalog, access control model, and permission system), ecosystem coupling (dbt integrations, BI tool optimizations, and ML pipelines built around a specific runtime), or the operational knowledge your team has built up around a platform. Compute portability and operational portability are not the same thing. The switching cost is lower than it was, not gone.
 
@@ -274,6 +295,3 @@ The obvious-choice era is over. Iceberg made data portable, DuckDB made local an
 
 Worth keeping an eye on: Iceberg adoption is accelerating and more engines are adding support. The pressure is toward commoditized compute sitting on top of open storage, which is good for buyers and bad for anyone whose business model depends on proprietary formats.
 
----
-
-Thank you for reading.
