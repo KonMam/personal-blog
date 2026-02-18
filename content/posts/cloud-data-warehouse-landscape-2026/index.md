@@ -91,6 +91,8 @@ Snowflake eventually added Iceberg table support. When the market leader adopts 
 <figcaption class="center">Any engine can read from the same data. Storage stays yours, compute is swappable.</figcaption>
 </figure>
 
+Worth being precise about what Iceberg actually changes: it removes storage lock-in. You can move your Parquet files to a different engine without reformatting data. What it doesn't change is governance lock-in (each platform has its own catalog, access control model, and permission system), ecosystem coupling (dbt integrations, BI tool optimizations, and ML pipelines built around a specific runtime), or the operational knowledge your team has built up around a platform. Compute portability and operational portability are not the same thing. The switching cost is lower than it was, not gone.
+
 ---
 
 ## The Commercial Platforms
@@ -104,6 +106,8 @@ Compute runs on virtual warehouses, clusters that spin up on demand, run your qu
 Notable features worth knowing: Data Sharing, which lets you share live data with other Snowflake accounts without copying it, and Snowpark, which lets you run Python or Java directly inside Snowflake for data transformation without moving data out.
 
 The main complaints are cost predictability (a forgotten running warehouse will run up your bill quietly) and the fact that even with Iceberg support added later, Snowflake's native format remains proprietary.
+
+Snowflake's enterprise dominance isn't primarily about the format, though. It's about governance tooling that actually works for large organizations: role-based access control that non-engineers can reason about, audit logging, compliance certifications, solid SLAs, and a product polished enough that a finance analyst can use it without filing a support ticket. Open formats help you move data. They don't replace any of that.
 
 <h3 class="platform-heading"><img src="googlebigquery.svg" class="platform-logo" alt=""> BigQuery</h3>
 
@@ -127,21 +131,23 @@ Serverless pricing is $0.375/RPU-hour, provisioned pricing varies heavily by nod
 
 <h3 class="platform-heading"><img src="databricks.svg" class="platform-logo" alt=""> Databricks</h3>
 
-Databricks is not a data warehouse. It's a Lakehouse platform, a term they coined for the idea of combining the flexibility of a data lake (raw files in object storage) with the structure and performance of a data warehouse. It tries to be one place for data engineering, SQL analytics, machine learning, and streaming, all built on top of Delta Lake stored in your own object storage.
+Databricks started as a data engineering and machine learning platform, but Databricks SQL has matured into a genuine competitor to Snowflake and BigQuery for SQL analytics workloads. It's a Lakehouse platform, a term they coined for combining the flexibility of a data lake (raw files in object storage) with the structure and performance of a data warehouse. The pitch is one place for data engineering, SQL analytics, machine learning, and streaming, all built on top of Delta Lake stored in your own object storage.
 
-If your team runs Spark jobs, trains ML models, and runs SQL analytics on the same data, Databricks keeps everything in one place and the shared data model makes sense. If you just want to run SQL against structured tables, it's probably more than you need.
+Where Databricks SQL excels is when SQL is one part of a broader workflow that already involves Spark jobs, ML pipelines, or streaming. The shared data model means you're not copying data between systems. For purely SQL-focused teams with no ML ambitions, Snowflake or BigQuery will feel more streamlined, but Databricks SQL is no longer an awkward choice for analytics on its own.
 
 Compute is billed in DBUs (Databricks Units), which represent processing capacity per hour. DBU pricing varies by workload type (SQL Serverless, Jobs clusters, All-Purpose clusters) which makes cost estimation less straightforward than the other platforms. SQL Serverless runs roughly $0.22/DBU ([Databricks pricing](https://www.databricks.com/product/pricing)). Storage costs are whatever you pay for S3 or GCS, since your data lives there.
 
-<h3 class="platform-heading"><img src="azure.svg" class="platform-logo" alt=""> Azure Synapse Analytics</h3>
+<h3 class="platform-heading"><img src="azure.svg" class="platform-logo" alt=""> Microsoft Fabric</h3>
 
-Microsoft's data warehouse offering, and the right starting point if you're already invested in the Azure ecosystem.
+Microsoft Fabric is the successor to Azure Synapse Analytics. Synapse remains supported, but Microsoft has shifted its investment and roadmap to Fabric. If you're starting fresh on Azure today, Fabric is where you'd land.
 
-Synapse comes in two modes. Dedicated SQL pools give you a provisioned MPP cluster that you size upfront, paying per DWU-hour (DWU standing for Data Warehouse Unit, their measure of provisioned compute). Serverless SQL pools let you query data in Azure Data Lake Storage (Azure's equivalent of S3) on demand, paying $5/TB processed, similar to BigQuery's model.
+Fabric is a unified analytics platform in the same mold as Databricks: one product covering a SQL data warehouse, data engineering, real-time analytics, data pipelines, and Power BI, all on top of OneLake (Microsoft's unified storage layer, built on Azure Data Lake Storage Gen2 using Delta Lake and Parquet underneath). The SQL component is called Warehouse, and it's a proper T-SQL data warehouse. Because OneLake uses Delta Lake, your data lives in an open format other engines can read.
 
-Power BI integration is tighter here than anywhere else, which matters if your organization already uses it for reporting. Synapse Link is worth knowing about: it lets you run analytics directly on operational databases like Azure Cosmos DB without running any ETL (Extract, Transform, Load) pipelines to copy the data first.
+Power BI integration is tighter here than anywhere else, which makes sense given it's the same company. For organizations already on Microsoft 365, identity and permissions integrate cleanly.
 
-The downside is that Synapse feels like several products assembled together rather than one coherent platform. Navigating it is less intuitive than the competition. Dedicated pool pricing lands roughly $1.20-2.40/hour per 100 DWUs, Serverless at $5/TB processed ([Azure Synapse pricing](https://azure.microsoft.com/en-us/pricing/details/synapse-analytics/)).
+Pricing is capacity-based. You purchase an F SKU billed by the hour, and all Fabric workloads share that capacity pool. F2 (the smallest) runs roughly $0.36/hour, F8 around $1.44/hour. Capacity can be paused when not in use, which is important for cost control. OneLake storage runs ~$0.023/GB/month ([Microsoft Fabric pricing](https://azure.microsoft.com/en-us/pricing/details/microsoft-fabric/)).
+
+The downside is that Fabric is still maturing. It's a large product surface and some features that were stable in Synapse are newer here. Navigating it takes time.
 
 ---
 
@@ -161,7 +167,7 @@ ORDER BY year;
 
 For datasets that fit in memory, it's shockingly fast. For datasets that exceed memory, it has out-of-core execution that spills to disk gracefully. And it's free.
 
-I'd reach for DuckDB first for exploratory analysis, local development, or smaller datasets. The moment you need multiple users querying a shared dataset concurrently, petabyte-scale data, or centralized access control, you'll want something else. But it's remarkable how far it gets you before that point ([DuckDB](https://duckdb.org/)).
+I'd reach for DuckDB first for exploratory analysis, local development, or smaller datasets. The moment you need multiple users querying a shared dataset concurrently, petabyte-scale data, or centralized access control, you'll want something else. Two options exist for pushing that ceiling: [MotherDuck](https://motherduck.com/) is the managed cloud version that adds collaborative features without you managing infrastructure; [DuckLake](https://ducklake.select/) is a new open catalog format from the DuckDB team that lets multiple DuckDB instances share and write to the same dataset with ACID guarantees and time travel. DuckLake is still early but it's the open-format path: you bring your own storage, no managed service required. But it's remarkable how far plain DuckDB gets you before any of that matters ([DuckDB](https://duckdb.org/)).
 
 <h3 class="platform-heading"><img src="clickhouse.svg" class="platform-logo" alt=""> ClickHouse</h3>
 
@@ -195,31 +201,35 @@ Prices sourced from each platform's public pricing pages as of early 2026. Verif
 | BigQuery (on-demand) | ~$200 | ~$94 (15TB × $6.25) | **~$294** |
 | Redshift Serverless | ~$240 | ~$135-270 | **$375-510** |
 | Databricks SQL Serverless | ~$230 (S3) | ~$200-400 | **$430-630** |
-| Azure Synapse Serverless | ~$180 (ADLS) | ~$75 (15TB × $5) | **~$255** |
+| Microsoft Fabric | ~$230 (OneLake) | ~$170-350 (F4-F8, paused when idle) | **$400-580** |
 | ClickHouse Cloud | ~$50-100 | ~$100-200 | **$150-300** |
 | DuckDB | $0 | $0 | **$0** |
 
-A few caveats worth being upfront about. Snowflake and Databricks compute costs depend heavily on query complexity and cluster sizing, hence the wide ranges. BigQuery's compute number assumes clean partitioning: unpartitioned scans on large tables could multiply that several times. Databricks and DuckDB assume you bring your own S3. These are rough estimates, not quotes.
+A few caveats worth being upfront about. The Snowflake estimate assumes an X-Small warehouse (1 credit/hour), auto-suspend enabled after a few minutes of inactivity, and single-user sequential queries. The wide range reflects whether your queries run for 2 hours a day or 8. Turn off auto-suspend and leave a warehouse running overnight, and the number climbs fast. Databricks ranges similarly, with the upper bound representing heavier or longer SQL sessions. BigQuery's compute number assumes clean date-partitioned tables: unpartitioned scans on large tables could multiply that several times. Databricks and DuckDB assume you bring your own S3. These are rough estimates, not quotes.
 
-The broader picture: BigQuery can significantly undercut Snowflake for bursty workloads with well-partitioned tables. Azure Synapse Serverless is cheaper per TB processed than BigQuery, which surprised me given how little attention it gets. ClickHouse Cloud is competitive at mid-scale if your workload fits its strengths. DuckDB is free until it stops being the right tool.
+Concurrency changes the picture significantly. These estimates model one user running queries sequentially. In practice, if ten analysts are querying at the same time, Snowflake scales by adding warehouse clusters (each cluster multiplies cost), BigQuery absorbs concurrent queries but slot reservations become attractive, and DuckDB is single-process and will queue concurrent requests. What looks cheap at single-user scale can look very different under real team workloads.
+
+The broader picture: BigQuery can significantly undercut Snowflake for bursty workloads with well-partitioned tables. Microsoft Fabric's capacity model makes direct per-query comparisons tricky, but pausing capacity aggressively keeps costs reasonable. ClickHouse Cloud is competitive at mid-scale if your workload fits its strengths. DuckDB is free until it stops being the right tool.
 
 ---
 
 ## What to Pick
 
-**Infrequent queries and no interest in managing infrastructure → BigQuery.** Pay for what you scan, nothing else. Works well when query volume is unpredictable.
+**Infrequent queries and no interest in managing infrastructure: BigQuery.** Pay for what you scan, nothing else. Works well when query volume is unpredictable.
 
-**All-in on AWS → Redshift.** Spectrum for querying existing S3 data without loading it, tight Glue integration, and reserved instance savings for stable workloads.
+**All-in on AWS: Redshift.** Spectrum for querying existing S3 data without loading it, tight Glue integration, and reserved instance savings for stable workloads.
 
-**All-in on Azure or heavy Power BI usage → Azure Synapse.** Serverless pools for ad-hoc work, dedicated pools for production, and the tightest Power BI integration of any platform here.
+**All-in on Azure or heavy Power BI usage: Microsoft Fabric.** SQL analytics, data engineering, and Power BI on top of open Delta Lake storage. Synapse is still around but Fabric is where Microsoft is investing.
 
-**ML, data engineering, and SQL on the same data → Databricks.** The Lakehouse model makes sense when you're running the full data stack in one place.
+**ML, data engineering, and SQL on the same data: Databricks.** The Lakehouse model makes sense when you're running the full data stack in one place.
 
-**Open formats, full control, no lock-in → Trino or ClickHouse.** Your data stays in Iceberg on S3. You pick the query engine. More operational responsibility, less vendor dependency.
+**Federated queries across many data sources: Trino.** Query Iceberg on S3, Postgres, Kafka, and Hive tables from a single SQL statement. More operational complexity, but nothing else does this as cleanly.
 
-**Smaller datasets, prototyping, or embedded analytics → DuckDB.** Reach for this first. It's free and shockingly capable before you outgrow it.
+**Ultra-fast event analytics or time-series: ClickHouse.** For aggregations over billions of events (user behavior, logs, metrics) it's the fastest option here. Less suited to general-purpose warehousing but excellent at its target workload.
 
-**Enterprise polish, Data Sharing, mature ecosystem → Snowflake.** Still the most complete product. You pay for it.
+**Smaller datasets, prototyping, or embedded analytics: DuckDB.** Reach for this first. It's free and shockingly capable before you outgrow it.
+
+**Enterprise polish, Data Sharing, mature ecosystem: Snowflake.** Still the most complete product. You pay for it.
 
 ---
 
@@ -229,7 +239,7 @@ The obvious-choice era is over. Iceberg made data portable, DuckDB made local an
 
 One thing I'd think about before picking anything is where your data lives and whether you want it to stay portable. Iceberg makes that a real option now in a way it wasn't a few years ago.
 
-Worth keeping an eye on: Iceberg adoption is accelerating and more engines are adding support. The pressure is toward commoditized compute sitting on top of open storage, which is good for buyers and bad for anyone whose business model depends on proprietary formats.
+Worth keeping an eye on: Iceberg adoption is accelerating and more engines are adding support. DuckLake is a new entrant in the open catalog space. If it matures, it could make DuckDB a viable multi-user data lake without touching a managed warehouse. The pressure is toward commoditized compute sitting on top of open storage, which is good for buyers and bad for anyone whose business model depends on proprietary formats.
 
 ---
 
