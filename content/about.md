@@ -5,8 +5,8 @@ draft = false
 layout = "about"
 +++
 
-**My name is Konstantinas Mamonas**, and I like exploring new ideas and writing about them. With a technical background, I often dive into systems, tools, and ways to make things work better, though I don't limit myself only to that.
+I'm a data engineer by day. This blog is where I write things down so I don't forget them -- and in case they're useful to someone else.
 
-Outside of the technical world, I enjoy single player games such as *Skyrim*, *The Witcher*, *Elden Ring*, and *Clair Obscur: Expedition 33*. I also read a lot of fantasy and science fiction, with favorites including Brandon Sanderson's *Cosmere* stories, James S. A. Corey's *The Expanse*, Liu Cixin's *The Three Body Problem*, and Andy Weir's *Project Hail Mary*.
+Data engineering never sits still -- there's always a new tool, a new tradeoff, a new reason the old approach doesn't quite work anymore. I write about that, and whatever else catches my attention. If you like digging into how things actually work, you'll probably find something here.
 
-This blog is where I collect what I'm working on and what interests me. Sometimes that's technical, sometimes not.
+Outside of work I read a lot -- fiction, mostly speculative (Brandon Sanderson's Cosmere and James S. A. Corey's *The Expanse* have eaten a significant portion of my life), but plenty of other things too. I also play games when I can: open-world RPGs, ARPGs, or roguelikes.

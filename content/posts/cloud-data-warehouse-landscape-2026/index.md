@@ -1,6 +1,6 @@
 +++
 title = "The Cloud Data Warehouse Landscape in 2026"
-date = "2026-02-23T00:00:00+03:00"
+date = "2026-02-22T00:00:00+03:00"
 tags = ["data-engineering", "cloud", "benchmarking"]
 categories = ["tech"]
 description = """
