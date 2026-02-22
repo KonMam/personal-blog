@@ -1,12 +1,12 @@
 +++
 title = "The Cloud Data Warehouse Landscape in 2026"
-date = "2026-02-18T00:00:00+03:00"
+date = "2026-02-23T00:00:00+03:00"
 tags = ["data-engineering", "cloud", "benchmarking"]
 categories = ["tech"]
 description = """
-Cloud data warehouses have never had more competition. This post breaks down the architecture, real costs, and the open format shift that changed who you should actually pick.
+Cloud data warehouses have never had more competition. This post breaks down the architecture, costs, and the open format shift that changed who you should actually pick.
 """
-draft = true
+draft = false
 +++
 
 <style>
@@ -73,11 +73,7 @@ details.note p {
 }
 </style>
 
-A few years ago, picking a cloud data warehouse was not much of a decision. Snowflake if you could afford it, BigQuery if you were on Google Cloud, Redshift if you were deep in AWS. The rest were either niche or still maturing.
-
-That's no longer true. Open table formats like Apache Iceberg removed storage lock-in, new entrants matured, and the "just use Snowflake" default has real challengers at every price point.
-
-This post covers the main platforms, what they actually cost at a fixed workload, and what I'd pick for different situations.
+I wanted to understand the cloud data warehouse space beyond the usual names. Snowflake, BigQuery, Redshift are the defaults everyone reaches for, but a lot has changed, especially with Iceberg reshaping how storage lock-in works. Here's what I found.
 
 ---
 
@@ -85,7 +81,7 @@ This post covers the main platforms, what they actually cost at a fixed workload
 
 Traditional warehouses stored your data in their own proprietary formats. A columnar format stores data column-by-column rather than row-by-row, which makes aggregations much faster since queries only read the columns they need. Snowflake's format was good: automatic micro-partitioning (splitting data into small chunks with metadata about each, so queries can skip irrelevant chunks entirely), compression, clustering. But your data lived inside Snowflake. Migrating away was painful by design.
 
-[Apache Iceberg](https://iceberg.apache.org/) changed that. It's an open table format that sits on top of object storage (S3, GCS). Your data stays as [Parquet](https://parquet.apache.org/) files (an open columnar file format widely used in data engineering) in your own storage bucket, with an Iceberg metadata layer on top that adds schema evolution (adding or renaming columns without breaking existing queries), time travel (querying data as it looked at a past point in time), and richer metadata that enables engines to prune partitions and files efficiently.
+[Apache Iceberg](https://iceberg.apache.org/) changed that. It's an open table format that sits on top of object storage (S3, GCS). Your data stays as [Parquet](https://parquet.apache.org/) files in your own storage bucket, with an Iceberg metadata layer on top that adds schema evolution (adding or renaming columns without breaking existing queries), time travel (querying data as it looked at a past point in time), and richer metadata that enables engines to prune partitions and files efficiently.
 
 The key shift: any query engine that supports Iceberg can read your data. Snowflake, Databricks, Spark, Trino, DuckDB. You're not locked into one vendor's runtime.
 
@@ -146,7 +142,7 @@ Worth being precise about what Iceberg actually changes: it removes storage lock
 
 <h3 class="platform-heading"><img src="snowflake.svg" class="platform-logo" alt=""> Snowflake</h3>
 
-The benchmark most teams still compare against.
+The benchmark most teams compare against.
 
 Compute runs on virtual warehouses, clusters that spin up on demand, run your queries, and bill by the second. Storage is billed separately per TB per month. This separation of compute and storage was Snowflake's core innovation when it launched: you can scale processing power independently from how much data you hold, without paying for idle capacity overnight. Pricing is in credits, which map to warehouse size and runtime. Credits cost roughly $2-4 each depending on cloud and tier, with storage around $23/TB/month ([Snowflake pricing](https://www.snowflake.com/en/data-cloud/pricing-options/)).
 
