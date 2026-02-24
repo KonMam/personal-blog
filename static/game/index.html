@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dungeon · mamonas.dev</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d0d14;
+      color: #b8bcc8;
+      font-family: Inter, system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      gap: 16px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    header a {
+      color: #4a5568;
+      text-decoration: none;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      transition: color 0.15s;
+    }
+    header a:hover { color: #6C8CFF; }
+
+    h1 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #6C8CFF;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    #loading {
+      color: #6C8CFF;
+      font-size: 0.9rem;
+      letter-spacing: 0.05em;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    canvas {
+      display: none;
+      border: 1px solid rgba(108, 140, 255, 0.15);
+      border-radius: 6px;
+      max-width: 100%;
+    }
+
+    footer {
+      font-size: 0.75rem;
+      color: #2d3748;
+      text-align: center;
+      line-height: 1.8;
+    }
+    footer span { color: #4a5568; }
+    footer kbd {
+      display: inline-block;
+      background: #1a1d2e;
+      border: 1px solid #2d3748;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.7rem;
+      color: #6C8CFF;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/">← mamonas.dev</a>
+    <h1>▼ Dungeon</h1>
+  </header>
+
+  <p id="loading">Loading...</p>
+  <canvas id="game-canvas"></canvas>
+
+  <footer>
+    <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrow keys to move &nbsp;·&nbsp;
+    Bump enemies to attack &nbsp;·&nbsp;
+    <span style="color:#68D391">♥</span> restores HP &nbsp;·&nbsp;
+    Reach <span style="color:#F6E05E">▼</span> to descend &nbsp;·&nbsp;
+    <kbd>R</kbd> to restart
+  </footer>
+
+  <script src="wasm_exec.js"></script>
+  <script>
+    const go = new Go();
+    WebAssembly.instantiateStreaming(fetch("game.wasm"), go.importObject)
+      .then(result => {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("game-canvas").style.display = "block";
+        go.run(result.instance);
+      })
+      .catch(err => {
+        document.getElementById("loading").textContent = "Failed to load: " + err;
+      });
+  </script>
+</body>
+</html>
