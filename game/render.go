@@ -99,7 +99,7 @@ func (g *Game) Render(ctx js.Value) {
 	case PhaseGameOver:
 		g.renderOverlay(ctx, "YOU DIED", "Press R to restart", ColorHPLow)
 	case PhaseVictory:
-		g.renderOverlay(ctx, "VICTORY", "You escaped the dungeon!  Press R to play again.", ColorAccent)
+		g.renderVictoryPanel(ctx)
 	case PhaseChest:
 		g.renderChestPanel(ctx)
 	case PhaseShop:
@@ -460,6 +460,61 @@ func (g *Game) renderShopPanel(ctx js.Value) {
 	ctx.Set("font", UIFont)
 	ctx.Set("textAlign", "center")
 	ctx.Call("fillText", "[Esc / move] Leave", cx, by+boxH-18)
+}
+
+func (g *Game) renderVictoryPanel(ctx js.Value) {
+	cx := float64(CanvasW) / 2
+	cy := float64(MapH*TileH) / 2
+
+	// Dim the map
+	ctx.Set("fillStyle", "rgba(10, 10, 20, 0.88)")
+	ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
+
+	// Panel box
+	boxW := float64(380)
+	boxH := float64(170)
+	bx := cx - boxW/2
+	by := cy - boxH/2
+
+	setFill(ctx, "#10101a")
+	ctx.Call("fillRect", bx, by, boxW, boxH)
+	ctx.Set("strokeStyle", ColorAccent)
+	ctx.Set("lineWidth", 1)
+	ctx.Call("strokeRect", bx+0.5, by+0.5, boxW-1, boxH-1)
+
+	ctx.Set("textAlign", "center")
+	ctx.Set("textBaseline", "top")
+
+	// Title
+	setFill(ctx, ColorAccent)
+	ctx.Set("font", "bold 26px Inter, system-ui, sans-serif")
+	ctx.Call("fillText", "VICTORY", cx, by+14)
+
+	// Subtitle
+	setFill(ctx, ColorUI)
+	ctx.Set("font", UIFont)
+	ctx.Call("fillText", "You escaped the dungeon!", cx, by+50)
+
+	// Stat labels
+	setFill(ctx, ColorUIDim)
+	ctx.Set("font", UIFont)
+	ctx.Call("fillText", "TURNS", cx-110, by+76)
+	ctx.Call("fillText", "GOLD", cx, by+76)
+	ctx.Call("fillText", "KILLS", cx+110, by+76)
+
+	// Stat values
+	ctx.Set("font", "bold 18px Inter, system-ui, sans-serif")
+	setFill(ctx, ColorMsgNew)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Turns), cx-110, by+94)
+	setFill(ctx, ColorGold)
+	ctx.Call("fillText", fmt.Sprintf("%dg", g.Player.Gold), cx, by+94)
+	setFill(ctx, ColorHPLow)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Kills), cx+110, by+94)
+
+	// Footer
+	setFill(ctx, ColorUIDim)
+	ctx.Set("font", UIFont)
+	ctx.Call("fillText", "[R] Play again", cx, by+boxH-22)
 }
 
 func setFill(ctx js.Value, color string) {

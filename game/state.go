@@ -58,6 +58,8 @@ type Game struct {
 	Floor       int
 	Messages    []string
 	PendingGear *Gear
+	Turns       int
+	Kills       int
 }
 
 func NewGame() *Game {
@@ -312,6 +314,8 @@ func (g *Game) usePotion() {
 	}
 	g.Player.HP += heal
 	g.addMessage(fmt.Sprintf("Used potion, +%d HP. (%d left)", heal, g.Player.Potions))
+	g.enemyTurn()
+	ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
 }
 
 func (g *Game) restart() {
@@ -320,6 +324,8 @@ func (g *Game) restart() {
 	g.Messages = nil
 	g.Phase = PhasePlay
 	g.PendingGear = nil
+	g.Turns = 0
+	g.Kills = 0
 	g.newFloor()
 }
 
@@ -340,6 +346,7 @@ func (g *Game) movePlayer(dx, dy int) {
 		if enemy.HP <= 0 {
 			enemy.HP = 0
 			enemy.Alive = false
+			g.Kills++
 			gold := enemy.goldDrop()
 			g.Player.Gold += gold
 			g.addMessage(fmt.Sprintf("You slay the %s! +%dg", enemy.Name, gold))
@@ -407,6 +414,7 @@ func (g *Game) movePlayer(dx, dy int) {
 }
 
 func (g *Game) enemyTurn() {
+	g.Turns++
 	g.cleanupDeadEnemies()
 	for _, e := range g.Enemies {
 		if !e.Alive {
@@ -442,6 +450,7 @@ func (g *Game) enemyTurn() {
 				if e.HP <= 0 {
 					e.HP = 0
 					e.Alive = false
+					g.Kills++
 					gold := e.goldDrop()
 					g.Player.Gold += gold
 					g.addMessage(fmt.Sprintf("Thorns slay the %s! +%dg", e.Name, gold))
@@ -467,28 +476,80 @@ func (g *Game) cleanupDeadEnemies() {
 	g.Enemies = live
 }
 
-func (g *Game) moveEnemy(e *Entity) {
-	dx := iSign(g.Player.X - e.X)
-	dy := iSign(g.Player.Y - e.Y)
+func (g *Game) bfsNextStep(e *Entity) (dx, dy int, ok bool) {
+	startIdx := e.Y*MapW + e.X
+	goalIdx := g.Player.Y*MapW + g.Player.X
 
-	moves := [][2]int{{dx, dy}, {dx, 0}, {0, dy}}
-	for _, m := range moves {
-		nx, ny := e.X+m[0], e.Y+m[1]
-		if nx < 0 || ny < 0 || nx >= MapW || ny >= MapH {
-			continue
+	parent := make([]int, MapW*MapH)
+	for i := range parent {
+		parent[i] = -1
+	}
+	parent[startIdx] = startIdx
+	queue := []int{startIdx}
+
+	dirs := [4][2]int{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
+	found := false
+	for len(queue) > 0 && !found {
+		cur := queue[0]
+		queue = queue[1:]
+		cx, cy := cur%MapW, cur/MapW
+		for _, d := range dirs {
+			nx, ny := cx+d[0], cy+d[1]
+			if nx < 0 || ny < 0 || nx >= MapW || ny >= MapH {
+				continue
+			}
+			if g.Tiles[ny][nx].Type == TileWall {
+				continue
+			}
+			nIdx := ny*MapW + nx
+			if nIdx == goalIdx {
+				parent[nIdx] = cur
+				found = true
+				break
+			}
+			if g.enemyAt(nx, ny) != nil {
+				continue
+			}
+			if parent[nIdx] != -1 {
+				continue
+			}
+			parent[nIdx] = cur
+			queue = append(queue, nIdx)
 		}
-		if g.Tiles[ny][nx].Type == TileWall {
-			continue
-		}
-		if g.enemyAt(nx, ny) != nil {
-			continue
-		}
-		if nx == g.Player.X && ny == g.Player.Y {
-			continue
-		}
-		e.X, e.Y = nx, ny
+	}
+
+	if !found {
+		return 0, 0, false
+	}
+
+	// Backtrack to find the first step from start
+	cur := goalIdx
+	for parent[cur] != startIdx {
+		cur = parent[cur]
+	}
+	fx, fy := cur%MapW, cur/MapW
+	return fx - e.X, fy - e.Y, true
+}
+
+func (g *Game) moveEnemy(e *Entity) {
+	dx, dy, ok := g.bfsNextStep(e)
+	if !ok {
 		return
 	}
+	nx, ny := e.X+dx, e.Y+dy
+	if nx < 0 || ny < 0 || nx >= MapW || ny >= MapH {
+		return
+	}
+	if g.Tiles[ny][nx].Type == TileWall {
+		return
+	}
+	if g.enemyAt(nx, ny) != nil {
+		return
+	}
+	if nx == g.Player.X && ny == g.Player.Y {
+		return
+	}
+	e.X, e.Y = nx, ny
 }
 
 func (g *Game) enemyAt(x, y int) *Entity {
