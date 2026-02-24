@@ -95,10 +95,10 @@ func (g *Game) newFloor() {
 
 	g.spawnEnemies(rooms)
 	g.spawnItems(rooms)
-	g.spawnChests(rooms)
 	if g.Floor == 2 {
 		g.spawnMerchant(rooms)
 	}
+	g.spawnChests(rooms)
 	g.spawnEvents(rooms)
 
 	// Refill shield charges from gear

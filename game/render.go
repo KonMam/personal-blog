@@ -212,7 +212,7 @@ func (g *Game) renderUI(ctx js.Value) {
 	if g.Player.ShieldCharges > 0 || g.Player.ShieldMod > 0 {
 		setFill(ctx, ColorShield)
 		ctx.Set("font", UIBold)
-		ctx.Call("fillText", fmt.Sprintf("◆ %dsh", g.Player.ShieldCharges), 472, top)
+		ctx.Call("fillText", fmt.Sprintf("◆ %dsh", g.Player.ShieldCharges), 510, top)
 	}
 
 	// Gold
