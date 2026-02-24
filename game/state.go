@@ -428,7 +428,7 @@ func (g *Game) enemyTurn() {
 		dy := g.Player.Y - e.Y
 
 		// Adjacent: attack
-		if iAbs(dx) <= 1 && iAbs(dy) <= 1 && (dx != 0 || dy != 0) {
+		if iAbs(dx)+iAbs(dy) == 1 {
 			rawDmg := e.CalcDamage()
 			finalDmg := rawDmg - g.Player.Def
 			if finalDmg < 1 {
