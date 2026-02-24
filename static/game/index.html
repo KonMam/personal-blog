@@ -19,8 +19,8 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 24px 16px;
-      gap: 16px;
+      padding: 16px;
+      gap: 12px;
     }
 
     header {
@@ -57,11 +57,17 @@
       50%       { opacity: 0.4; }
     }
 
+    /* Canvas wrapper handles scaled sizing */
+    #canvas-wrapper {
+      position: relative;
+      overflow: visible;
+    }
+
     canvas {
       display: none;
       border: 1px solid rgba(108, 140, 255, 0.15);
       border-radius: 6px;
-      max-width: 100%;
+      transform-origin: top left;
     }
 
     footer {
@@ -81,6 +87,71 @@
       font-size: 0.7rem;
       color: #6C8CFF;
     }
+
+    /* ── Mobile touch controls ─────────────────────────────── */
+    .touch-controls {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    /* Show on touch screens */
+    @media (pointer: coarse) {
+      .touch-controls { display: flex; }
+    }
+
+    /* D-pad */
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 48px);
+      grid-template-rows: repeat(3, 48px);
+      gap: 4px;
+    }
+
+    .dpad-btn, .act-btn {
+      background: #1a1d2e;
+      border: 1px solid #2d3748;
+      border-radius: 6px;
+      color: #6C8CFF;
+      font-size: 1.1rem;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s;
+    }
+    .dpad-btn:active, .act-btn:active {
+      background: #2a2d4e;
+    }
+
+    .dpad-empty {
+      /* empty center cell */
+    }
+
+    /* Action buttons row */
+    .act-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .act-btn {
+      width: 48px;
+      height: 36px;
+      font-size: 0.75rem;
+      font-family: Inter, system-ui, sans-serif;
+      font-weight: 600;
+    }
+
+    .act-btn.wide {
+      width: 68px;
+    }
   </style>
 </head>
 <body>
@@ -90,24 +161,101 @@
   </header>
 
   <p id="loading">Loading...</p>
-  <canvas id="game-canvas"></canvas>
+
+  <div id="canvas-wrapper">
+    <canvas id="game-canvas"></canvas>
+  </div>
+
+  <!-- Touch controls (only visible on pointer:coarse / touch screens) -->
+  <div class="touch-controls">
+    <!-- D-pad -->
+    <div class="dpad">
+      <div class="dpad-empty"></div>
+      <button class="dpad-btn" onclick="gameInput('ArrowUp')">▲</button>
+      <div class="dpad-empty"></div>
+      <button class="dpad-btn" onclick="gameInput('ArrowLeft')">◄</button>
+      <div class="dpad-empty"></div>
+      <button class="dpad-btn" onclick="gameInput('ArrowRight')">►</button>
+      <div class="dpad-empty"></div>
+      <button class="dpad-btn" onclick="gameInput('ArrowDown')">▼</button>
+      <div class="dpad-empty"></div>
+    </div>
+    <!-- Action buttons -->
+    <div class="act-row">
+      <button class="act-btn" onclick="gameInput('u')">U</button>
+      <button class="act-btn" onclick="gameInput('e')">E</button>
+      <button class="act-btn wide" onclick="gameInput('Escape')">ESC</button>
+      <button class="act-btn" onclick="gameInput('1')">1</button>
+      <button class="act-btn" onclick="gameInput('2')">2</button>
+      <button class="act-btn" onclick="gameInput('3')">3</button>
+      <button class="act-btn" onclick="gameInput('4')">4</button>
+    </div>
+  </div>
 
   <footer>
     <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrow keys to move &nbsp;·&nbsp;
     Bump enemies to attack &nbsp;·&nbsp;
-    <span style="color:#68D391">♥</span> restores HP &nbsp;·&nbsp;
+    <span style="color:#68D391">♥</span> picks up potion &nbsp;·&nbsp;
+    <kbd>U</kbd> use potion &nbsp;·&nbsp;
+    <span style="color:#F6E05E">■</span> chests &nbsp;·&nbsp;
+    <span style="color:#48BB78">$</span> merchant (floor 2) &nbsp;·&nbsp;
     Reach <span style="color:#F6E05E">▼</span> to descend &nbsp;·&nbsp;
     <kbd>R</kbd> to restart
   </footer>
 
   <script src="wasm_exec.js"></script>
   <script>
+    const CANVAS_W = 960;
+    const CANVAS_H = 594; // MapH*TileH + UIHeight = 22*22 + 110
+
+    const canvas = document.getElementById('game-canvas');
+    const wrapper = document.getElementById('canvas-wrapper');
+
+    function rescale() {
+      const maxW = window.innerWidth - 32;
+      if (maxW < CANVAS_W) {
+        const scale = maxW / CANVAS_W;
+        canvas.style.transform = `scale(${scale})`;
+        wrapper.style.width  = (CANVAS_W * scale) + 'px';
+        wrapper.style.height = (CANVAS_H * scale) + 'px';
+      } else {
+        canvas.style.transform = '';
+        wrapper.style.width  = '';
+        wrapper.style.height = '';
+      }
+    }
+    window.addEventListener('resize', rescale);
+
+    // Swipe on canvas → arrow keys
+    let swipeX = 0, swipeY = 0, swipeT = 0;
+    canvas.addEventListener('touchstart', e => {
+      swipeX = e.touches[0].clientX;
+      swipeY = e.touches[0].clientY;
+      swipeT = Date.now();
+      e.preventDefault();
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - swipeX;
+      const dy = e.changedTouches[0].clientY - swipeY;
+      const dt = Date.now() - swipeT;
+      if (dt > 300) return;
+      const adx = Math.abs(dx), ady = Math.abs(dy);
+      if (Math.max(adx, ady) < 10) return;
+      const key = adx > ady
+        ? (dx > 0 ? 'ArrowRight' : 'ArrowLeft')
+        : (dy > 0 ? 'ArrowDown'  : 'ArrowUp');
+      if (typeof gameInput === 'function') gameInput(key);
+      e.preventDefault();
+    }, { passive: false });
+
     const go = new Go();
     WebAssembly.instantiateStreaming(fetch("game.wasm"), go.importObject)
       .then(result => {
         document.getElementById("loading").style.display = "none";
-        document.getElementById("game-canvas").style.display = "block";
+        canvas.style.display = "block";
         go.run(result.instance);
+        rescale();
       })
       .catch(err => {
         document.getElementById("loading").textContent = "Failed to load: " + err;

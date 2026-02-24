@@ -30,7 +30,17 @@ func main() {
 		return nil
 	})
 	js.Global().Get("document").Call("addEventListener", "keydown", keyHandler)
-	defer keyHandler.Release()
+
+	// Mobile touch input -- exposed as global gameInput(key) for button taps
+	inputFn := js.FuncOf(func(_ js.Value, args []js.Value) any {
+		if len(args) == 0 {
+			return nil
+		}
+		g.HandleInput(args[0].String())
+		g.Render(ctx)
+		return nil
+	})
+	js.Global().Set("gameInput", inputFn)
 
 	// Block forever -- WASM must stay alive
 	<-make(chan struct{})

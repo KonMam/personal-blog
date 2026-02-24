@@ -11,7 +11,7 @@ import (
 const (
 	TileW    = 16
 	TileH    = 22
-	UIHeight = 88
+	UIHeight = 110
 	CanvasW  = MapW * TileW  // 960
 	CanvasH  = MapH*TileH + UIHeight
 )
@@ -41,6 +41,9 @@ const (
 	ColorMsgNew         = "#e2e8f0"
 	ColorMsgOld         = "#4a5568"
 	ColorSeparator      = "#1a1d2e"
+	ColorGold           = "#F6AD55"
+	ColorChest          = "#F6E05E"
+	ColorMerchant       = "#48BB78"
 
 	GameFont = "bold 15px 'Courier New', 'Lucida Console', monospace"
 	UIFont   = "12px Inter, system-ui, sans-serif"
@@ -59,7 +62,19 @@ func (g *Game) Render(ctx js.Value) {
 		}
 	}
 
-	// Items
+	// Chests
+	for _, chest := range g.Chests {
+		if !chest.Opened && g.Tiles[chest.Y][chest.X].Visible {
+			g.drawChar(ctx, '■', chest.X, chest.Y, ColorChest)
+		}
+	}
+
+	// Merchant
+	if g.Merchant != nil && g.Tiles[g.Merchant.Y][g.Merchant.X].Visible {
+		g.drawChar(ctx, '$', g.Merchant.X, g.Merchant.Y, ColorMerchant)
+	}
+
+	// Items (potions on floor)
 	for _, item := range g.Items {
 		if g.Tiles[item.Y][item.X].Visible {
 			g.drawChar(ctx, '♥', item.X, item.Y, ColorPotion)
@@ -85,6 +100,10 @@ func (g *Game) Render(ctx js.Value) {
 		g.renderOverlay(ctx, "YOU DIED", "Press R to restart", ColorHPLow)
 	case PhaseVictory:
 		g.renderOverlay(ctx, "VICTORY", "You escaped the dungeon!  Press R to play again.", ColorAccent)
+	case PhaseChest:
+		g.renderChestPanel(ctx)
+	case PhaseShop:
+		g.renderShopPanel(ctx)
 	}
 }
 
@@ -163,24 +182,75 @@ func (g *Game) renderUI(ctx js.Value) {
 
 	top := sepY + 8
 
+	ctx.Set("textAlign", "left")
+	ctx.Set("textBaseline", "top")
+
+	// --- Line 1: FLOOR | HP bar | Gold | Potions ---
+
 	// Floor label
 	setFill(ctx, ColorAccent)
 	ctx.Set("font", UIBold)
-	ctx.Set("textAlign", "left")
-	ctx.Set("textBaseline", "top")
-	ctx.Call("fillText", fmt.Sprintf("FLOOR  %d / %d", g.Floor, MaxFloors), 12, top)
+	ctx.Call("fillText", fmt.Sprintf("FLOOR %d/%d", g.Floor, MaxFloors), 12, top)
 
 	// HP bar
 	g.renderHPBar(ctx, top)
 
-	// Messages
-	g.renderMessages(ctx, top+22)
+	// Gold
+	goldX := float64(600)
+	setFill(ctx, ColorGold)
+	ctx.Set("font", UIBold)
+	ctx.Call("fillText", fmt.Sprintf("◆ %dg", g.Player.Gold), goldX, top)
+
+	// Potions
+	potX := float64(700)
+	setFill(ctx, ColorPotion)
+	ctx.Set("font", UIBold)
+	ctx.Call("fillText", fmt.Sprintf("♥ %d", g.Player.Potions), potX, top)
+
+	// --- Line 2: Gear slots ---
+	gearY := top + 22
+
+	// Weapon slot
+	ctx.Set("font", UIFont)
+	g.renderGearSlot(ctx, 12, gearY, SlotWeapon)
+
+	// Armor slot
+	g.renderGearSlot(ctx, float64(CanvasW)/2, gearY, SlotArmor)
+
+	// --- Lines 3-4: Messages ---
+	g.renderMessages(ctx, top+46)
+}
+
+func (g *Game) renderGearSlot(ctx js.Value, x, y float64, slot GearSlot) {
+	gear := g.Player.Equipped[slot]
+	ctx.Set("textAlign", "left")
+	ctx.Set("font", UIFont)
+
+	if gear == nil {
+		setFill(ctx, ColorUIDim)
+		if slot == SlotWeapon {
+			ctx.Call("fillText", "† (no weapon)", x, y)
+		} else {
+			ctx.Call("fillText", "◈ (no armor)", x, y)
+		}
+		return
+	}
+
+	// Draw icon in gear color, then measure its width for offset
+	icon := string(gear.Char) + " "
+	setFill(ctx, gear.Color)
+	ctx.Call("fillText", icon, x, y)
+	iconW := ctx.Call("measureText", icon).Get("width").Float()
+
+	// Name + desc in UI color, positioned after icon
+	setFill(ctx, ColorUI)
+	ctx.Call("fillText", fmt.Sprintf("%s  %s", gear.Name, gear.Desc), x+iconW, y)
 }
 
 func (g *Game) renderHPBar(ctx js.Value, y float64) {
-	labelX := float64(CanvasW) * 0.32
+	labelX := float64(200)
 	barX := labelX + 28.0
-	barW := float64(CanvasW) * 0.28
+	barW := float64(220)
 	barH := 13.0
 
 	ratio := float64(g.Player.HP) / float64(g.Player.MaxHP)
@@ -212,16 +282,15 @@ func (g *Game) renderHPBar(ctx js.Value, y float64) {
 	// Numbers
 	setFill(ctx, ColorUI)
 	ctx.Set("font", UIBold)
-	ctx.Set("textAlign", "left")
 	ctx.Call("fillText",
-		fmt.Sprintf("%d / %d", g.Player.HP, g.Player.MaxHP),
-		barX+barW+10, y+1)
+		fmt.Sprintf("%d/%d", g.Player.HP, g.Player.MaxHP),
+		barX+barW+8, y+1)
 }
 
 func (g *Game) renderMessages(ctx js.Value, y float64) {
 	msgs := g.Messages
-	if len(msgs) > 3 {
-		msgs = msgs[len(msgs)-3:]
+	if len(msgs) > 2 {
+		msgs = msgs[len(msgs)-2:]
 	}
 	ctx.Set("font", UIFont)
 	ctx.Set("textAlign", "left")
@@ -254,6 +323,143 @@ func (g *Game) renderOverlay(ctx js.Value, title, sub, titleColor string) {
 	setFill(ctx, ColorUI)
 	ctx.Set("font", "15px Inter, system-ui, sans-serif")
 	ctx.Call("fillText", sub, cx, cy+18)
+}
+
+func (g *Game) renderChestPanel(ctx js.Value) {
+	if g.PendingGear == nil {
+		return
+	}
+
+	cx := float64(CanvasW) / 2
+	cy := float64(MapH*TileH) / 2
+
+	// Dim the map
+	ctx.Set("fillStyle", "rgba(10, 10, 20, 0.85)")
+	ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
+
+	// Panel box
+	boxW := float64(380)
+	boxH := float64(130)
+	bx := cx - boxW/2
+	by := cy - boxH/2
+
+	setFill(ctx, "#10101a")
+	ctx.Call("fillRect", bx, by, boxW, boxH)
+	ctx.Set("strokeStyle", ColorChest)
+	ctx.Set("lineWidth", 1)
+	ctx.Call("strokeRect", bx+0.5, by+0.5, boxW-1, boxH-1)
+
+	ctx.Set("textAlign", "center")
+	ctx.Set("textBaseline", "top")
+
+	// Header
+	setFill(ctx, ColorChest)
+	ctx.Set("font", UIBold)
+	ctx.Call("fillText", "GEAR FOUND", cx, by+14)
+
+	// Gear name
+	setFill(ctx, g.PendingGear.Color)
+	ctx.Set("font", "bold 16px Inter, system-ui, sans-serif")
+	ctx.Call("fillText", string(g.PendingGear.Char)+" "+g.PendingGear.Name, cx, by+36)
+
+	// Gear description
+	setFill(ctx, ColorUI)
+	ctx.Set("font", UIFont)
+	ctx.Call("fillText", g.PendingGear.Desc, cx, by+58)
+
+	// Current equipped
+	slot := g.PendingGear.Slot
+	current := g.Player.Equipped[slot]
+	currentText := "(empty slot)"
+	if current != nil {
+		currentText = "Replaces: " + current.Name
+	}
+	setFill(ctx, ColorUIDim)
+	ctx.Call("fillText", currentText, cx, by+76)
+
+	// Actions
+	setFill(ctx, ColorMsgNew)
+	ctx.Set("font", UIBold)
+	ctx.Call("fillText", "[E] Equip     [any key] Leave", cx, by+100)
+}
+
+func (g *Game) renderShopPanel(ctx js.Value) {
+	if g.Merchant == nil {
+		return
+	}
+
+	cx := float64(CanvasW) / 2
+	cy := float64(MapH*TileH) / 2
+
+	// Dim the map
+	ctx.Set("fillStyle", "rgba(10, 10, 20, 0.85)")
+	ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
+
+	// Panel box
+	boxW := float64(420)
+	boxH := float64(180)
+	bx := cx - boxW/2
+	by := cy - boxH/2
+
+	setFill(ctx, "#10101a")
+	ctx.Call("fillRect", bx, by, boxW, boxH)
+	ctx.Set("strokeStyle", ColorMerchant)
+	ctx.Set("lineWidth", 1)
+	ctx.Call("strokeRect", bx+0.5, by+0.5, boxW-1, boxH-1)
+
+	ctx.Set("textBaseline", "top")
+
+	// Header
+	setFill(ctx, ColorMerchant)
+	ctx.Set("font", UIBold)
+	ctx.Set("textAlign", "left")
+	ctx.Call("fillText", "MERCHANT", bx+14, by+14)
+
+	// Player gold (top right)
+	setFill(ctx, ColorGold)
+	ctx.Set("textAlign", "right")
+	ctx.Call("fillText", fmt.Sprintf("◆ %dg", g.Player.Gold), bx+boxW-14, by+14)
+
+	// Items
+	for i, item := range g.Merchant.Stock {
+		iy := by + 38 + float64(i)*32
+
+		canAfford := g.Player.Gold >= item.Cost
+		label := fmt.Sprintf("[%d] %s", i+1, item.Name)
+		costLabel := fmt.Sprintf("%dg", item.Cost)
+
+		var textColor string
+		switch {
+		case item.Sold:
+			textColor = ColorUIDim
+			label = fmt.Sprintf("[%d] %s", i+1, item.Name+" (sold)")
+		case !canAfford:
+			textColor = "#5a5f6e"
+		default:
+			textColor = ColorUI
+		}
+
+		ctx.Set("textAlign", "left")
+		setFill(ctx, textColor)
+		ctx.Set("font", UIFont)
+		ctx.Call("fillText", label, bx+14, iy)
+
+		if !item.Sold {
+			if canAfford {
+				setFill(ctx, ColorGold)
+			} else {
+				setFill(ctx, ColorUIDim)
+			}
+			ctx.Set("textAlign", "right")
+			ctx.Call("fillText", costLabel, bx+boxW-14, iy)
+		}
+	}
+
+	// Footer
+	setFill(ctx, ColorUIDim)
+	ctx.Set("font", UIFont)
+	ctx.Set("textAlign", "center")
+	ctx.Call("fillText", "[Esc / move] Leave", cx, by+boxH-18)
 }
 
 func setFill(ctx js.Value, color string) {
