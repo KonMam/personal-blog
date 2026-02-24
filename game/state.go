@@ -21,6 +21,7 @@ const (
 	PhaseVictory
 	PhaseChest
 	PhaseShop
+	PhaseEvent
 )
 
 type Item struct {
@@ -54,6 +55,8 @@ type Game struct {
 	Items       []*Item
 	Chests      []*Chest
 	Merchant    *Merchant
+	Events      []*EventSpawn
+	ActiveEvent *ActiveEvent
 	Phase       GamePhase
 	Floor       int
 	Messages    []string
@@ -75,6 +78,8 @@ func (g *Game) newFloor() {
 	g.Items = nil
 	g.Chests = nil
 	g.Merchant = nil
+	g.Events = nil
+	g.ActiveEvent = nil
 
 	g.addMessage(fmt.Sprintf("You descend to floor %d.", g.Floor))
 
@@ -94,6 +99,13 @@ func (g *Game) newFloor() {
 	if g.Floor == 2 {
 		g.spawnMerchant(rooms)
 	}
+	g.spawnEvents(rooms)
+
+	// Refill shield charges from gear
+	g.Player.ShieldCharges += g.Player.ShieldMod
+	// Poison clears on floor descent
+	g.Player.Poison = 0
+
 	ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
 }
 
@@ -121,18 +133,28 @@ func (g *Game) spawnEnemies(rooms []Room) {
 			case 1:
 				e = NewGoblin(x, y)
 			case 2:
-				if rand.Intn(2) == 0 {
-					e = NewOrc(x, y)
-				} else {
+				roll := rand.Intn(4)
+				switch roll {
+				case 0:
+					e = NewArcher(x, y)
+				case 1:
 					e = NewGoblin(x, y)
+				default:
+					e = NewOrc(x, y)
 				}
 			case 3:
 				if i == len(rooms)-1 && n == 0 {
 					e = NewTroll(x, y)
-				} else if rand.Intn(3) == 0 {
-					e = NewGoblin(x, y)
 				} else {
-					e = NewOrc(x, y)
+					roll := rand.Intn(5)
+					switch roll {
+					case 0:
+						e = NewArcher(x, y)
+					case 1:
+						e = NewGoblin(x, y)
+					default:
+						e = NewOrc(x, y)
+					}
 				}
 			}
 			if e != nil {
@@ -176,7 +198,7 @@ func (g *Game) spawnChests(rooms []Room) {
 			// 50% chance to contain gear
 			var gear *Gear
 			if rand.Intn(2) == 0 {
-				all := append(GearWeapons, GearArmors...)
+				all := append(append(GearWeapons, GearArmors...), GearTrinkets...)
 				gear = all[rand.Intn(len(all))]
 			}
 			g.Chests = append(g.Chests, &Chest{
@@ -199,17 +221,54 @@ func (g *Game) spawnMerchant(rooms []Room) {
 
 	wi := rand.Intn(len(GearWeapons))
 	ai := rand.Intn(len(GearArmors))
+	ti := rand.Intn(len(GearTrinkets))
 	w := GearWeapons[wi]
 	a := GearArmors[ai]
+	t := GearTrinkets[ti]
 
 	stock := []*ShopItem{
 		{Name: "Healing Potion (+12 HP)", Cost: 15},
 		{Name: "Greater Potion (+25 HP)", Cost: 28},
 		{Name: w.Name, Cost: 35 + rand.Intn(20), Gear: w},
 		{Name: a.Name, Cost: 35 + rand.Intn(20), Gear: a},
+		{Name: t.Name, Cost: 40 + rand.Intn(25), Gear: t},
 	}
 
 	g.Merchant = &Merchant{X: cx, Y: cy, Stock: stock}
+}
+
+func (g *Game) spawnEvents(rooms []Room) {
+	if len(rooms) < 3 {
+		return
+	}
+	for attempt := 0; attempt < 20; attempt++ {
+		// Not first room (player spawn), not last room (stairs)
+		idx := 1 + rand.Intn(len(rooms)-2)
+		room := rooms[idx]
+		cx, cy := room.Center()
+
+		// Skip if occupied by enemy, chest, or merchant
+		if g.enemyAt(cx, cy) != nil {
+			continue
+		}
+		occupied := false
+		for _, chest := range g.Chests {
+			if chest.X == cx && chest.Y == cy {
+				occupied = true
+				break
+			}
+		}
+		if occupied {
+			continue
+		}
+		if g.Merchant != nil && g.Merchant.X == cx && g.Merchant.Y == cy {
+			continue
+		}
+
+		def := allEvents[rand.Intn(len(allEvents))]
+		g.Events = append(g.Events, &EventSpawn{X: cx, Y: cy, Def: def})
+		return
+	}
 }
 
 func (g *Game) HandleInput(key string) {
@@ -224,6 +283,9 @@ func (g *Game) HandleInput(key string) {
 		return
 	case PhaseShop:
 		g.handleShopInput(key)
+		return
+	case PhaseEvent:
+		g.handleEventInput(key)
 		return
 	}
 
@@ -273,7 +335,7 @@ func (g *Game) handleShopInput(key string) {
 	case "ArrowUp", "w", "W", "ArrowDown", "s", "S",
 		"ArrowLeft", "a", "A", "ArrowRight", "d", "D":
 		g.Phase = PhasePlay
-	case "1", "2", "3", "4":
+	case "1", "2", "3", "4", "5":
 		if g.Merchant == nil {
 			return
 		}
@@ -302,6 +364,27 @@ func (g *Game) handleShopInput(key string) {
 	}
 }
 
+func (g *Game) handleEventInput(key string) {
+	if g.ActiveEvent == nil {
+		g.Phase = PhasePlay
+		return
+	}
+	if g.ActiveEvent.Result != "" {
+		// Any key continues — events are free actions, no enemy turn
+		g.ActiveEvent = nil
+		g.Phase = PhasePlay
+		return
+	}
+	// Process choice keys
+	if key == "1" || key == "2" || key == "3" {
+		idx := int(key[0] - '1')
+		choices := g.ActiveEvent.Def.Choices
+		if idx < len(choices) {
+			g.ActiveEvent.Result = choices[idx].Effect(g)
+		}
+	}
+}
+
 func (g *Game) usePotion() {
 	if g.Player.Potions <= 0 {
 		g.addMessage("No potions. [♥ 0]")
@@ -324,6 +407,8 @@ func (g *Game) restart() {
 	g.Messages = nil
 	g.Phase = PhasePlay
 	g.PendingGear = nil
+	g.Events = nil
+	g.ActiveEvent = nil
 	g.Turns = 0
 	g.Kills = 0
 	g.newFloor()
@@ -339,20 +424,23 @@ func (g *Game) movePlayer(dx, dy int) {
 		return
 	}
 
-	// Bump attack
-	if enemy := g.enemyAt(nx, ny); enemy != nil {
-		dmg := g.Player.CalcDamage()
-		enemy.HP -= dmg
-		if enemy.HP <= 0 {
-			enemy.HP = 0
-			enemy.Alive = false
-			g.Kills++
-			gold := enemy.goldDrop()
-			g.Player.Gold += gold
-			g.addMessage(fmt.Sprintf("You slay the %s! +%dg", enemy.Name, gold))
-		} else {
-			g.addMessage(fmt.Sprintf("You hit the %s for %d damage.", enemy.Name, dmg))
+	// Reach attack: scan ahead in movement direction
+	var target *Entity
+	for dist := 1; dist <= g.Player.Reach; dist++ {
+		tx, ty := g.Player.X+dx*dist, g.Player.Y+dy*dist
+		if tx < 0 || ty < 0 || tx >= MapW || ty >= MapH {
+			break
 		}
+		if g.Tiles[ty][tx].Type == TileWall {
+			break
+		}
+		if e := g.enemyAt(tx, ty); e != nil {
+			target = e
+			break
+		}
+	}
+	if target != nil {
+		g.doPlayerAttack(target)
 		g.enemyTurn()
 		ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
 		return
@@ -387,6 +475,17 @@ func (g *Game) movePlayer(dx, dy int) {
 		}
 	}
 
+	// Walk into event
+	for i, ev := range g.Events {
+		if ev.X == nx && ev.Y == ny {
+			g.ActiveEvent = &ActiveEvent{Def: ev.Def}
+			g.Events = append(g.Events[:i], g.Events[i+1:]...)
+			g.Phase = PhaseEvent
+			// Events are free actions — no enemyTurn
+			return
+		}
+	}
+
 	// Stairs
 	if g.Tiles[ny][nx].Type == TileStairs {
 		if g.Floor < MaxFloors {
@@ -413,8 +512,116 @@ func (g *Game) movePlayer(dx, dy int) {
 	ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
 }
 
+// doPlayerAttack handles a player bump attack with all combat mechanics.
+func (g *Game) doPlayerAttack(enemy *Entity) {
+	dmg := g.Player.CalcDamage()
+	enemy.HP -= dmg
+	if enemy.HP <= 0 {
+		enemy.HP = 0
+		enemy.Alive = false
+		g.Kills++
+		gold := enemy.goldDrop()
+		g.Player.Gold += gold
+		g.addMessage(fmt.Sprintf("You slay the %s! +%dg", enemy.Name, gold))
+	} else {
+		g.addMessage(fmt.Sprintf("You hit the %s for %d damage.", enemy.Name, dmg))
+	}
+	if g.Player.Lifesteal > 0 {
+		g.Player.HP = min(g.Player.MaxHP, g.Player.HP+g.Player.Lifesteal)
+	}
+	if g.Player.BurnOnHit && enemy.Alive {
+		enemy.Burn = 3
+	}
+	if g.Player.DoubleStrike && enemy.Alive {
+		dmg2 := g.Player.CalcDamage()
+		enemy.HP -= dmg2
+		if enemy.HP <= 0 {
+			enemy.HP = 0
+			enemy.Alive = false
+			g.Kills++
+			gold := enemy.goldDrop()
+			g.Player.Gold += gold
+			g.addMessage(fmt.Sprintf("You slay the %s! +%dg", enemy.Name, gold))
+		} else {
+			g.addMessage(fmt.Sprintf("You strike again for %d damage.", dmg2))
+		}
+		if g.Player.Lifesteal > 0 {
+			g.Player.HP = min(g.Player.MaxHP, g.Player.HP+g.Player.Lifesteal)
+		}
+	}
+}
+
+// doEnemyAttack applies one enemy attack to the player.
+// Returns true if the player dies.
+func (g *Game) doEnemyAttack(e *Entity, isRanged bool) bool {
+	rawDmg := e.CalcDamage()
+
+	// Shield absorbs the hit
+	if g.Player.ShieldCharges > 0 {
+		g.Player.ShieldCharges--
+		g.addMessage(fmt.Sprintf("Shield absorbs the %s's attack! (%d left)", e.Name, g.Player.ShieldCharges))
+		return false
+	}
+
+	// Dodge check
+	if rand.Intn(100) < g.Player.Dodge {
+		g.addMessage(fmt.Sprintf("You dodge the %s's attack!", e.Name))
+		return false
+	}
+
+	finalDmg := rawDmg - g.Player.Def
+	if finalDmg < 1 {
+		finalDmg = 1
+	}
+	g.Player.HP -= finalDmg
+	if g.Player.HP <= 0 {
+		g.Player.HP = 0
+		g.Player.Alive = false
+		g.Phase = PhaseGameOver
+		g.addMessage("You died. Press R to restart.")
+		return true
+	}
+
+	if isRanged {
+		g.addMessage(fmt.Sprintf("An arrow from the %s hits you for %d damage.", e.Name, finalDmg))
+	} else {
+		g.addMessage(fmt.Sprintf("The %s hits you for %d damage.", e.Name, finalDmg))
+	}
+
+	// Thorns
+	if g.Player.Thorns > 0 {
+		e.HP -= g.Player.Thorns
+		if e.HP <= 0 {
+			e.HP = 0
+			e.Alive = false
+			g.Kills++
+			gold := e.goldDrop()
+			g.Player.Gold += gold
+			g.addMessage(fmt.Sprintf("Thorns slay the %s! +%dg", e.Name, gold))
+		} else {
+			g.addMessage(fmt.Sprintf("Thorns deal %d to the %s.", g.Player.Thorns, e.Name))
+		}
+	}
+	return false
+}
+
 func (g *Game) enemyTurn() {
 	g.Turns++
+
+	// Player poison tick
+	if g.Player.Poison > 0 {
+		g.Player.HP -= 3
+		g.Player.Poison--
+		if g.Player.HP <= 0 {
+			g.Player.HP = 0
+			g.Player.Alive = false
+			g.Phase = PhaseGameOver
+			g.addMessage("Poison kills you. Press R to restart.")
+			return
+		}
+		g.addMessage(fmt.Sprintf("Poison deals 3 damage. (%d turns left)", g.Player.Poison))
+	}
+
 	g.cleanupDeadEnemies()
 	for _, e := range g.Enemies {
 		if !e.Alive {
@@ -424,39 +631,42 @@ func (g *Game) enemyTurn() {
 			continue
 		}
 
+		// Burn tick (before acting)
+		if e.Burn > 0 {
+			e.HP -= 3
+			e.Burn--
+			if e.HP <= 0 {
+				e.HP = 0
+				e.Alive = false
+				g.Kills++
+				gold := e.goldDrop()
+				g.Player.Gold += gold
+				g.addMessage(fmt.Sprintf("The %s burns to death! +%dg", e.Name, gold))
+				continue
+			}
+			g.addMessage(fmt.Sprintf("The %s burns for 3 damage.", e.Name))
+		}
+
 		dx := g.Player.X - e.X
 		dy := g.Player.Y - e.Y
 
-		// Adjacent: attack
-		if iAbs(dx)+iAbs(dy) == 1 {
-			rawDmg := e.CalcDamage()
-			finalDmg := rawDmg - g.Player.Def
-			if finalDmg < 1 {
-				finalDmg = 1
-			}
-			g.Player.HP -= finalDmg
-			if g.Player.HP <= 0 {
-				g.Player.HP = 0
-				g.Player.Alive = false
-				g.Phase = PhaseGameOver
-				g.addMessage("You died. Press R to restart.")
-				return
-			}
-			g.addMessage(fmt.Sprintf("The %s hits you for %d damage.", e.Name, finalDmg))
-
-			// Thorns
-			if g.Player.Thorns > 0 {
-				e.HP -= g.Player.Thorns
-				if e.HP <= 0 {
-					e.HP = 0
-					e.Alive = false
-					g.Kills++
-					gold := e.goldDrop()
-					g.Player.Gold += gold
-					g.addMessage(fmt.Sprintf("Thorns slay the %s! +%dg", e.Name, gold))
-				} else {
-					g.addMessage(fmt.Sprintf("Thorns deal %d to the %s.", g.Player.Thorns, e.Name))
+		// Ranged attack (Archer)
+		if e.RangeAttack > 0 {
+			cheby := max(iAbs(dx), iAbs(dy))
+			if cheby <= e.RangeAttack {
+				if g.doEnemyAttack(e, true) {
+					return
 				}
+				continue
+			}
+			g.moveEnemy(e)
+			continue
+		}
+
+		// Adjacent: melee attack
+		if iAbs(dx)+iAbs(dy) == 1 {
+			if g.doEnemyAttack(e, false) {
+				return
 			}
 			continue
 		}

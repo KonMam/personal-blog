@@ -31,6 +31,7 @@ const (
 	ColorGoblin         = "#FC8181"
 	ColorOrc            = "#F56565"
 	ColorTroll          = "#E53E3E"
+	ColorArcher         = "#B7791F"
 	ColorPotion         = "#68D391"
 	ColorUI             = "#b8bcc8"
 	ColorUIDim          = "#4a5568"
@@ -44,6 +45,9 @@ const (
 	ColorGold           = "#F6AD55"
 	ColorChest          = "#F6E05E"
 	ColorMerchant       = "#48BB78"
+	ColorShield         = "#9F7AEA"
+	ColorPoisonUI       = "#68D391"
+	ColorEvent          = "#6C8CFF"
 
 	GameFont = "bold 15px 'Courier New', 'Lucida Console', monospace"
 	UIFont   = "12px Inter, system-ui, sans-serif"
@@ -81,6 +85,13 @@ func (g *Game) Render(ctx js.Value) {
 		}
 	}
 
+	// Events (? glyph)
+	for _, ev := range g.Events {
+		if g.Tiles[ev.Y][ev.X].Visible {
+			g.drawChar(ctx, '?', ev.X, ev.Y, ColorEvent)
+		}
+	}
+
 	// Enemies
 	for _, e := range g.Enemies {
 		if e.Alive && g.Tiles[e.Y][e.X].Visible {
@@ -104,6 +115,8 @@ func (g *Game) Render(ctx js.Value) {
 		g.renderChestPanel(ctx)
 	case PhaseShop:
 		g.renderShopPanel(ctx)
+	case PhaseEvent:
+		g.renderEventPanel(ctx)
 	}
 }
 
@@ -185,7 +198,7 @@ func (g *Game) renderUI(ctx js.Value) {
 	ctx.Set("textAlign", "left")
 	ctx.Set("textBaseline", "top")
 
-	// --- Line 1: FLOOR | HP bar | Gold | Potions ---
+	// --- Line 1: FLOOR | HP bar | Shield | Gold | Potions | Poison ---
 
 	// Floor label
 	setFill(ctx, ColorAccent)
@@ -195,27 +208,37 @@ func (g *Game) renderUI(ctx js.Value) {
 	// HP bar
 	g.renderHPBar(ctx, top)
 
+	// Shield charges (only if player has shield gear or active charges)
+	if g.Player.ShieldCharges > 0 || g.Player.ShieldMod > 0 {
+		setFill(ctx, ColorShield)
+		ctx.Set("font", UIBold)
+		ctx.Call("fillText", fmt.Sprintf("◆ %dsh", g.Player.ShieldCharges), 472, top)
+	}
+
 	// Gold
-	goldX := float64(600)
 	setFill(ctx, ColorGold)
 	ctx.Set("font", UIBold)
-	ctx.Call("fillText", fmt.Sprintf("◆ %dg", g.Player.Gold), goldX, top)
+	ctx.Call("fillText", fmt.Sprintf("◆ %dg", g.Player.Gold), 580, top)
 
 	// Potions
-	potX := float64(700)
 	setFill(ctx, ColorPotion)
 	ctx.Set("font", UIBold)
-	ctx.Call("fillText", fmt.Sprintf("♥ %d", g.Player.Potions), potX, top)
+	ctx.Call("fillText", fmt.Sprintf("♥ %d", g.Player.Potions), 700, top)
+
+	// Poison indicator
+	if g.Player.Poison > 0 {
+		setFill(ctx, ColorPoisonUI)
+		ctx.Set("font", UIBold)
+		ctx.Call("fillText", fmt.Sprintf("☠ %d", g.Player.Poison), 780, top)
+	}
 
 	// --- Line 2: Gear slots ---
 	gearY := top + 22
 
-	// Weapon slot
 	ctx.Set("font", UIFont)
 	g.renderGearSlot(ctx, 12, gearY, SlotWeapon)
-
-	// Armor slot
-	g.renderGearSlot(ctx, float64(CanvasW)/2, gearY, SlotArmor)
+	g.renderGearSlot(ctx, 330, gearY, SlotArmor)
+	g.renderGearSlot(ctx, 650, gearY, SlotTrinket)
 
 	// --- Lines 3-4: Messages ---
 	g.renderMessages(ctx, top+46)
@@ -228,10 +251,13 @@ func (g *Game) renderGearSlot(ctx js.Value, x, y float64, slot GearSlot) {
 
 	if gear == nil {
 		setFill(ctx, ColorUIDim)
-		if slot == SlotWeapon {
+		switch slot {
+		case SlotWeapon:
 			ctx.Call("fillText", "† (no weapon)", x, y)
-		} else {
+		case SlotArmor:
 			ctx.Call("fillText", "◈ (no armor)", x, y)
+		case SlotTrinket:
+			ctx.Call("fillText", "◇ (no trinket)", x, y)
 		}
 		return
 	}
@@ -395,9 +421,10 @@ func (g *Game) renderShopPanel(ctx js.Value) {
 	ctx.Set("fillStyle", "rgba(10, 10, 20, 0.85)")
 	ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
 
-	// Panel box
-	boxW := float64(420)
-	boxH := float64(180)
+	// Panel box — sized dynamically for number of items
+	const itemH = 28
+	boxW := float64(440)
+	boxH := float64(44 + len(g.Merchant.Stock)*itemH + 22)
 	bx := cx - boxW/2
 	by := cy - boxH/2
 
@@ -422,7 +449,7 @@ func (g *Game) renderShopPanel(ctx js.Value) {
 
 	// Items
 	for i, item := range g.Merchant.Stock {
-		iy := by + 38 + float64(i)*32
+		iy := by + 38 + float64(i)*float64(itemH)
 
 		canAfford := g.Player.Gold >= item.Cost
 		label := fmt.Sprintf("[%d] %s", i+1, item.Name)
@@ -460,6 +487,69 @@ func (g *Game) renderShopPanel(ctx js.Value) {
 	ctx.Set("font", UIFont)
 	ctx.Set("textAlign", "center")
 	ctx.Call("fillText", "[Esc / move] Leave", cx, by+boxH-18)
+}
+
+func (g *Game) renderEventPanel(ctx js.Value) {
+	if g.ActiveEvent == nil {
+		return
+	}
+
+	cx := float64(CanvasW) / 2
+	cy := float64(MapH*TileH) / 2
+
+	// Dim the map
+	ctx.Set("fillStyle", "rgba(10, 10, 20, 0.85)")
+	ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
+
+	def := g.ActiveEvent.Def
+
+	// Panel size depends on state
+	boxW := float64(460)
+	var boxH float64
+	if g.ActiveEvent.Result != "" {
+		boxH = 110
+	} else {
+		boxH = float64(72 + len(def.Choices)*28)
+	}
+	bx := cx - boxW/2
+	by := cy - boxH/2
+
+	setFill(ctx, "#10101a")
+	ctx.Call("fillRect", bx, by, boxW, boxH)
+	ctx.Set("strokeStyle", ColorAccent)
+	ctx.Set("lineWidth", 1)
+	ctx.Call("strokeRect", bx+0.5, by+0.5, boxW-1, boxH-1)
+
+	ctx.Set("textBaseline", "top")
+
+	if g.ActiveEvent.Result != "" {
+		// Post-choice: result
+		setFill(ctx, ColorMsgNew)
+		ctx.Set("font", UIFont)
+		ctx.Set("textAlign", "center")
+		ctx.Call("fillText", g.ActiveEvent.Result, cx, by+30)
+		setFill(ctx, ColorUIDim)
+		ctx.Call("fillText", "[any key] Continue", cx, by+56)
+		return
+	}
+
+	// Pre-choice: title
+	setFill(ctx, ColorAccent)
+	ctx.Set("font", UIBold)
+	ctx.Set("textAlign", "left")
+	ctx.Call("fillText", def.Title, bx+14, by+14)
+
+	// Body
+	setFill(ctx, ColorUI)
+	ctx.Set("font", UIFont)
+	ctx.Call("fillText", def.Body, bx+14, by+32)
+
+	// Choices
+	for i, choice := range def.Choices {
+		setFill(ctx, ColorUI)
+		ctx.Set("font", UIFont)
+		ctx.Call("fillText", fmt.Sprintf("[%d] %s", i+1, choice.Label), bx+14, by+56+float64(i)*26)
+	}
 }
 
 func (g *Game) renderVictoryPanel(ctx js.Value) {
