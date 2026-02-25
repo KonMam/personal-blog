@@ -32,10 +32,10 @@ var allEvents = []*EventDef{
 	// 1
 	{
 		Title: "Ancient Shrine",
-		Body:  "A crumbling shrine flickers with pale light.",
+		Body:  "A crumbling shrine flickers. Something still listens.",
 		Choices: []*EventChoice{
 			{
-				Label: "Pray (-10g)",
+				Label: "Kneel and pray (-10g)",
 				Effect: func(g *Game) string {
 					if g.Player.Gold < 10 {
 						return "Not enough gold to pray. (need 10g)"
@@ -69,7 +69,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You leave the shrine undisturbed."
+					return "You walk past without kneeling."
 				},
 			},
 		},
@@ -77,7 +77,7 @@ var allEvents = []*EventDef{
 	// 2
 	{
 		Title: "Murky Pool",
-		Body:  "A still pool reflects your tired face.",
+		Body:  "A still pool, dark as ink. Something moves beneath the surface.",
 		Choices: []*EventChoice{
 			{
 				Label: "Drink deeply (risky)",
@@ -98,13 +98,14 @@ var allEvents = []*EventDef{
 					}
 					g.Player.Gold -= 5
 					g.Player.Potions++
-					return fmt.Sprintf("You fill a flask. +1 potion. (%d total)", g.Player.Potions)
+					g.Player.PotionTypes = append(g.Player.PotionTypes, PotionHealing)
+					return fmt.Sprintf("You fill a flask. +1 Healing Potion. (%d total)", g.Player.Potions)
 				},
 			},
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You leave the pool alone."
+					return "You step back. Probably wise."
 				},
 			},
 		},
@@ -112,10 +113,10 @@ var allEvents = []*EventDef{
 	// 3
 	{
 		Title: "Blood Altar",
-		Body:  "An altar slicked with old blood.",
+		Body:  "The blood here is never fully dry.",
 		Choices: []*EventChoice{
 			{
-				Label: "Offer blood (+20g)",
+				Label: "Bleed for it (+20g)",
 				Effect: func(g *Game) string {
 					sacrifice := g.Player.MaxHP / 5
 					if sacrifice < 5 {
@@ -126,33 +127,61 @@ var allEvents = []*EventDef{
 						g.Player.HP = 1
 					}
 					g.Player.Gold += 20
-					return fmt.Sprintf("You offer blood. -%d HP, +20g.", sacrifice)
+					return fmt.Sprintf("It drinks eagerly. -%d HP, +20g.", sacrifice)
 				},
 			},
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You step back from the altar."
+					return "You keep your blood. For now."
 				},
 			},
 		},
 	},
 	// 4
 	{
-		Title: "Crystal Vial",
-		Body:  "A humming vial filled with silver light.",
+		Title: "Unstable Elixir",
+		Body:  "A bubbling flask. It smells of power — and regret.",
 		Choices: []*EventChoice{
 			{
-				Label: "Drink",
+				Label: "Sip carefully (+5 shields, -6 max HP)",
 				Effect: func(g *Game) string {
 					g.Player.ShieldCharges += 5
-					return fmt.Sprintf("A shimmer surrounds you. +5 shields. (%d total)", g.Player.ShieldCharges)
+					g.Player.BaseMaxHP -= 6
+					if g.Player.BaseMaxHP < 5 {
+						g.Player.BaseMaxHP = 5
+					}
+					g.Player.RecalcStats()
+					if g.Player.HP > g.Player.MaxHP {
+						g.Player.HP = g.Player.MaxHP
+					}
+					return fmt.Sprintf("A cold shimmer settles. +5 shields, -6 max HP. (%d shields)", g.Player.ShieldCharges)
+				},
+			},
+			{
+				Label: "Chug the whole thing (risky)",
+				Effect: func(g *Game) string {
+					if rand.Intn(2) == 0 {
+						heal := 20
+						if g.Player.HP+heal > g.Player.MaxHP {
+							heal = g.Player.MaxHP - g.Player.HP
+						}
+						g.Player.HP += heal
+						g.Player.ShieldCharges += 8
+						return fmt.Sprintf("The elixir surges through you! +%d HP, +8 shields.", heal)
+					}
+					g.Player.HP -= 12
+					if g.Player.HP < 1 {
+						g.Player.HP = 1
+					}
+					g.Player.Poison = 3
+					return "Violent reaction! -12 HP, Poisoned for 3 turns."
 				},
 			},
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You set the vial down carefully."
+					return "You set the flask down before it decides for you."
 				},
 			},
 		},
@@ -160,10 +189,10 @@ var allEvents = []*EventDef{
 	// 5
 	{
 		Title: "Alchemist's Fire",
-		Body:  "A cracked flask leaks acrid smoke.",
+		Body:  "The flask hisses. It wants to be thrown.",
 		Choices: []*EventChoice{
 			{
-				Label: "Throw it",
+				Label: "Hurl it at them",
 				Effect: func(g *Game) string {
 					count := 0
 					for _, e := range g.Enemies {
@@ -181,7 +210,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You carefully set the flask aside."
+					return "You leave it. Still hissing."
 				},
 			},
 		},
@@ -189,55 +218,73 @@ var allEvents = []*EventDef{
 	// 6
 	{
 		Title: "Dusty Tome",
-		Body:  "A leather tome, pages rustling on their own.",
+		Body:  "A leather tome whose pages turn by themselves.",
 		Choices: []*EventChoice{
 			{
-				Label: "Study it (risky)",
+				Label: "Open it and read (risky)",
 				Effect: func(g *Game) string {
 					if rand.Intn(2) == 0 {
 						g.Player.BaseDef += 2
 						g.Player.RecalcStats()
-						return "Ancient knowledge fortifies you. +2 DEF."
+						return "The words rearrange themselves into something useful. +2 DEF."
 					}
 					g.Player.BaseMaxHP -= 6
 					if g.Player.BaseMaxHP < 5 {
 						g.Player.BaseMaxHP = 5
 					}
 					g.Player.RecalcStats()
-					return "The tome drains your vitality. -6 max HP."
+					return "The words reach back. -6 max HP."
 				},
 			},
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You close the tome and move on."
+					return "You don't touch it."
 				},
 			},
 		},
 	},
 	// 7
 	{
-		Title: "Lucky Bones",
-		Body:  "A shady figure grins. 'Care for a wager?'",
+		Title: "The Armourer's Gift",
+		Body:  "A grizzled smith looks you over. 'That could be sharper. Or sturdier. Your call.'",
 		Choices: []*EventChoice{
 			{
-				Label: "Roll (bet 15g)",
+				Label: "Sharpen your weapon (+1 ATK)",
 				Effect: func(g *Game) string {
-					if g.Player.Gold < 15 {
-						return "Not enough gold to bet. (need 15g)"
+					weapon := g.Player.Equipped[SlotWeapon]
+					if weapon == nil {
+						return "No weapon equipped to sharpen."
 					}
-					g.Player.Gold -= 15
-					if rand.Intn(2) == 0 {
-						g.Player.Gold += 35
-						return "Lucky! You win big. +35g. (net +20g)"
-					}
-					return "Snake eyes. You lose. (-15g)"
+					upgraded := *weapon
+					upgraded.AtkMod++
+					upgraded.Name = weapon.Name + " +"
+					upgraded.Desc = fmt.Sprintf("+%d ATK. [sharpened]", upgraded.AtkMod)
+					g.Player.Equipped[SlotWeapon] = &upgraded
+					g.Player.RecalcStats()
+					return fmt.Sprintf("The smith sharpens your %s. +1 ATK.", weapon.Name)
 				},
 			},
 			{
-				Label: "Walk away",
+				Label: "Reinforce your armor (+1 DEF)",
 				Effect: func(g *Game) string {
-					return "You pocket your gold and walk away."
+					armor := g.Player.Equipped[SlotArmor]
+					if armor == nil {
+						return "No armor equipped to reinforce."
+					}
+					upgraded := *armor
+					upgraded.DefMod++
+					upgraded.Name = armor.Name + " +"
+					upgraded.Desc = fmt.Sprintf("+%d DEF. [reinforced]", upgraded.DefMod)
+					g.Player.Equipped[SlotArmor] = &upgraded
+					g.Player.RecalcStats()
+					return fmt.Sprintf("The smith reinforces your %s. +1 DEF.", armor.Name)
+				},
+			},
+			{
+				Label: "Leave",
+				Effect: func(g *Game) string {
+					return "The smith shrugs and goes back to hammering."
 				},
 			},
 		},
@@ -245,23 +292,26 @@ var allEvents = []*EventDef{
 	// 8
 	{
 		Title: "Dying Mercenary",
-		Body:  "A mercenary slumps against the wall.",
+		Body:  "A mercenary, bleeding out. Eyes still open.",
 		Choices: []*EventChoice{
 			{
-				Label: "Give a potion (+2 DEF, +12g)",
+				Label: "Give them a potion (+2 DEF, +12g)",
 				Effect: func(g *Game) string {
 					if g.Player.Potions <= 0 {
 						return "You have no potions to give."
 					}
 					g.Player.Potions--
+					if len(g.Player.PotionTypes) > 0 {
+						g.Player.PotionTypes = g.Player.PotionTypes[1:]
+					}
 					g.Player.BaseDef += 2
 					g.Player.RecalcStats()
 					g.Player.Gold += 12
-					return fmt.Sprintf("The mercenary thanks you. +2 DEF, +12g. (%d potions left)", g.Player.Potions)
+					return fmt.Sprintf("'Worth more than the dying,' they rasp. +2 DEF, +12g. (%d potions left)", g.Player.Potions)
 				},
 			},
 			{
-				Label: "Loot their pack",
+				Label: "Go through their pockets",
 				Effect: func(g *Game) string {
 					if rand.Intn(2) == 0 {
 						g.Player.Gold += 15
@@ -273,7 +323,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You leave the mercenary to their fate."
+					return "You step over them."
 				},
 			},
 		},
@@ -281,10 +331,10 @@ var allEvents = []*EventDef{
 	// 9
 	{
 		Title: "Weapon Shrine",
-		Body:  "Runic weapons line a stone rack.",
+		Body:  "Blades etched with old script hang in rows. One hums when you near it.",
 		Choices: []*EventChoice{
 			{
-				Label: "Take the best one",
+				Label: "Claim one",
 				Effect: func(g *Game) string {
 					g.PendingGear = GearEventWeapons[rand.Intn(len(GearEventWeapons))]
 					g.UsedGear[g.PendingGear] = true
@@ -294,7 +344,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You leave the weapons untouched."
+					return "You leave them to hum alone."
 				},
 			},
 		},
@@ -302,10 +352,10 @@ var allEvents = []*EventDef{
 	// 10
 	{
 		Title: "Armory of the Fallen",
-		Body:  "A hero's armor hangs unmolested on the wall.",
+		Body:  "A suit of armor, standing as if the hero just stepped out of it.",
 		Choices: []*EventChoice{
 			{
-				Label: "Claim it",
+				Label: "Take it down",
 				Effect: func(g *Game) string {
 					g.PendingGear = GearEventArmors[rand.Intn(len(GearEventArmors))]
 					g.UsedGear[g.PendingGear] = true
@@ -315,7 +365,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You leave the armor where it hangs."
+					return "You leave it standing."
 				},
 			},
 		},
@@ -323,10 +373,10 @@ var allEvents = []*EventDef{
 	// 11
 	{
 		Title: "Sacred Reliquary",
-		Body:  "A sealed case holds a pulsing trinket.",
+		Body:  "A sealed reliquary, silver-clasped. Whatever's inside pushes against the lid.",
 		Choices: []*EventChoice{
 			{
-				Label: "Take it",
+				Label: "Break the seal",
 				Effect: func(g *Game) string {
 					g.PendingGear = GearEventTrinkets[rand.Intn(len(GearEventTrinkets))]
 					g.UsedGear[g.PendingGear] = true
@@ -336,7 +386,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You leave the reliquary sealed."
+					return "You leave it shut."
 				},
 			},
 		},
@@ -344,10 +394,10 @@ var allEvents = []*EventDef{
 	// 12
 	{
 		Title: "Blood Price",
-		Body:  "A demon offers power for pain.",
+		Body:  "A demon leans against the wall, arms folded. It's been waiting.",
 		Choices: []*EventChoice{
 			{
-				Label: "Accept (-20 max HP, +5 ATK)",
+				Label: "Take the deal (-20 max HP, +5 ATK)",
 				Effect: func(g *Game) string {
 					g.Player.BaseMaxHP -= 20
 					if g.Player.BaseMaxHP < 5 {
@@ -358,7 +408,7 @@ var allEvents = []*EventDef{
 					if g.Player.HP > g.Player.MaxHP {
 						g.Player.HP = g.Player.MaxHP
 					}
-					return "Power surges through you. -20 max HP, +5 ATK."
+					return "'Pleasure doing business,' it says. Then it's gone. -20 max HP, +5 ATK."
 				},
 			},
 			{
@@ -372,17 +422,17 @@ var allEvents = []*EventDef{
 	// 13
 	{
 		Title: "Bonfire",
-		Body:  "A warm bonfire crackles in the darkness.",
+		Body:  "A bonfire, no explanation for who lit it. It doesn't matter.",
 		Choices: []*EventChoice{
 			{
-				Label: "Rest (+15 HP)",
+				Label: "Sit and rest (+15 HP)",
 				Effect: func(g *Game) string {
 					heal := 15
 					if g.Player.HP+heal > g.Player.MaxHP {
 						heal = g.Player.MaxHP - g.Player.HP
 					}
 					g.Player.HP += heal
-					return fmt.Sprintf("You rest by the fire. +%d HP.", heal)
+					return fmt.Sprintf("You stop thinking for a while. +%d HP.", heal)
 				},
 			},
 			{
@@ -408,10 +458,10 @@ var allEvents = []*EventDef{
 	// 14
 	{
 		Title: "Acid Pit",
-		Body:  "A bubbling pit of corrosive acid.",
+		Body:  "A pit that eats stone. You can hear it from the doorway.",
 		Choices: []*EventChoice{
 			{
-				Label: "Splash visible enemies",
+				Label: "Kick acid at them",
 				Effect: func(g *Game) string {
 					count := 0
 					killed := 0
@@ -429,7 +479,7 @@ var allEvents = []*EventDef{
 						}
 					}
 					if count == 0 {
-						return "No enemies in sight. The acid splashes harmlessly."
+						return "No one to splash. The acid eats the floor instead."
 					}
 					if killed > 0 {
 						return fmt.Sprintf("Acid burns %d enemies for 6! %d killed.", count, killed)
@@ -440,7 +490,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You back away from the pit carefully."
+					return "You step around it."
 				},
 			},
 		},
@@ -448,7 +498,7 @@ var allEvents = []*EventDef{
 	// 15
 	{
 		Title: "Magic Forge",
-		Body:  "A forge still burning with blue flame.",
+		Body:  "A forge burning cold blue. Nobody tends it. It doesn't need them.",
 		Choices: []*EventChoice{
 			{
 				Label: "Temper weapon (-20g, +2 ATK)",
@@ -467,37 +517,67 @@ var allEvents = []*EventDef{
 					upgraded.Desc = fmt.Sprintf("+%d ATK. [forged]", upgraded.AtkMod)
 					g.Player.Equipped[SlotWeapon] = &upgraded
 					g.Player.RecalcStats()
-					return fmt.Sprintf("The forge tempers your blade. +2 ATK. (%s)", upgraded.Name)
+					return fmt.Sprintf("The flame runs along the edge and settles in. +2 ATK. (%s)", upgraded.Name)
 				},
 			},
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You leave the forge to cool."
+					return "The forge doesn't need your permission to keep burning."
 				},
 			},
 		},
 	},
 	// 16
 	{
-		Title: "Necromancer's Tome",
-		Body:  "A tome bound in shadow and bone.",
+		Title: "Haunted Cell",
+		Body:  "A spirit lingers here. It is angry, but it can be reasoned with.",
 		Choices: []*EventChoice{
 			{
-				Label: "Read it (risky)",
+				Label: "Bargain with it (-8 HP, freeze one enemy)",
 				Effect: func(g *Game) string {
-					if rand.Intn(2) == 0 {
-						g.Player.ShieldCharges += 6
-						return fmt.Sprintf("Dark knowledge surrounds you. +6 shields. (%d total)", g.Player.ShieldCharges)
+					var targets []*Entity
+					for _, e := range g.Enemies {
+						if e.Alive && g.Tiles[e.Y][e.X].Visible {
+							targets = append(targets, e)
+						}
 					}
-					g.Player.Poison = 5
-					return "The words rot your mind. Poisoned for 5 turns."
+					if len(targets) == 0 {
+						return "No visible enemies. The spirit fades without claiming a victim."
+					}
+					target := targets[rand.Intn(len(targets))]
+					target.Frozen = 3
+					g.Player.HP -= 8
+					if g.Player.HP < 1 {
+						g.Player.HP = 1
+					}
+					return fmt.Sprintf("The spirit obeys. The %s is frozen for 3 turns. -8 HP.", target.Name)
 				},
 			},
 			{
-				Label: "Leave",
+				Label: "Offer it a memory (-1 shield, freeze all visible)",
 				Effect: func(g *Game) string {
-					return "You close the tome without reading."
+					if g.Player.ShieldCharges < 1 {
+						return "You have no shields to offer. The spirit ignores you."
+					}
+					g.Player.ShieldCharges--
+					count := 0
+					for _, e := range g.Enemies {
+						if e.Alive && g.Tiles[e.Y][e.X].Visible {
+							e.Frozen = 1
+							count++
+						}
+					}
+					if count == 0 {
+						return "The spirit drinks your memory. No enemies to freeze."
+					}
+					return fmt.Sprintf("The spirit drinks your memory. %d enemies frozen briefly.", count)
+				},
+			},
+			{
+				Label: "Drive it out",
+				Effect: func(g *Game) string {
+					return "The spirit screams and dissipates."
 				},
 			},
 		},
@@ -505,56 +585,72 @@ var allEvents = []*EventDef{
 	// 17
 	{
 		Title: "Phoenix Feather",
-		Body:  "A feather radiates intense heat.",
+		Body:  "A feather that hasn't cooled in centuries. It knows what it could do.",
 		Choices: []*EventChoice{
 			{
-				Label: "Crush it (burn all visible enemies)",
+				Label: "Draw the warmth in (+12 HP, clears ailments)",
+				Effect: func(g *Game) string {
+					heal := 12
+					if g.Player.HP+heal > g.Player.MaxHP {
+						heal = g.Player.MaxHP - g.Player.HP
+					}
+					g.Player.HP += heal
+					g.Player.Poison = 0
+					g.Player.PlayerBurn = 0
+					return fmt.Sprintf("The feather's warmth cleanses you. +%d HP, all ailments cleared.", heal)
+				},
+			},
+			{
+				Label: "Crush it in your fist (ignites all visible, burns you too)",
 				Effect: func(g *Game) string {
 					count := 0
 					for _, e := range g.Enemies {
 						if e.Alive && g.Tiles[e.Y][e.X].Visible {
-							e.Burn = 4
+							e.Burn = 5
 							count++
 						}
 					}
+					g.Player.PlayerBurn = 2
 					if count == 0 {
-						return "No enemies in sight. The feather smolders to ash."
+						return "No targets. The heat has nowhere to go. PlayerBurn 2."
 					}
-					return fmt.Sprintf("The feather ignites! %d enemies catch fire (Burn 4).", count)
+					return fmt.Sprintf("Fire erupts! %d enemies ignited (Burn 5). You catch some heat. PlayerBurn 2.", count)
 				},
 			},
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You leave the feather where it glows."
+					return "You leave it glowing."
 				},
 			},
 		},
 	},
 	// 18
 	{
-		Title: "Warrior's Trophy",
-		Body:  "A trophy from a fallen champion.",
+		Title: "Champion's Legacy",
+		Body:  "A glass case, untouched. The champion is long dead but their things remain.",
 		Choices: []*EventChoice{
 			{
-				Label: "Claim the gold (+12g)",
+				Label: "Take the coins (+18g)",
 				Effect: func(g *Game) string {
-					g.Player.Gold += 12
-					return "You pocket the gold. +12g."
+					g.Player.Gold += 18
+					return "Heavy. The champion hoarded well. +18g."
 				},
 			},
 			{
-				Label: "Study their technique (+1 DEF)",
+				Label: "Take the medicine pouch (+1 Antidote, +1 Might Draught)",
 				Effect: func(g *Game) string {
-					g.Player.BaseDef++
+					g.Player.Potions += 2
+					g.Player.PotionTypes = append(g.Player.PotionTypes, PotionAntidote, PotionMight)
+					return fmt.Sprintf("You pocket the pouch. +1 Antidote, +1 Might Draught. (%d total)", g.Player.Potions)
+				},
+			},
+			{
+				Label: "Read the victory scrolls (+2 ATK)",
+				Effect: func(g *Game) string {
+					g.Player.BaseAtk += 2
 					g.Player.RecalcStats()
-					return "You learn from the champion. +1 DEF."
-				},
-			},
-			{
-				Label: "Leave",
-				Effect: func(g *Game) string {
-					return "You leave the trophy in peace."
+					return "The champion's tactics burn into your mind. +2 ATK."
 				},
 			},
 		},
@@ -562,27 +658,27 @@ var allEvents = []*EventDef{
 	// 19
 	{
 		Title: "Trap Cache",
-		Body:  "A suspicious pile of crates. Could be rigged.",
+		Body:  "A stack of crates wedged into the corner. They've been here a long time.",
 		Choices: []*EventChoice{
 			{
-				Label: "Loot it (risky)",
+				Label: "Tear it open (risky)",
 				Effect: func(g *Game) string {
 					if rand.Intn(2) == 0 {
 						g.Player.Gold += 25
-						return "No trap! You find 25g inside."
+						return "No spring, no needle. Just coin. +25g."
 					}
 					g.Player.HP -= 8
 					if g.Player.HP < 1 {
 						g.Player.HP = 1
 					}
 					g.Player.Poison = 2
-					return "Trapped! -8 HP and poisoned for 2 turns."
+					return "Something stings your hand. Fast. -8 HP, poisoned."
 				},
 			},
 			{
 				Label: "Leave it alone",
 				Effect: func(g *Game) string {
-					return "Better safe than sorry."
+					return "You've seen this before."
 				},
 			},
 		},
@@ -590,7 +686,7 @@ var allEvents = []*EventDef{
 	// 20
 	{
 		Title: "Wandering Alchemist",
-		Body:  "An alchemist stirs a glowing pot.",
+		Body:  "An alchemist, entirely unbothered by the dungeon. The pot smells like progress.",
 		Choices: []*EventChoice{
 			{
 				Label: "Buy potions (-15g, +2 potions)",
@@ -600,7 +696,8 @@ var allEvents = []*EventDef{
 					}
 					g.Player.Gold -= 15
 					g.Player.Potions += 2
-					return fmt.Sprintf("You buy two potions. (%d total)", g.Player.Potions)
+					g.Player.PotionTypes = append(g.Player.PotionTypes, PotionHealing, PotionHealing)
+					return fmt.Sprintf("You buy two Healing Potions. (%d total)", g.Player.Potions)
 				},
 			},
 			{
@@ -623,7 +720,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You have no need for potions right now."
+					return "You move on."
 				},
 			},
 		},
@@ -631,17 +728,17 @@ var allEvents = []*EventDef{
 	// 21
 	{
 		Title: "Oathstone",
-		Body:  "A stone inscribed with ancient runes pulses faintly.",
+		Body:  "A flat stone with a single oath carved deep into it: 'I will endure.'",
 		Choices: []*EventChoice{
 			{
-				Label: "Touch it (-10 HP, +8 shields)",
+				Label: "Press your hand to it (-10 HP, +8 shields)",
 				Effect: func(g *Game) string {
 					g.Player.HP -= 10
 					if g.Player.HP < 1 {
 						g.Player.HP = 1
 					}
 					g.Player.ShieldCharges += 8
-					return fmt.Sprintf("The oath binds you. -10 HP, +8 shields. (%d total)", g.Player.ShieldCharges)
+					return fmt.Sprintf("The stone cracks when you lift your hand. The oath is yours now. -10 HP, +8 shields (%d).", g.Player.ShieldCharges)
 				},
 			},
 			{
@@ -654,93 +751,154 @@ var allEvents = []*EventDef{
 	},
 	// 22
 	{
-		Title: "Dark Bargain",
-		Body:  "A cloaked figure waits in silence.",
+		Title: "Knowledge Exchange",
+		Body:  "A scholar's notebook, dense with marginalia. You can only absorb one discipline.",
 		Choices: []*EventChoice{
 			{
-				Label: "Trade HP for power (-10 max HP, +4 ATK, +1 DEF)",
+				Label: "Study warfare (+2 ATK, -1 DEF)",
 				Effect: func(g *Game) string {
-					g.Player.BaseMaxHP -= 10
-					if g.Player.BaseMaxHP < 5 {
-						g.Player.BaseMaxHP = 5
+					g.Player.BaseAtk += 2
+					g.Player.BaseDef--
+					if g.Player.BaseDef < 0 {
+						g.Player.BaseDef = 0
 					}
-					g.Player.BaseAtk += 4
-					g.Player.BaseDef++
 					g.Player.RecalcStats()
-					if g.Player.HP > g.Player.MaxHP {
-						g.Player.HP = g.Player.MaxHP
-					}
-					return "The figure nods. -10 max HP, +4 ATK, +1 DEF."
+					return "Combat instincts sharpen. +2 ATK, -1 DEF."
 				},
 			},
 			{
-				Label: "Walk away",
+				Label: "Study defence (+2 DEF, -1 ATK)",
 				Effect: func(g *Game) string {
-					return "The figure watches as you pass."
+					g.Player.BaseDef += 2
+					g.Player.BaseAtk--
+					if g.Player.BaseAtk < 1 {
+						g.Player.BaseAtk = 1
+					}
+					g.Player.RecalcStats()
+					return "Your guard tightens. +2 DEF, -1 ATK."
+				},
+			},
+			{
+				Label: "Leave",
+				Effect: func(g *Game) string {
+					return "You close it. Too much ink, not enough time."
 				},
 			},
 		},
 	},
 	// 23
 	{
-		Title: "Potion Cache",
-		Body:  "Dusty shelves hold several forgotten potions.",
+		Title: "Apothecary's Cache",
+		Body:  "Three vials on a dusty shelf, each labeled in a shaking hand. One of them.",
 		Choices: []*EventChoice{
 			{
-				Label: "Take them (+2 potions)",
+				Label: "Take the Healing Potion (+1)",
 				Effect: func(g *Game) string {
-					g.Player.Potions += 2
-					return fmt.Sprintf("You pocket two potions. (%d total)", g.Player.Potions)
+					g.Player.Potions++
+					g.Player.PotionTypes = append(g.Player.PotionTypes, PotionHealing)
+					return fmt.Sprintf("+1 Healing Potion. (%d total)", g.Player.Potions)
 				},
 			},
 			{
-				Label: "Leave",
+				Label: "Take the Antidote (+1)",
 				Effect: func(g *Game) string {
-					return "You already have enough."
+					g.Player.Potions++
+					g.Player.PotionTypes = append(g.Player.PotionTypes, PotionAntidote)
+					return fmt.Sprintf("+1 Antidote. (%d total)", g.Player.Potions)
+				},
+			},
+			{
+				Label: "Take the Might Draught (+1)",
+				Effect: func(g *Game) string {
+					g.Player.Potions++
+					g.Player.PotionTypes = append(g.Player.PotionTypes, PotionMight)
+					return fmt.Sprintf("+1 Might Draught. (%d total)", g.Player.Potions)
 				},
 			},
 		},
 	},
 	// 24
 	{
-		Title: "Giant Spider",
-		Body:  "A giant spider guards a silk-wrapped bundle.",
+		Title: "Trapped Chest",
+		Body:  "A chest, and you can see the spring. Someone set this up deliberately.",
 		Choices: []*EventChoice{
 			{
-				Label: "Fight through (-12 HP, +20g)",
+				Label: "Wrench it open (risky)",
 				Effect: func(g *Game) string {
-					g.Player.HP -= 12
+					if rand.Intn(2) == 0 {
+						gear := g.pickAnyGear()
+						if gear != nil {
+							g.PendingGear = gear
+							return "The chest springs open without triggering. Gear inside!"
+						}
+						return "The chest opens safely but is empty."
+					}
+					g.Player.HP -= 15
 					if g.Player.HP < 1 {
 						g.Player.HP = 1
 					}
-					g.Player.Gold += 20
-					return "You tear through the spider. -12 HP, +20g."
+					g.Player.Poison = 2
+					return "The spring catches your arm. -15 HP, Poisoned."
 				},
 			},
 			{
-				Label: "Leave",
+				Label: "Disarm the mechanism (-12g, safe)",
 				Effect: func(g *Game) string {
-					return "You back away from the massive spider."
+					if g.Player.Gold < 12 {
+						return "Not enough gold to study the mechanism. (need 12g)"
+					}
+					gear := g.pickAnyGear()
+					if gear == nil {
+						return "Nothing left to find inside."
+					}
+					g.Player.Gold -= 12
+					g.PendingGear = gear
+					return "You carefully disarm the trap and open the chest."
+				},
+			},
+			{
+				Label: "Leave it",
+				Effect: func(g *Game) string {
+					return "Not today."
 				},
 			},
 		},
 	},
 	// 25
 	{
-		Title: "Sage's Study",
-		Body:  "Books and scrolls fill a small alcove.",
+		Title: "The Cartographer",
+		Body:  "A mapmaker hunches over parchment. 'I know every tunnel on this floor.'",
 		Choices: []*EventChoice{
 			{
-				Label: "Study them (+2 vision)",
+				Label: "Buy the full map (-15g)",
 				Effect: func(g *Game) string {
+					if g.Player.Gold < 15 {
+						return "Not enough gold. (need 15g)"
+					}
+					g.Player.Gold -= 15
+					for y := range g.Tiles {
+						for x := range g.Tiles[y] {
+							g.Tiles[y][x].Explored = true
+						}
+					}
+					return "Every room and corridor is now known to you. -15g."
+				},
+			},
+			{
+				Label: "Share your notes (-5g, +2 vision)",
+				Effect: func(g *Game) string {
+					if g.Player.Gold < 5 {
+						return "Not enough gold. (need 5g)"
+					}
+					g.Player.Gold -= 5
 					g.Player.FOVRadius += 2
-					return "Your perception sharpens permanently. +2 vision."
+					return "Your awareness sharpens permanently. -5g, +2 vision."
 				},
 			},
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "No time for reading today."
+					return "You know enough."
 				},
 			},
 		},
@@ -748,28 +906,28 @@ var allEvents = []*EventDef{
 	// 26
 	{
 		Title: "Well of Souls",
-		Body:  "An ancient well pulses with eerie light.",
+		Body:  "A well that glows from within. You can't see the bottom.",
 		Choices: []*EventChoice{
 			{
-				Label: "Drink (1-of-3 outcome)",
+				Label: "Cup your hands and drink",
 				Effect: func(g *Game) string {
 					switch rand.Intn(3) {
 					case 0:
 						g.Player.HP = g.Player.MaxHP
-						return "The well restores you completely. (full HP)"
+						return "Cold and clean. You feel entirely restored."
 					case 1:
 						g.Player.Poison = 4
-						return "The well poisons you! (4 turns)"
+						return "It tastes wrong halfway down. Poisoned."
 					default:
 						g.Player.Gold += 15
-						return "Coins glitter at the bottom. +15g."
+						return "The glow was just coins. +15g."
 					}
 				},
 			},
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You peer into the dark water and walk on."
+					return "You walk on."
 				},
 			},
 		},
@@ -777,10 +935,10 @@ var allEvents = []*EventDef{
 	// 27
 	{
 		Title: "Ruined Library",
-		Body:  "Decaying books hold traces of old knowledge.",
+		Body:  "Shelves of rotting books. Most of it gone, but not all.",
 		Choices: []*EventChoice{
 			{
-				Label: "Study them (-10g, +1 ATK, +1 DEF)",
+				Label: "Study what remains (-10g, +1 ATK +1 DEF)",
 				Effect: func(g *Game) string {
 					if g.Player.Gold < 10 {
 						return "Not enough gold. (need 10g)"
@@ -789,38 +947,59 @@ var allEvents = []*EventDef{
 					g.Player.BaseAtk++
 					g.Player.BaseDef++
 					g.Player.RecalcStats()
-					return "The old texts teach you. -10g, +1 ATK, +1 DEF."
+					return "The knowledge is old but it holds. -10g, +1 ATK, +1 DEF."
 				},
 			},
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You leave the crumbling books alone."
+					return "You don't have time to read."
 				},
 			},
 		},
 	},
 	// 28
 	{
-		Title: "Execution Block",
-		Body:  "A blood-stained block hums with latent violence.",
+		Title: "Memory Crystal",
+		Body:  "A crystal holding someone else's lifetime. You can only take part of it.",
 		Choices: []*EventChoice{
 			{
-				Label: "Channel it (-8 HP, +3 ATK)",
+				Label: "Absorb their strength (+2 ATK, +1 DEF, -8 max HP)",
 				Effect: func(g *Game) string {
-					g.Player.HP -= 8
-					if g.Player.HP < 1 {
-						g.Player.HP = 1
+					g.Player.BaseAtk += 2
+					g.Player.BaseDef++
+					g.Player.BaseMaxHP -= 8
+					if g.Player.BaseMaxHP < 5 {
+						g.Player.BaseMaxHP = 5
 					}
-					g.Player.BaseAtk += 3
 					g.Player.RecalcStats()
-					return "Violence flows through you. -8 HP, +3 ATK."
+					if g.Player.HP > g.Player.MaxHP {
+						g.Player.HP = g.Player.MaxHP
+					}
+					return "The warrior's fury floods you. +2 ATK, +1 DEF, -8 max HP."
 				},
 			},
 			{
-				Label: "Leave",
+				Label: "Absorb their resilience (+10 max HP, -1 ATK)",
 				Effect: func(g *Game) string {
-					return "You step away from the block."
+					g.Player.BaseMaxHP += 10
+					g.Player.HP += 10
+					g.Player.BaseAtk--
+					if g.Player.BaseAtk < 1 {
+						g.Player.BaseAtk = 1
+					}
+					g.Player.RecalcStats()
+					if g.Player.HP > g.Player.MaxHP {
+						g.Player.HP = g.Player.MaxHP
+					}
+					return "The warrior's endurance is yours. +10 max HP, -1 ATK."
+				},
+			},
+			{
+				Label: "Shatter it (+15g)",
+				Effect: func(g *Game) string {
+					g.Player.Gold += 15
+					return "The crystal shatters into coin-dust. +15g."
 				},
 			},
 		},
@@ -828,25 +1007,25 @@ var allEvents = []*EventDef{
 	// 29
 	{
 		Title: "Echo of the Past",
-		Body:  "Visions of a great warrior fill your mind.",
+		Body:  "A ghost of muscle memory. Someone else's battles bleeding into yours.",
 		Choices: []*EventChoice{
 			{
-				Label: "Embrace them (risky)",
+				Label: "Open yourself to them (risky)",
 				Effect: func(g *Game) string {
 					if rand.Intn(2) == 0 {
 						g.Player.BaseAtk += 2
 						g.Player.BaseDef += 2
 						g.Player.RecalcStats()
-						return "The warrior's skill is yours. +2 ATK, +2 DEF."
+						return "They fought well. Now you do. +2 ATK, +2 DEF."
 					}
 					g.Player.Poison = 4
-					return "The memories overwhelm you. Poisoned for 4 turns."
+					return "Too much at once. Poisoned for 4 turns."
 				},
 			},
 			{
 				Label: "Let them fade",
 				Effect: func(g *Game) string {
-					return "The visions dissolve like smoke."
+					return "The visions dissolve."
 				},
 			},
 		},
@@ -854,10 +1033,10 @@ var allEvents = []*EventDef{
 	// 31
 	{
 		Title: "Altar of Cleansing",
-		Body:  "A purifying altar emanates light.",
+		Body:  "An altar that smells of cold stone and old mercy.",
 		Choices: []*EventChoice{
 			{
-				Label: "Cleanse (-25g)",
+				Label: "Pay for cleansing (-25g)",
 				Effect: func(g *Game) string {
 					if g.Player.Gold < 25 {
 						return "Not enough gold. (need 25g)"
@@ -880,32 +1059,42 @@ var allEvents = []*EventDef{
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You leave the altar behind."
+					return "You leave it. Your burdens stay."
 				},
 			},
 		},
 	},
 	// 30
 	{
-		Title: "Berserker's Trial",
-		Body:  "A test of pain and iron will.",
+		Title: "Proving Grounds",
+		Body:  "An inscription reads: 'Only those who face the horde may claim the prize.'",
 		Choices: []*EventChoice{
 			{
-				Label: "Endure it (-12 HP, +3 DEF)",
+				Label: "Enter the trial",
 				Effect: func(g *Game) string {
-					g.Player.HP -= 12
+					count := 0
+					for _, e := range g.Enemies {
+						if e.Alive {
+							count++
+						}
+					}
+					dmg := count * 2
+					g.Player.BaseAtk += 2
+					g.Player.RecalcStats()
+					if dmg == 0 {
+						return "All enemies are dead. The trial is granted freely. +2 ATK."
+					}
+					g.Player.HP -= dmg
 					if g.Player.HP < 1 {
 						g.Player.HP = 1
 					}
-					g.Player.BaseDef += 3
-					g.Player.RecalcStats()
-					return "You endure the trial. -12 HP, +3 DEF."
+					return fmt.Sprintf("The trial sears you. -%d HP (%d enemies), +2 ATK.", dmg, count)
 				},
 			},
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You walk past the trial untested."
+					return "You've nothing to prove."
 				},
 			},
 		},
@@ -916,7 +1105,7 @@ var allEvents = []*EventDef{
 		Body:  "A shadowy figure gestures to a table of bone dice. \"Care for a wager?\"",
 		Choices: []*EventChoice{
 			{
-				Label: "Bet 20g — 50% win 45g",
+				Label: "Small bet (20g)",
 				Effect: func(g *Game) string {
 					if g.Player.Gold < 20 {
 						return "Not enough gold. (need 20g)"
@@ -924,13 +1113,13 @@ var allEvents = []*EventDef{
 					g.Player.Gold -= 20
 					if rand.Intn(2) == 0 {
 						g.Player.Gold += 45
-						return "The dice roll in your favour. +25g net."
+						return "The dice like you tonight. +25g net."
 					}
-					return "Bad luck. 20g lost."
+					return "'Better luck next time,' it says."
 				},
 			},
 			{
-				Label: "Bet 40g — 35% win 120g",
+				Label: "High stakes (40g)",
 				Effect: func(g *Game) string {
 					if g.Player.Gold < 40 {
 						return "Not enough gold. (need 40g)"
@@ -938,15 +1127,15 @@ var allEvents = []*EventDef{
 					g.Player.Gold -= 40
 					if rand.Intn(20) < 7 {
 						g.Player.Gold += 120
-						return "Jackpot! +80g net."
+						return "You didn't deserve that. Take it anyway. +80g net."
 					}
-					return "Bust. 40g gone."
+					return "The figure pockets your gold without a word."
 				},
 			},
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You back away from the table."
+					return "You know better."
 				},
 			},
 		},
@@ -995,10 +1184,10 @@ var allEvents = []*EventDef{
 	// 33
 	{
 		Title: "Fountain of Vigour",
-		Body:  "Crystal-clear water bubbles up through ancient stone.",
+		Body:  "The water is impossibly clear. It tastes like something you'd forgotten.",
 		Choices: []*EventChoice{
 			{
-				Label: "Drink (+15 HP, cure ailments)",
+				Label: "Drink deep (+15 HP, clears ailments)",
 				Effect: func(g *Game) string {
 					heal := 15
 					if g.Player.HP+heal > g.Player.MaxHP {
@@ -1007,7 +1196,7 @@ var allEvents = []*EventDef{
 					g.Player.HP += heal
 					g.Player.Poison = 0
 					g.Player.PlayerBurn = 0
-					return fmt.Sprintf("Refreshed. +%d HP, all ailments cleared.", heal)
+					return fmt.Sprintf("Everything that was hurting stops. +%d HP, ailments cleared.", heal)
 				},
 			},
 			{
@@ -1021,7 +1210,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You leave the fountain undisturbed."
+					return "You don't trust it."
 				},
 			},
 		},
@@ -1032,7 +1221,7 @@ var allEvents = []*EventDef{
 		Body:  "A cloaked merchant eyes your coin pouch. \"Special price today. One item, one chance.\"",
 		Choices: []*EventChoice{
 			{
-				Label: "Browse (-15g, random gear)",
+				Label: "Have a look (-15g)",
 				Effect: func(g *Game) string {
 					if g.Player.Gold < 15 {
 						return "Not enough gold. (need 15g)"
@@ -1057,10 +1246,10 @@ var allEvents = []*EventDef{
 	// 35
 	{
 		Title: "Hidden Cache",
-		Body:  "A collapsed wall reveals a forgotten stash in the rubble.",
+		Body:  "A gap in the wall where stones have fallen. Someone hid something here.",
 		Choices: []*EventChoice{
 			{
-				Label: "Search",
+				Label: "Dig through it",
 				Effect: func(g *Game) string {
 					roll := rand.Intn(10)
 					if roll < 5 {
@@ -1086,7 +1275,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Leave",
 				Effect: func(g *Game) string {
-					return "You leave the rubble undisturbed."
+					return "You move on."
 				},
 			},
 		},

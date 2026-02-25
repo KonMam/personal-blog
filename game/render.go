@@ -172,16 +172,6 @@ func (g *Game) Render(ctx js.Value) {
 		}
 	}
 
-	// Shooters (on wall tiles — always visible when room is explored nearby)
-	for _, s := range g.Shooters {
-		if s.Y >= 0 && s.Y < MapH && s.X >= 0 && s.X < MapW && g.Tiles[s.Y][s.X].Explored {
-			color := ColorShooter
-			if s.Timer == 1 {
-				color = ColorShooterWarn
-			}
-			g.drawChar(ctx, '*', s.X, s.Y, color)
-		}
-	}
 
 	// Last-known enemy positions (ghosts shown when enemy is out of FOV)
 	for _, e := range g.Enemies {
@@ -598,7 +588,8 @@ func (g *Game) renderUI(ctx js.Value) {
 	ctx.Set("font", UIFont)
 	g.renderGearSlot(ctx, 12, gearY, SlotWeapon)
 	g.renderGearSlot(ctx, 330, gearY, SlotArmor)
-	g.renderGearSlot(ctx, 650, gearY, SlotTrinket)
+	g.renderGearSlot(ctx, 648, gearY, SlotTrinket)
+	g.renderClassSlotRight(ctx, float64(CanvasW)-12, gearY)
 
 	// --- Lines 3-4: Messages ---
 	g.renderMessages(ctx, top+46)
@@ -631,6 +622,38 @@ func (g *Game) renderGearSlot(ctx js.Value, x, y float64, slot GearSlot) {
 	// Name + desc in UI color, positioned after icon
 	setFill(ctx, ColorUI)
 	ctx.Call("fillText", fmt.Sprintf("%s  %s", gear.Name, gear.Desc), x+iconW, y)
+}
+
+// renderClassSlotRight draws the class slot right-aligned at rightX,
+// showing only the icon and name (no description) to stay compact.
+func (g *Game) renderClassSlotRight(ctx js.Value, rightX, y float64) {
+	ctx.Set("font", UIFont)
+	gear := g.Player.Equipped[SlotClass]
+
+	if gear == nil {
+		ctx.Set("textAlign", "right")
+		setFill(ctx, ColorUIDim)
+		ctx.Call("fillText", "✦ (class item)", rightX, y)
+		ctx.Set("textAlign", "left")
+		return
+	}
+
+	lockStr := "✦ "
+	iconStr := string(gear.Char) + " "
+	nameStr := gear.Name
+
+	ctx.Set("textAlign", "left")
+	lockW := ctx.Call("measureText", lockStr).Get("width").Float()
+	iconW := ctx.Call("measureText", iconStr).Get("width").Float()
+	nameW := ctx.Call("measureText", nameStr).Get("width").Float()
+	startX := rightX - (lockW + iconW + nameW)
+
+	setFill(ctx, ColorUIDim)
+	ctx.Call("fillText", lockStr, startX, y)
+	setFill(ctx, gear.Color)
+	ctx.Call("fillText", iconStr, startX+lockW, y)
+	setFill(ctx, ColorUI)
+	ctx.Call("fillText", nameStr, startX+lockW+iconW, y)
 }
 
 func (g *Game) renderHPBar(ctx js.Value, y float64) {
@@ -1027,7 +1050,7 @@ func (g *Game) renderDeathPanel(ctx js.Value) {
 	}
 
 	boxW := float64(480)
-	boxH := 240 + historyH + 36
+	boxH := 256 + historyH + 36
 	bx := cx - boxW/2
 	by := float64(MapH*TileH)/2 - boxH/2
 
@@ -1068,8 +1091,8 @@ func (g *Game) renderDeathPanel(ctx js.Value) {
 	// Gear (3 lines)
 	ctx.Set("textAlign", "left")
 	ctx.Set("font", UIFont)
-	gearLabels := []string{"†", "◈", "◇"}
-	for i, slot := range []GearSlot{SlotWeapon, SlotArmor, SlotTrinket} {
+	gearLabels := []string{"†", "◈", "◇", "✦"}
+	for i, slot := range []GearSlot{SlotWeapon, SlotArmor, SlotTrinket, SlotClass} {
 		gy := by + 80 + float64(i)*16
 		gear := g.Player.Equipped[slot]
 		if gear != nil {
@@ -1083,44 +1106,44 @@ func (g *Game) renderDeathPanel(ctx js.Value) {
 
 	// Separator
 	setFill(ctx, ColorSeparator)
-	ctx.Call("fillRect", bx+14, by+132, boxW-28, 1)
+	ctx.Call("fillRect", bx+14, by+148, boxW-28, 1)
 
 	// Stats row 1
 	ctx.Set("textAlign", "center")
 	setFill(ctx, ColorUIDim)
 	ctx.Set("font", UIFont)
-	ctx.Call("fillText", "TURNS", cx-110, by+146)
-	ctx.Call("fillText", "GOLD", cx, by+146)
-	ctx.Call("fillText", "KILLS", cx+110, by+146)
+	ctx.Call("fillText", "TURNS", cx-110, by+162)
+	ctx.Call("fillText", "GOLD", cx, by+162)
+	ctx.Call("fillText", "KILLS", cx+110, by+162)
 
 	ctx.Set("font", "bold 16px Inter, system-ui, sans-serif")
 	setFill(ctx, ColorMsgNew)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Turns), cx-110, by+162)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Turns), cx-110, by+178)
 	setFill(ctx, ColorGold)
-	ctx.Call("fillText", fmt.Sprintf("%dg", g.Player.Gold), cx, by+162)
+	ctx.Call("fillText", fmt.Sprintf("%dg", g.Player.Gold), cx, by+178)
 	setFill(ctx, ColorHPLow)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Kills), cx+110, by+162)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Kills), cx+110, by+178)
 
 	// Stats row 2
 	setFill(ctx, ColorUIDim)
 	ctx.Set("font", UIFont)
-	ctx.Call("fillText", "DMG OUT", cx-172, by+184)
-	ctx.Call("fillText", "DMG IN", cx-57, by+184)
-	ctx.Call("fillText", "POTIONS", cx+57, by+184)
-	ctx.Call("fillText", "STEPS", cx+172, by+184)
+	ctx.Call("fillText", "DMG OUT", cx-172, by+200)
+	ctx.Call("fillText", "DMG IN", cx-57, by+200)
+	ctx.Call("fillText", "POTIONS", cx+57, by+200)
+	ctx.Call("fillText", "STEPS", cx+172, by+200)
 
 	ctx.Set("font", "bold 14px Inter, system-ui, sans-serif")
 	setFill(ctx, ColorHPMid)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageDealt), cx-172, by+200)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageDealt), cx-172, by+216)
 	setFill(ctx, ColorHPLow)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageTaken), cx-57, by+200)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageTaken), cx-57, by+216)
 	setFill(ctx, ColorPotion)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.PotionsUsed), cx+57, by+200)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.PotionsUsed), cx+57, by+216)
 	setFill(ctx, ColorUIDim)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.Steps), cx+172, by+200)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.Steps), cx+172, by+216)
 
 	// History
-	g.renderEndHistory(ctx, bx, by+220, boxW)
+	g.renderEndHistory(ctx, bx, by+236, boxW)
 
 	// Footer
 	setFill(ctx, ColorUIDim)
@@ -1146,7 +1169,7 @@ func (g *Game) renderVictoryPanel(ctx js.Value) {
 	}
 
 	boxW := float64(480)
-	boxH := 250 + historyH + 36
+	boxH := 266 + historyH + 36
 	bx := cx - boxW/2
 	by := float64(MapH*TileH)/2 - boxH/2
 
@@ -1187,8 +1210,8 @@ func (g *Game) renderVictoryPanel(ctx js.Value) {
 	// Gear (3 lines)
 	ctx.Set("textAlign", "left")
 	ctx.Set("font", UIFont)
-	gearLabels := []string{"†", "◈", "◇"}
-	for i, slot := range []GearSlot{SlotWeapon, SlotArmor, SlotTrinket} {
+	gearLabels := []string{"†", "◈", "◇", "✦"}
+	for i, slot := range []GearSlot{SlotWeapon, SlotArmor, SlotTrinket, SlotClass} {
 		gy := by + 80 + float64(i)*16
 		gear := g.Player.Equipped[slot]
 		if gear != nil {
@@ -1202,44 +1225,44 @@ func (g *Game) renderVictoryPanel(ctx js.Value) {
 
 	// Separator
 	setFill(ctx, ColorSeparator)
-	ctx.Call("fillRect", bx+14, by+132, boxW-28, 1)
+	ctx.Call("fillRect", bx+14, by+148, boxW-28, 1)
 
 	// Stats
 	ctx.Set("textAlign", "center")
 	setFill(ctx, ColorUIDim)
 	ctx.Set("font", UIFont)
-	ctx.Call("fillText", "TURNS", cx-110, by+146)
-	ctx.Call("fillText", "GOLD", cx, by+146)
-	ctx.Call("fillText", "KILLS", cx+110, by+146)
+	ctx.Call("fillText", "TURNS", cx-110, by+162)
+	ctx.Call("fillText", "GOLD", cx, by+162)
+	ctx.Call("fillText", "KILLS", cx+110, by+162)
 
 	ctx.Set("font", "bold 18px Inter, system-ui, sans-serif")
 	setFill(ctx, ColorMsgNew)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Turns), cx-110, by+164)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Turns), cx-110, by+180)
 	setFill(ctx, ColorGold)
-	ctx.Call("fillText", fmt.Sprintf("%dg", g.Player.Gold), cx, by+164)
+	ctx.Call("fillText", fmt.Sprintf("%dg", g.Player.Gold), cx, by+180)
 	setFill(ctx, ColorHPHigh)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Kills), cx+110, by+164)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Kills), cx+110, by+180)
 
 	// Stats row 2
 	setFill(ctx, ColorUIDim)
 	ctx.Set("font", UIFont)
-	ctx.Call("fillText", "DMG OUT", cx-172, by+186)
-	ctx.Call("fillText", "DMG IN", cx-57, by+186)
-	ctx.Call("fillText", "POTIONS", cx+57, by+186)
-	ctx.Call("fillText", "STEPS", cx+172, by+186)
+	ctx.Call("fillText", "DMG OUT", cx-172, by+202)
+	ctx.Call("fillText", "DMG IN", cx-57, by+202)
+	ctx.Call("fillText", "POTIONS", cx+57, by+202)
+	ctx.Call("fillText", "STEPS", cx+172, by+202)
 
 	ctx.Set("font", "bold 14px Inter, system-ui, sans-serif")
 	setFill(ctx, ColorHPMid)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageDealt), cx-172, by+202)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageDealt), cx-172, by+218)
 	setFill(ctx, ColorHPLow)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageTaken), cx-57, by+202)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageTaken), cx-57, by+218)
 	setFill(ctx, ColorPotion)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.PotionsUsed), cx+57, by+202)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.PotionsUsed), cx+57, by+218)
 	setFill(ctx, ColorUIDim)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.Steps), cx+172, by+202)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.Steps), cx+172, by+218)
 
 	// History
-	g.renderEndHistory(ctx, bx, by+224, boxW)
+	g.renderEndHistory(ctx, bx, by+240, boxW)
 
 	// Footer
 	setFill(ctx, ColorUIDim)
@@ -1484,13 +1507,16 @@ func renderClassRow(ctx js.Value, def *ClassDef, keyNum int, bx, ry, boxW float6
 
 	item := def.StartItem
 	ctx.Set("textAlign", "left")
+	setFill(ctx, ColorUIDim)
+	ctx.Set("font", UIFont)
+	ctx.Call("fillText", "✦ ", bx+30, ry+22)
+	prefW := ctx.Call("measureText", "✦ ").Get("width").Float()
 	icon := string(item.Char) + " "
 	setFill(ctx, item.Color)
-	ctx.Set("font", UIFont)
-	ctx.Call("fillText", icon, bx+30, ry+22)
+	ctx.Call("fillText", icon, bx+30+prefW, ry+22)
 	iconW := ctx.Call("measureText", icon).Get("width").Float()
 	setFill(ctx, ColorUI)
-	ctx.Call("fillText", item.Name+"  "+item.Desc, bx+30+iconW, ry+22)
+	ctx.Call("fillText", item.Name+"  "+item.Desc, bx+30+prefW+iconW, ry+22)
 
 	setFill(ctx, ColorUIDim)
 	ctx.Call("fillText", def.Flavor, bx+30, ry+42)

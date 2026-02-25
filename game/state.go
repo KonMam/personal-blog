@@ -659,14 +659,19 @@ func (g *Game) handleChestInput(key string) {
 		playSound("chest")
 		slot := g.PendingGear.Slot
 		old := g.Player.Equipped[slot]
-		// Record synergies before equipping
+		// Record state before equipping
 		oldW := g.Player.SynergyWildfire
 		oldF := g.Player.SynergyFortress
 		oldR := g.Player.SynergyRageDrain
 		oldRe := g.Player.SynergyReactive
 		oldI := g.Player.SynergyInferno
+		oldShieldMod := g.Player.ShieldMod
 		g.Player.Equipped[slot] = g.PendingGear
 		g.Player.RecalcStats()
+		// Grant shield charges immediately if ShieldMod increased mid-floor
+		if delta := g.Player.ShieldMod - oldShieldMod; delta > 0 {
+			g.Player.ShieldCharges += delta
+		}
 		if old != nil {
 			g.addMessage(fmt.Sprintf("Equipped %s (replaced %s).", g.PendingGear.Name, old.Name))
 		} else {

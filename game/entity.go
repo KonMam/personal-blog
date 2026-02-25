@@ -28,6 +28,7 @@ const (
 	SlotWeapon  GearSlot = 0
 	SlotArmor   GearSlot = 1
 	SlotTrinket GearSlot = 2
+	SlotClass   GearSlot = 3 // locked class ability slot — never replaced by found gear
 )
 
 type PotionType int
@@ -149,7 +150,7 @@ type Entity struct {
 	Gold          int
 	Potions       int
 	PotionTypes   []PotionType // typed potion inventory
-	Equipped      [3]*Gear
+	Equipped      [4]*Gear
 	ShieldCharges int
 	ShieldMod     int
 	DoubleStrike  bool

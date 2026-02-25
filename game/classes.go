@@ -20,7 +20,7 @@ var (
 		Name:      "Ironclad Seal",
 		Char:      '◇',
 		Color:     "#9F7AEA",
-		Slot:      SlotTrinket,
+		Slot:      SlotClass,
 		ShieldMod: 5,
 		Desc:      "5 shield charges/floor.",
 	}
@@ -28,7 +28,7 @@ var (
 		Name:         "Shadow Wrap",
 		Char:         '◈',
 		Color:        "#68D391",
-		Slot:         SlotArmor,
+		Slot:         SlotClass,
 		DodgeMod:     20,
 		LifestealMod: 1,
 		Desc:         "20% dodge, lifesteal 1.",
@@ -37,7 +37,7 @@ var (
 		Name:   "Warlord's Hide",
 		Char:   '◈',
 		Color:  "#FC8181",
-		Slot:   SlotArmor,
+		Slot:   SlotClass,
 		Thorns: 4,
 		Desc:   "Thorns 4.",
 	}
@@ -45,7 +45,7 @@ var (
 		Name:      "Infusion Blade",
 		Char:      '†',
 		Color:     "#F6AD55",
-		Slot:      SlotWeapon,
+		Slot:      SlotClass,
 		AtkMod:    3,
 		BurnOnHit: true,
 		Desc:      "+3 ATK, attacks burn enemies.",
@@ -56,22 +56,22 @@ var (
 var (
 	classItemPaladin = &Gear{
 		Name: "Aegis", Char: '◈', Color: "#9F7AEA",
-		Slot: SlotArmor, DefMod: 2, ShieldMod: 4,
+		Slot: SlotClass, DefMod: 2, ShieldMod: 4,
 		Desc: "+2 DEF, 4 shields/floor.",
 	}
 	classItemShadowblade = &Gear{
 		Name: "Phantom Cloak", Char: '◈', Color: "#9F7AEA",
-		Slot: SlotArmor, DefMod: 1, DodgeMod: 30,
+		Slot: SlotClass, DefMod: 1, DodgeMod: 30,
 		Desc: "+1 DEF, 30% dodge.",
 	}
 	classItemWarlord = &Gear{
 		Name: "Battle Axe", Char: '†', Color: "#F6AD55",
-		Slot: SlotWeapon, AtkMod: 7, DefMod: -1,
+		Slot: SlotClass, AtkMod: 7, DefMod: -1,
 		Desc: "+7 ATK, -1 DEF.",
 	}
 	classItemPyromancer = &Gear{
 		Name: "Pyromancer's Lens", Char: '◇', Color: "#F6AD55",
-		Slot: SlotTrinket, BurnBonus: 4,
+		Slot: SlotClass, BurnBonus: 4,
 		Desc: "+4 damage to burning enemies.",
 	}
 )
