@@ -52,11 +52,11 @@ const (
 	ColorEvent          = "#6C8CFF"
 	ColorVenomancer     = "#9AE6B4"
 	ColorGuard          = "#90CDF4"
-	ColorTrap           = "#ED8936" // static spike trap ^
-	ColorMovingTrap     = "#FC8181" // moving spike ◆
-	ColorShooter        = "#FC8181" // shooter glyph
-	ColorShooterWarn    = "#F6E05E" // shooter warning (1 turn before fire)
-	ColorAltar          = "#E53E3E" // sacrifice altar +
+	ColorTrap        = "#ED8936" // static spike trap ^
+	ColorMovingTrap  = "#FC8181" // moving spike ◆
+	ColorShooter     = "#ED8936" // shooter glyph * (orange, matches fire line)
+	ColorShooterWarn = "#F6E05E" // shooter warning (1 turn before fire)
+	ColorAltar       = "#E53E3E" // sacrifice altar +
 
 	GameFont = "bold 15px 'Courier New', 'Lucida Console', monospace"
 	UIFont   = "12px Inter, system-ui, sans-serif"
@@ -77,6 +77,29 @@ func (g *Game) Render(ctx js.Value) {
 	for y := 0; y < MapH; y++ {
 		for x := 0; x < MapW; x++ {
 			g.renderTile(ctx, x, y)
+		}
+	}
+
+	// Shooter fire-line overlay (dim = danger zone, bright = about to fire)
+	for _, s := range g.Shooters {
+		if s.Y < 0 || s.Y >= MapH || s.X < 0 || s.X >= MapW || !g.Tiles[s.Y][s.X].Explored {
+			continue
+		}
+		warn := s.Timer == 1
+		x, y := s.X+s.DX, s.Y+s.DY
+		for x >= 0 && y >= 0 && x < MapW && y < MapH && g.Tiles[y][x].Type != TileWall {
+			if g.Tiles[y][x].Visible {
+				if warn {
+					// About to fire: bright yellow line
+					ctx.Set("fillStyle", "rgba(246, 224, 94, 0.35)")
+				} else {
+					// Idle: dim orange line
+					ctx.Set("fillStyle", "rgba(237, 137, 54, 0.15)")
+				}
+				ctx.Call("fillRect", float64(x*TileW), float64(y*TileH), float64(TileW), float64(TileH))
+			}
+			x += s.DX
+			y += s.DY
 		}
 	}
 
@@ -132,18 +155,7 @@ func (g *Game) Render(ctx js.Value) {
 			if s.Timer == 1 {
 				color = ColorShooterWarn
 			}
-			var ch rune
-			switch {
-			case s.DX > 0:
-				ch = '→'
-			case s.DX < 0:
-				ch = '←'
-			case s.DY > 0:
-				ch = '↓'
-			default:
-				ch = '↑'
-			}
-			g.drawChar(ctx, ch, s.X, s.Y, color)
+			g.drawChar(ctx, '*', s.X, s.Y, color)
 		}
 	}
 

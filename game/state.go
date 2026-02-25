@@ -32,10 +32,11 @@ type Item struct {
 }
 
 type Chest struct {
-	X, Y   int
-	Gold   int
-	Gear   *Gear
-	Opened bool
+	X, Y      int
+	Gold      int
+	Gear      *Gear
+	Opened    bool // true = fully done (hidden from map)
+	GoldTaken bool // true = gold already collected
 }
 
 type ShopItem struct {
@@ -95,10 +96,11 @@ type Game struct {
 	Shooters       []*Shooter
 	SacrificeAltar *SacrificeAltar
 	ChallengeRoom  *ChallengeRoom
-	Phase       GamePhase
-	Floor       int
-	Messages    []string
-	PendingGear *Gear
+	Phase        GamePhase
+	Floor        int
+	Messages     []string
+	PendingGear  *Gear
+	PendingChest *Chest // chest that triggered PhaseChest; nil for merchant/event gear
 	Turns       int
 	Kills       int
 	ClassName   string
@@ -132,6 +134,7 @@ func (g *Game) newFloor() {
 	g.Shooters = nil
 	g.SacrificeAltar = nil
 	g.ChallengeRoom = nil
+	g.PendingChest = nil
 
 	g.addMessage(fmt.Sprintf("You descend to floor %d.", g.Floor))
 
@@ -307,9 +310,12 @@ func (g *Game) spawnChests(rooms []Room) {
 			if used[idx] {
 				continue
 			}
-			used[idx] = true
 			room := rooms[idx]
 			cx, cy := room.Center()
+			if g.occupied(cx, cy) {
+				continue
+			}
+			used[idx] = true
 
 			// 50% chance to contain gear (never repeat an item seen this run)
 			var gear *Gear
@@ -500,8 +506,13 @@ func (g *Game) handleChestInput(key string) {
 		} else {
 			g.addMessage(fmt.Sprintf("Equipped %s.", g.PendingGear.Name))
 		}
+		// Mark the chest as fully cleared so it disappears from the map
+		if g.PendingChest != nil {
+			g.PendingChest.Opened = true
+		}
 	}
 	g.PendingGear = nil
+	g.PendingChest = nil
 	g.Phase = PhasePlay
 }
 
@@ -602,6 +613,7 @@ func (g *Game) restart() {
 	g.Shooters = nil
 	g.SacrificeAltar = nil
 	g.ChallengeRoom = nil
+	g.PendingChest = nil
 	// newFloor() is called by selectClass() once a class is chosen
 }
 
@@ -696,6 +708,28 @@ func (g *Game) movePlayer(dx, dy int) {
 		}
 	}
 
+	// Moving spike trap collision (player steps onto trap)
+	for _, mt := range g.MovingTraps {
+		if mt.X == nx && mt.Y == ny {
+			dmg := 6 + rand.Intn(5) // 6-10
+			g.Player.HP -= dmg
+			if g.Player.HP < 0 {
+				g.Player.HP = 0
+			}
+			g.addMessage(fmt.Sprintf("Moving spike! -%d HP.", dmg))
+			g.LastDamagedAt = time.Now()
+			if g.Player.HP <= 0 {
+				g.Player.Alive = false
+				g.recordRun("Died")
+				g.Phase = PhaseGameOver
+				g.enemyTurn()
+				g.recomputeFOV()
+				return
+			}
+			break
+		}
+	}
+
 	// Sacrifice altar
 	if sa := g.SacrificeAltar; sa != nil && !sa.Used && nx == sa.X && ny == sa.Y {
 		sa.Used = true
@@ -757,14 +791,22 @@ func (g *Game) movePlayer(dx, dy int) {
 	// Walk into chest
 	for _, chest := range g.Chests {
 		if !chest.Opened && chest.X == nx && chest.Y == ny {
-			chest.Opened = true
-			g.Player.Gold += chest.Gold
 			if chest.Gear != nil {
-				g.addMessage(fmt.Sprintf("Chest: +%dg and found %s!", chest.Gold, chest.Gear.Name))
+				// Take gold on first entry only
+				if !chest.GoldTaken {
+					chest.GoldTaken = true
+					g.Player.Gold += chest.Gold
+					g.addMessage(fmt.Sprintf("Chest: +%dg and found %s! [E] equip.", chest.Gold, chest.Gear.Name))
+				} else {
+					g.addMessage(fmt.Sprintf("Found %s! [E] equip, any key to leave.", chest.Gear.Name))
+				}
 				g.PendingGear = chest.Gear
+				g.PendingChest = chest
 				g.Phase = PhaseChest
 			} else {
+				g.Player.Gold += chest.Gold
 				g.addMessage(fmt.Sprintf("Chest: +%dg gold!", chest.Gold))
+				chest.Opened = true
 			}
 			g.enemyTurn()
 			g.recomputeFOV()
@@ -1296,19 +1338,54 @@ func (g *Game) spawnMovingTrapRoom(room Room) {
 
 	useHoriz := room.W >= room.H
 	count := 2 + rand.Intn(2) // 2-3 moving traps
+
+	// Divide the primary axis into count segments so traps spread across the room.
+	// Alternate starting direction so they don't all move the same way.
+	var inner int
+	if useHoriz {
+		inner = room.W - 2
+	} else {
+		inner = room.H - 2
+	}
+
 	for i := 0; i < count; i++ {
+		seg := inner / count
+		if seg < 1 {
+			seg = 1
+		}
+		offset := i * seg
+		if seg > 1 {
+			offset += rand.Intn(seg)
+		}
+		if offset >= inner {
+			offset = inner - 1
+		}
+
+		dir := 1
+		if i%2 == 1 {
+			dir = -1
+		}
+
 		var x, y, dx, dy int
 		if useHoriz {
-			dx, dy = 1, 0
-			x = room.X + 1 + (i*2)%(room.W-2)
+			dx, dy = dir, 0
+			x = room.X + 1 + offset
 			y = room.Y + 1 + rand.Intn(room.H-2)
 		} else {
-			dx, dy = 0, 1
+			dx, dy = 0, dir
 			x = room.X + 1 + rand.Intn(room.W-2)
-			y = room.Y + 1 + (i*2)%(room.H-2)
+			y = room.Y + 1 + offset
 		}
+
+		// Avoid spawning on the chest
 		if x == cx && y == cy {
-			continue // don't start on chest
+			if x+1 < room.X+room.W-1 {
+				x++
+			} else if x-1 > room.X {
+				x--
+			} else {
+				continue
+			}
 		}
 		g.MovingTraps = append(g.MovingTraps, &MovingTrap{X: x, Y: y, DX: dx, DY: dy})
 	}
