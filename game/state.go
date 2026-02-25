@@ -848,8 +848,30 @@ func (g *Game) restart() {
 	// newFloor() is called by selectClass() once a class is chosen
 }
 
+func countVictories(history []RunRecord) int {
+	n := 0
+	for _, r := range history {
+		if r.Outcome == "Victory" {
+			n++
+		}
+	}
+	return n
+}
+
+func countHardVictories(history []RunRecord) int {
+	n := 0
+	for _, r := range history {
+		if r.Outcome == "Victory" && r.Difficulty >= 1 {
+			n++
+		}
+	}
+	return n
+}
+
 func (g *Game) handleDifficultyInput(key string) {
-	completedRuns := len(loadRunHistory())
+	history := loadRunHistory()
+	victories := countVictories(history)
+	hardVictories := countHardVictories(history)
 	switch key {
 	case "1":
 		g.Difficulty = 0
@@ -857,16 +879,16 @@ func (g *Game) handleDifficultyInput(key string) {
 		rand.Seed(g.Seed)
 		g.Phase = PhaseClassSelect
 	case "2":
-		if completedRuns < 1 {
-			return // locked
+		if victories < 1 {
+			return // locked: need 1 victory on any difficulty
 		}
 		g.Difficulty = 1
 		g.Seed = time.Now().UnixNano()
 		rand.Seed(g.Seed)
 		g.Phase = PhaseClassSelect
 	case "3":
-		if completedRuns < 10 {
-			return // locked
+		if hardVictories < 1 {
+			return // locked: need 1 victory on Hard
 		}
 		g.Difficulty = 2
 		g.Seed = time.Now().UnixNano()

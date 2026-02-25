@@ -1356,7 +1356,9 @@ func (g *Game) renderDifficultySelect(ctx js.Value) {
 	ctx.Set("textAlign", "center")
 	ctx.Call("fillText", "SELECT DIFFICULTY", cx, by+14)
 
-	completedRuns := len(loadRunHistory())
+	history := loadRunHistory()
+	victories := countVictories(history)
+	hardVictories := countHardVictories(history)
 
 	type diffOpt struct {
 		key     string
@@ -1367,8 +1369,8 @@ func (g *Game) renderDifficultySelect(ctx js.Value) {
 	}
 	opts := []diffOpt{
 		{"1", "Normal", false, "", ColorHPHigh},
-		{"2", "Hard  (enemy HP ×1.25, no floor-2 merchant)", completedRuns < 1, "(complete 1 run to unlock)", ColorHPMid},
-		{"3", "Nightmare  (HP ×1.40, poison persists)", completedRuns < 10, fmt.Sprintf("(%d/10 runs to unlock)", completedRuns), ColorHPLow},
+		{"2", "Hard  (enemy HP ×1.25, no floor-2 merchant)", victories < 1, "(win on Normal to unlock)", ColorHPMid},
+		{"3", "Nightmare  (HP ×1.40, poison persists)", hardVictories < 1, "(win on Hard to unlock)", ColorHPLow},
 		{"4", fmt.Sprintf("Daily Challenge  (%s)", time.Now().Format("Jan 02")), false, "", ColorAccent},
 	}
 
