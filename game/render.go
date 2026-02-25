@@ -69,6 +69,10 @@ const (
 )
 
 func (g *Game) Render(ctx js.Value) {
+	if g.Phase == PhaseTitle {
+		g.renderTitleScreen(ctx)
+		return
+	}
 	if g.Phase == PhaseDifficulty {
 		g.renderDifficultySelect(ctx)
 		return
@@ -218,6 +222,32 @@ func (g *Game) Render(ctx js.Value) {
 	// Player
 	g.drawChar(ctx, g.Player.Char, g.Player.X, g.Player.Y, ColorPlayer)
 
+	// Boss HP bar — full-width strip at the very bottom of the map area
+	for _, e := range g.Enemies {
+		if e.IsBoss && e.Alive && g.Tiles[e.Y][e.X].Visible {
+			bossBarY := float64(MapH*TileH - 7)
+			ratio := float64(e.HP) / float64(e.MaxHP)
+			ctx.Set("fillStyle", "rgba(20, 10, 0, 0.75)")
+			ctx.Call("fillRect", 0, bossBarY, float64(CanvasW), 7)
+			hpColor := ColorBossHP
+			if ratio < 0.3 {
+				hpColor = ColorHPLow
+			} else if ratio < 0.6 {
+				hpColor = ColorHPMid
+			}
+			setFill(ctx, hpColor)
+			ctx.Call("fillRect", 0, bossBarY, float64(CanvasW)*ratio, 7)
+			setFill(ctx, ColorMsgNew)
+			ctx.Set("font", "bold 10px 'Courier New', monospace")
+			ctx.Set("textAlign", "left")
+			ctx.Set("textBaseline", "middle")
+			ctx.Call("fillText",
+				fmt.Sprintf("  %s  %d/%d", e.Name, e.HP, e.MaxHP),
+				0, bossBarY+3.5)
+			break
+		}
+	}
+
 	// UI strip
 	g.renderUI(ctx)
 
@@ -262,9 +292,19 @@ func (g *Game) renderTile(ctx js.Value, x, y int) {
 	var bg, fg string
 	var ch rune
 
+	// Floor background variants (visible / explored)
+	floorBgV := [4]string{"#1e2236", "#1b1f33", "#212540", "#1e2236"}
+	floorDotV := [4]string{"#2e3450", "#2a3048", "#333a5a", "#282e4a"}
+	floorBgE := [4]string{"#111420", "#0f1119", "#131724", "#111420"}
+	floorDotE := [4]string{"#161825", "#131622", "#191e2c", "#141620"}
+	// Wall char variants — mostly solid, variant 1 uses ▓ for rougher look
+	wallChars := [4]rune{'█', '▓', '█', '█'}
+
+	v := int(tile.Variant)
+
 	switch tile.Type {
 	case TileWall:
-		ch = '█'
+		ch = wallChars[v]
 		if tile.Visible {
 			bg = ColorBg
 			fg = ColorWallVisible
@@ -275,11 +315,11 @@ func (g *Game) renderTile(ctx js.Value, x, y int) {
 	case TileFloor:
 		ch = '·'
 		if tile.Visible {
-			bg = ColorFloorVisible
-			fg = ColorDotVisible
+			bg = floorBgV[v]
+			fg = floorDotV[v]
 		} else {
-			bg = ColorFloorExplored
-			fg = ColorDotExplored
+			bg = floorBgE[v]
+			fg = floorDotE[v]
 		}
 	case TileStairs:
 		ch = '▼'
@@ -348,25 +388,37 @@ func (g *Game) renderUI(ctx js.Value) {
 	// Gold
 	setFill(ctx, ColorGold)
 	ctx.Set("font", UIBold)
-	ctx.Call("fillText", fmt.Sprintf("◆ %dg", g.Player.Gold), 580, top)
+	ctx.Call("fillText", fmt.Sprintf("¤ %dg", g.Player.Gold), 580, top)
 
-	// Potions
+	// Potions — show count and next type if known
 	setFill(ctx, ColorPotion)
 	ctx.Set("font", UIBold)
-	ctx.Call("fillText", fmt.Sprintf("♥ %d", g.Player.Potions), 700, top)
+	potLabel := fmt.Sprintf("♥ %d", g.Player.Potions)
+	if g.Player.Potions > 0 && len(g.Player.PotionTypes) > 0 {
+		switch g.Player.PotionTypes[0] {
+		case PotionAntidote:
+			potLabel += " [Antidote]"
+		case PotionMight:
+			potLabel += " [Might]"
+		case PotionGreater:
+			potLabel += " [Greater]"
+		}
+	}
+	ctx.Call("fillText", potLabel, 660, top)
 
-	// Poison indicator
+	// Status effects — right-aligned cluster before ATK/DEF
+	statusX := float64(CanvasW) - 160.0
+	ctx.Set("textAlign", "left")
 	if g.Player.Poison > 0 {
 		setFill(ctx, ColorPoisonUI)
 		ctx.Set("font", UIBold)
-		ctx.Call("fillText", fmt.Sprintf("☠ %d", g.Player.Poison), 780, top)
+		ctx.Call("fillText", fmt.Sprintf("PSN %d", g.Player.Poison), statusX, top)
+		statusX += 60
 	}
-
-	// PlayerBurn indicator
 	if g.Player.PlayerBurn > 0 {
 		setFill(ctx, ColorBurn)
 		ctx.Set("font", UIBold)
-		ctx.Call("fillText", fmt.Sprintf("🔥 %d", g.Player.PlayerBurn), 840, top)
+		ctx.Call("fillText", fmt.Sprintf("BRN %d", g.Player.PlayerBurn), statusX, top)
 	}
 
 	// ATK / DEF — right-aligned
@@ -967,6 +1019,90 @@ func (g *Game) renderVictoryPanel(ctx js.Value) {
 	ctx.Set("font", UIFont)
 	ctx.Set("textAlign", "center")
 	ctx.Call("fillText", "[R] Play again", cx, by+boxH-18)
+}
+
+func (g *Game) renderTitleScreen(ctx js.Value) {
+	setFill(ctx, ColorBg)
+	ctx.Call("fillRect", 0, 0, CanvasW, CanvasH)
+
+	cx := float64(CanvasW) / 2
+	cy := float64(CanvasH) / 2
+
+	// Draw a decorative grid of dim dungeon characters as a background
+	ctx.Set("font", GameFont)
+	ctx.Set("textAlign", "center")
+	ctx.Set("textBaseline", "middle")
+	glyphs := []rune{'█', '·', '▓', '█', '·', '█', '·', '▓'}
+	for row := 0; row < MapH; row++ {
+		for col := 0; col < MapW; col++ {
+			g := glyphs[(row*7+col*3)%len(glyphs)]
+			if g == '·' {
+				ctx.Set("fillStyle", "rgba(30,34,54,0.5)")
+			} else {
+				ctx.Set("fillStyle", "rgba(22,25,40,0.5)")
+			}
+			ctx.Call("fillText", string(g),
+				float64(col*TileW)+float64(TileW)/2,
+				float64(row*TileH)+float64(TileH)/2)
+		}
+	}
+
+	// Vignette — darken edges so title pops
+	grad := ctx.Call("createRadialGradient", cx, cy, 100, cx, cy, float64(CanvasW)*0.72)
+	grad.Call("addColorStop", 0, "rgba(13,13,20,0)")
+	grad.Call("addColorStop", 1, "rgba(13,13,20,0.92)")
+	ctx.Set("fillStyle", grad)
+	ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
+
+	ctx.Set("textAlign", "center")
+	ctx.Set("textBaseline", "middle")
+
+	// Glyph icon
+	setFill(ctx, ColorAccent)
+	ctx.Set("font", "bold 42px 'Courier New', monospace")
+	ctx.Call("fillText", "▼", cx, cy-72)
+
+	// Title
+	setFill(ctx, ColorMsgNew)
+	ctx.Set("font", "bold 52px Inter, system-ui, sans-serif")
+	ctx.Call("fillText", "DUNGEON", cx, cy-20)
+
+	// Tagline
+	setFill(ctx, ColorUIDim)
+	ctx.Set("font", "16px Inter, system-ui, sans-serif")
+	ctx.Call("fillText", "Three floors. One chance.", cx, cy+26)
+
+	// Last run info
+	history := loadRunHistory()
+	if len(history) > 0 {
+		r := history[0]
+		var runColor string
+		if r.Outcome == "Victory" {
+			runColor = ColorHPHigh
+		} else {
+			runColor = ColorUIDim
+		}
+		setFill(ctx, runColor)
+		ctx.Set("font", UIFont)
+		ctx.Call("fillText",
+			fmt.Sprintf("Last run: %s — %s  Floor %d  %dg  %d kills",
+				r.Class, r.Outcome, r.Floor, r.Gold, r.Kills),
+			cx, cy+56)
+	}
+
+	// Prompt — pulse using sine of current time
+	pulse := (time.Now().UnixMilli()/600)%2 == 0
+	if pulse {
+		setFill(ctx, ColorAccent)
+	} else {
+		setFill(ctx, ColorUIDim)
+	}
+	ctx.Set("font", UIBold)
+	ctx.Call("fillText", "Press any key to begin", cx, cy+90)
+
+	// UI strip background
+	setFill(ctx, "#080810")
+	ctx.Call("fillRect", 0, float64(MapH*TileH), CanvasW, UIHeight)
 }
 
 func (g *Game) renderDifficultySelect(ctx js.Value) {

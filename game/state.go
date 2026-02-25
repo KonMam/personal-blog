@@ -25,6 +25,7 @@ const (
 	PhaseEvent
 	PhaseClassSelect
 	PhaseDifficulty
+	PhaseTitle
 )
 
 type Item struct {
@@ -120,7 +121,7 @@ type Game struct {
 func NewGame() *Game {
 	return &Game{
 		Floor:      1,
-		Phase:      PhaseDifficulty,
+		Phase:      PhaseTitle,
 		UsedGear:   make(map[*Gear]bool),
 		UsedEvents: make(map[*EventDef]bool),
 		ClassWins:  loadClassWins(),
@@ -568,6 +569,9 @@ func (g *Game) HandleInput(key string) {
 	}
 
 	switch g.Phase {
+	case PhaseTitle:
+		g.Phase = PhaseDifficulty
+		return
 	case PhaseDifficulty:
 		g.handleDifficultyInput(key)
 		return
@@ -623,6 +627,7 @@ func (g *Game) HandleInput(key string) {
 
 func (g *Game) handleChestInput(key string) {
 	if (key == "e" || key == "E") && g.PendingGear != nil {
+		playSound("chest")
 		slot := g.PendingGear.Slot
 		old := g.Player.Equipped[slot]
 		// Record synergies before equipping
@@ -732,6 +737,7 @@ func (g *Game) usePotion() {
 		return
 	}
 	g.Player.Potions--
+	playSound("potion")
 	var pt PotionType
 	if len(g.Player.PotionTypes) > 0 {
 		pt = g.Player.PotionTypes[0]
@@ -1080,9 +1086,11 @@ func (g *Game) movePlayer(dx, dy int) {
 		}
 		if g.Floor < MaxFloors {
 			g.Floor++
+			playSound("stairs")
 			g.newFloor()
 			return
 		}
+		playSound("victory")
 		g.Phase = PhaseVictory
 		g.recordRun("Victory")
 		g.addMessage("You escaped the dungeon. Victory!")
@@ -1156,6 +1164,7 @@ func (g *Game) applyHitToEnemy(enemy *Entity, isFirst bool) {
 				g.PendingGear = bossGear
 			}
 		}
+		playSound("kill")
 		if isFirst {
 			g.addMessage(fmt.Sprintf("You slay the %s! +%dg%s", enemy.Name, gold, suffix))
 		} else {
@@ -1165,6 +1174,7 @@ func (g *Game) applyHitToEnemy(enemy *Entity, isFirst bool) {
 			g.Phase = PhaseChest
 		}
 	} else {
+		playSound("hit")
 		if isFirst {
 			g.addMessage(fmt.Sprintf("You hit the %s for %d damage.%s", enemy.Name, dmg, suffix))
 		} else {
@@ -1233,12 +1243,14 @@ func (g *Game) doEnemyAttack(e *Entity, isRanged bool) bool {
 	// Shield absorbs the hit
 	if g.Player.ShieldCharges > 0 {
 		g.Player.ShieldCharges--
+		playSound("block")
 		g.addMessage(fmt.Sprintf("Shield absorbs the %s's attack! (%d left)", e.Name, g.Player.ShieldCharges))
 		return false
 	}
 
 	// Dodge check
 	if rand.Intn(100) < g.Player.Dodge {
+		playSound("miss")
 		g.addMessage(fmt.Sprintf("You dodge the %s's attack!", e.Name))
 		// Reactive synergy: on dodge, deal thorns damage to attacker
 		if g.Player.SynergyReactive && g.Player.Thorns > 0 {
@@ -1262,11 +1274,13 @@ func (g *Game) doEnemyAttack(e *Entity, isRanged bool) bool {
 		finalDmg = 1
 	}
 	finalDmg += g.Player.CursePenalty
+	playSound("hurt")
 	g.Player.HP -= finalDmg
 	g.LastDamagedAt = time.Now()
 	if g.Player.HP <= 0 {
 		g.Player.HP = 0
 		g.Player.Alive = false
+		playSound("gameover")
 		g.Phase = PhaseGameOver
 		g.recordRun("Died")
 		g.addMessage("You died. Press R to restart.")
@@ -1322,7 +1336,8 @@ func (g *Game) enemyTurn() {
 			g.Player.Alive = false
 			g.Phase = PhaseGameOver
 			g.recordRun("Died")
-			g.addMessage("Poison kills you. Press R to restart.")
+			playSound("gameover")
+		g.addMessage("Poison kills you. Press R to restart.")
 			return
 		}
 		g.addMessage(fmt.Sprintf("Poison deals 3 damage. (%d turns left)", g.Player.Poison))
@@ -1338,7 +1353,8 @@ func (g *Game) enemyTurn() {
 			g.Player.Alive = false
 			g.Phase = PhaseGameOver
 			g.recordRun("Died")
-			g.addMessage("You burn to death. Press R to restart.")
+			playSound("gameover")
+		g.addMessage("You burn to death. Press R to restart.")
 			return
 		}
 		g.addMessage(fmt.Sprintf("You are burning! -3 HP. (%d turns)", g.Player.PlayerBurn))

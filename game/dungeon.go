@@ -16,6 +16,7 @@ type Tile struct {
 	Type     TileType
 	Visible  bool
 	Explored bool
+	Variant  byte // 0-3, for floor/wall visual variety
 }
 
 type Room struct {
@@ -128,6 +129,13 @@ func GenerateDungeon(width, height int) ([][]Tile, []Room) {
 		last := rooms[len(rooms)-1]
 		cx, cy := last.Center()
 		tiles[cy][cx].Type = TileStairs
+	}
+
+	// Assign visual variants to all floor and wall tiles
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			tiles[y][x].Variant = byte(rand.Intn(4))
+		}
 	}
 
 	return tiles, rooms
