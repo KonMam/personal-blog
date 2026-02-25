@@ -70,6 +70,7 @@ type Game struct {
 	UsedGear      map[*Gear]bool     // tracks gear placed in the world this run
 	UsedEvents    map[*EventDef]bool // tracks events spawned this run
 	LastDamagedAt time.Time         // for damage-flash animation
+	ShowLog       bool              // message log overlay visible
 }
 
 func NewGame() *Game {
@@ -116,7 +117,7 @@ func (g *Game) newFloor() {
 	// Poison clears on floor descent
 	g.Player.Poison = 0
 
-	ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
+	g.recomputeFOV()
 }
 
 func (g *Game) spawnEnemies(rooms []Room) {
@@ -279,7 +280,17 @@ func (g *Game) spawnMerchant(rooms []Room) {
 	if len(rooms) < 3 {
 		return
 	}
-	room := rooms[2]
+	// Pick a random middle room (not player spawn or stairs)
+	room := rooms[1] // fallback
+	for attempt := 0; attempt < 20; attempt++ {
+		idx := 1 + rand.Intn(len(rooms)-2)
+		r := rooms[idx]
+		rc, ry := r.Center()
+		if !g.occupied(rc, ry) {
+			room = r
+			break
+		}
+	}
 	cx, cy := room.Center()
 
 	pickUnused := func(pool []*Gear) *Gear {
@@ -356,6 +367,16 @@ func (g *Game) spawnEvents(rooms []Room) {
 }
 
 func (g *Game) HandleInput(key string) {
+	// Message log overlay — Tab toggles; any other key dismisses it
+	if key == "Tab" {
+		g.ShowLog = !g.ShowLog
+		return
+	}
+	if g.ShowLog {
+		g.ShowLog = false
+		return
+	}
+
 	switch g.Phase {
 	case PhaseClassSelect:
 		g.handleClassSelectInput(key)
@@ -384,8 +405,9 @@ func (g *Game) HandleInput(key string) {
 
 	// Wait / pass turn
 	if key == "." || key == " " {
+		g.addMessage("You wait.")
 		g.enemyTurn()
-		ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
+		g.recomputeFOV()
 		return
 	}
 
@@ -496,7 +518,7 @@ func (g *Game) usePotion() {
 	g.Player.HP += heal
 	g.addMessage(fmt.Sprintf("Used potion, +%d HP. (%d left)", heal, g.Player.Potions))
 	g.enemyTurn()
-	ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
+	g.recomputeFOV()
 }
 
 func (g *Game) restart() {
@@ -513,6 +535,7 @@ func (g *Game) restart() {
 	g.UsedGear = make(map[*Gear]bool)
 	g.UsedEvents = make(map[*EventDef]bool)
 	g.LastDamagedAt = time.Time{}
+	g.ShowLog = false
 	// newFloor() is called by selectClass() once a class is chosen
 }
 
@@ -542,7 +565,7 @@ func (g *Game) selectClass(idx int) {
 	g.Player.Poison = 0
 
 	// Re-run FOV in case FOVRadius changed
-	ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
+	g.recomputeFOV()
 
 	g.ClassName = def.Name
 	g.Phase = PhasePlay
@@ -577,7 +600,7 @@ func (g *Game) movePlayer(dx, dy int) {
 	if target != nil {
 		g.doPlayerAttack(target)
 		g.enemyTurn()
-		ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
+		g.recomputeFOV()
 		return
 	}
 
@@ -588,7 +611,7 @@ func (g *Game) movePlayer(dx, dy int) {
 	if g.Merchant != nil && g.Merchant.X == nx && g.Merchant.Y == ny {
 		g.Phase = PhaseShop
 		g.enemyTurn()
-		ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
+		g.recomputeFOV()
 		return
 	}
 
@@ -605,7 +628,7 @@ func (g *Game) movePlayer(dx, dy int) {
 				g.addMessage(fmt.Sprintf("Chest: +%dg gold!", chest.Gold))
 			}
 			g.enemyTurn()
-			ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
+			g.recomputeFOV()
 			return
 		}
 	}
@@ -645,7 +668,7 @@ func (g *Game) movePlayer(dx, dy int) {
 	}
 
 	g.enemyTurn()
-	ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
+	g.recomputeFOV()
 }
 
 // applyHitToEnemy resolves one hit with all player combat mechanics.
@@ -943,6 +966,39 @@ func (g *Game) enemyAt(x, y int) *Entity {
 		}
 	}
 	return nil
+}
+
+// recomputeFOV recalculates visibility then updates last-seen tracking.
+func (g *Game) recomputeFOV() {
+	ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
+	g.updateLastSeen()
+	g.checkFirstSightings()
+}
+
+// updateLastSeen records each currently-visible enemy's position for ghost rendering.
+func (g *Game) updateLastSeen() {
+	for _, e := range g.Enemies {
+		if e.Alive && g.Tiles[e.Y][e.X].Visible {
+			e.WasSeen = true
+			e.LastSeenX = e.X
+			e.LastSeenY = e.Y
+		}
+	}
+}
+
+// checkFirstSightings fires one-time messages when notable enemies first enter FOV.
+func (g *Game) checkFirstSightings() {
+	if g.Phase != PhasePlay {
+		return
+	}
+	for _, e := range g.Enemies {
+		if e.Alive && !e.Announced && g.Tiles[e.Y][e.X].Visible {
+			if e.Type == EntityTroll {
+				g.addMessage("A massive troll blocks the path to the stairs!")
+				e.Announced = true
+			}
+		}
+	}
 }
 
 func (g *Game) addMessage(msg string) {

@@ -101,6 +101,16 @@ func (g *Game) Render(ctx js.Value) {
 		}
 	}
 
+	// Last-known enemy positions (ghosts shown when enemy is out of FOV)
+	for _, e := range g.Enemies {
+		if e.Alive && e.WasSeen && !g.Tiles[e.Y][e.X].Visible {
+			lx, ly := e.LastSeenX, e.LastSeenY
+			if g.Tiles[ly][lx].Explored && !g.Tiles[ly][lx].Visible {
+				g.drawChar(ctx, e.Char, lx, ly, ColorUIDim)
+			}
+		}
+	}
+
 	// Enemies
 	for _, e := range g.Enemies {
 		if e.Alive && g.Tiles[e.Y][e.X].Visible {
@@ -153,6 +163,11 @@ func (g *Game) Render(ctx js.Value) {
 		g.renderShopPanel(ctx)
 	case PhaseEvent:
 		g.renderEventPanel(ctx)
+	}
+
+	// Message log — drawn on top of everything
+	if g.ShowLog {
+		g.renderLogPanel(ctx)
 	}
 }
 
@@ -465,7 +480,7 @@ func (g *Game) renderShopPanel(ctx js.Value) {
 	ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
 
 	// Panel box — sized dynamically for number of items
-	const itemH = 38
+	const itemH = 48
 	boxW := float64(440)
 	boxH := float64(44 + len(g.Merchant.Stock)*itemH + 22)
 	bx := cx - boxW/2
@@ -514,10 +529,18 @@ func (g *Game) renderShopPanel(ctx js.Value) {
 		ctx.Set("font", UIFont)
 		ctx.Call("fillText", label, bx+14, iy)
 
-		// Gear description on the line below (dimmed)
+		// Gear description + equipped comparison (dimmed lines below name)
 		if item.Gear != nil && !item.Sold {
 			setFill(ctx, ColorUIDim)
 			ctx.Call("fillText", item.Gear.Desc, bx+26, iy+15)
+			equipped := g.Player.Equipped[item.Gear.Slot]
+			var cmpText string
+			if equipped != nil {
+				cmpText = "Equipped: " + equipped.Name
+			} else {
+				cmpText = "Slot empty"
+			}
+			ctx.Call("fillText", cmpText, bx+26, iy+27)
 		}
 
 		if !item.Sold {
@@ -930,6 +953,69 @@ func (g *Game) renderClassSelect(ctx js.Value) {
 	ctx.Set("font", UIFont)
 	ctx.Set("textAlign", "center")
 	ctx.Call("fillText", "[1–4] Choose your class", cx, by+boxH-18)
+}
+
+func (g *Game) renderLogPanel(ctx js.Value) {
+	const (
+		boxW     = 700.0
+		maxLines = 22
+		lineH    = 18.0
+	)
+	boxH := 32.0 + maxLines*lineH + 28.0 // header + lines + footer
+	cx := float64(CanvasW) / 2
+	cy := float64(MapH*TileH) / 2
+	bx := cx - boxW/2
+	by := cy - boxH/2
+
+	// Dim background
+	ctx.Set("fillStyle", "rgba(10, 10, 20, 0.92)")
+	ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
+
+	// Panel
+	setFill(ctx, "#10101a")
+	ctx.Call("fillRect", bx, by, boxW, boxH)
+	ctx.Set("strokeStyle", ColorAccent)
+	ctx.Set("lineWidth", 1)
+	ctx.Call("strokeRect", bx+0.5, by+0.5, boxW-1, boxH-1)
+
+	ctx.Set("textBaseline", "top")
+
+	// Header
+	setFill(ctx, ColorAccent)
+	ctx.Set("font", UIBold)
+	ctx.Set("textAlign", "left")
+	ctx.Call("fillText", "MESSAGE LOG", bx+14, by+10)
+
+	// Separator
+	setFill(ctx, ColorSeparator)
+	ctx.Call("fillRect", bx+1, by+28, boxW-2, 1)
+
+	// Messages — show the most recent maxLines, oldest at top
+	msgs := g.Messages
+	if len(msgs) > maxLines {
+		msgs = msgs[len(msgs)-maxLines:]
+	}
+	ctx.Set("font", UIFont)
+	ctx.Set("textAlign", "left")
+	for i, msg := range msgs {
+		age := len(msgs) - 1 - i // 0 = newest
+		var color string
+		switch {
+		case age == 0:
+			color = ColorMsgNew
+		case age <= 4:
+			color = ColorUI
+		default:
+			color = ColorMsgOld
+		}
+		setFill(ctx, color)
+		ctx.Call("fillText", msg, bx+14, by+34+float64(i)*lineH)
+	}
+
+	// Footer
+	setFill(ctx, ColorUIDim)
+	ctx.Set("textAlign", "center")
+	ctx.Call("fillText", "[Tab] Close", cx, by+boxH-18)
 }
 
 func setFill(ctx js.Value, color string) {

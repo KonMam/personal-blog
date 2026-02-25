@@ -138,6 +138,10 @@ type Entity struct {
 	// Enemy-only fields
 	Burn        int
 	RangeAttack int
+	Announced   bool // first-sight announcement already fired
+	WasSeen     bool // has ever entered player FOV
+	LastSeenX   int  // position when last visible
+	LastSeenY   int
 }
 
 func NewPlayer(x, y int) *Entity {

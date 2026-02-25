@@ -21,7 +21,7 @@ func main() {
 
 		// Prevent default scroll behaviour for arrow keys / space
 		switch key {
-		case "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ":
+		case "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "Tab":
 			event.Call("preventDefault")
 		}
 
