@@ -22,6 +22,7 @@ const (
 	PhaseChest
 	PhaseShop
 	PhaseEvent
+	PhaseClassSelect
 )
 
 type Item struct {
@@ -66,9 +67,7 @@ type Game struct {
 }
 
 func NewGame() *Game {
-	g := &Game{Floor: 1}
-	g.newFloor()
-	return g
+	return &Game{Floor: 1, Phase: PhaseClassSelect}
 }
 
 func (g *Game) newFloor() {
@@ -94,12 +93,12 @@ func (g *Game) newFloor() {
 	}
 
 	g.spawnEnemies(rooms)
-	g.spawnItems(rooms)
 	if g.Floor == 2 {
 		g.spawnMerchant(rooms)
 	}
 	g.spawnChests(rooms)
 	g.spawnEvents(rooms)
+	g.spawnItems(rooms)
 
 	// Refill shield charges from gear
 	g.Player.ShieldCharges += g.Player.ShieldMod
@@ -170,12 +169,44 @@ func (g *Game) spawnItems(rooms []Room) {
 	}
 	count := 1 + rand.Intn(2) // 1-2 potions
 	for range count {
-		idx := 1 + rand.Intn(len(rooms)-1)
-		room := rooms[idx]
-		x := room.X + 1 + rand.Intn(room.W-2)
-		y := room.Y + 1 + rand.Intn(room.H-2)
-		g.Items = append(g.Items, &Item{X: x, Y: y, HealAmount: 12})
+		for attempt := 0; attempt < 20; attempt++ {
+			idx := 1 + rand.Intn(len(rooms)-1)
+			room := rooms[idx]
+			x := room.X + 1 + rand.Intn(room.W-2)
+			y := room.Y + 1 + rand.Intn(room.H-2)
+			if g.occupied(x, y) {
+				continue
+			}
+			g.Items = append(g.Items, &Item{X: x, Y: y, HealAmount: 12})
+			break
+		}
 	}
+}
+
+// occupied returns true if a chest, merchant, event, enemy, or existing item is at (x, y).
+func (g *Game) occupied(x, y int) bool {
+	for _, chest := range g.Chests {
+		if chest.X == x && chest.Y == y {
+			return true
+		}
+	}
+	if g.Merchant != nil && g.Merchant.X == x && g.Merchant.Y == y {
+		return true
+	}
+	for _, ev := range g.Events {
+		if ev.X == x && ev.Y == y {
+			return true
+		}
+	}
+	if g.enemyAt(x, y) != nil {
+		return true
+	}
+	for _, item := range g.Items {
+		if item.X == x && item.Y == y {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *Game) spawnChests(rooms []Room) {
@@ -273,6 +304,9 @@ func (g *Game) spawnEvents(rooms []Room) {
 
 func (g *Game) HandleInput(key string) {
 	switch g.Phase {
+	case PhaseClassSelect:
+		g.handleClassSelectInput(key)
+		return
 	case PhaseGameOver, PhaseVictory:
 		if key == "r" || key == "R" {
 			g.restart()
@@ -405,13 +439,45 @@ func (g *Game) restart() {
 	g.Floor = 1
 	g.Player = nil
 	g.Messages = nil
-	g.Phase = PhasePlay
+	g.Phase = PhaseClassSelect
 	g.PendingGear = nil
 	g.Events = nil
 	g.ActiveEvent = nil
 	g.Turns = 0
 	g.Kills = 0
-	g.newFloor()
+	// newFloor() is called by selectClass() once a class is chosen
+}
+
+func (g *Game) handleClassSelectInput(key string) {
+	switch key {
+	case "1", "2", "3", "4":
+		g.selectClass(int(key[0] - '1'))
+	}
+}
+
+func (g *Game) selectClass(idx int) {
+	def := classDefs[idx]
+	g.newFloor() // generates dungeon, creates player with default stats
+
+	// Apply class base stats
+	g.Player.BaseAtk = def.BaseAtk
+	g.Player.BaseMaxHP = def.BaseHP
+	g.Player.BaseDef = def.BaseDef
+
+	// Pre-equip starting item
+	g.Player.Equipped[def.StartItem.Slot] = def.StartItem
+	g.Player.RecalcStats()
+
+	// Full HP at class-corrected max; correct shield charges from starting gear
+	g.Player.HP = g.Player.MaxHP
+	g.Player.ShieldCharges = g.Player.ShieldMod
+	g.Player.Poison = 0
+
+	// Re-run FOV in case FOVRadius changed
+	ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
+
+	g.Phase = PhasePlay
+	g.addMessage(fmt.Sprintf("You descend as the %s.", def.Name))
 }
 
 func (g *Game) movePlayer(dx, dy int) {

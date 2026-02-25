@@ -55,6 +55,11 @@ const (
 )
 
 func (g *Game) Render(ctx js.Value) {
+	if g.Phase == PhaseClassSelect {
+		g.renderClassSelect(ctx)
+		return
+	}
+
 	// Background
 	setFill(ctx, ColorBg)
 	ctx.Call("fillRect", 0, 0, CanvasW, CanvasH)
@@ -605,6 +610,82 @@ func (g *Game) renderVictoryPanel(ctx js.Value) {
 	setFill(ctx, ColorUIDim)
 	ctx.Set("font", UIFont)
 	ctx.Call("fillText", "[R] Play again", cx, by+boxH-22)
+}
+
+func (g *Game) renderClassSelect(ctx js.Value) {
+	// Full dark background
+	setFill(ctx, ColorBg)
+	ctx.Call("fillRect", 0, 0, CanvasW, CanvasH)
+
+	cx := float64(CanvasW) / 2
+	cy := float64(CanvasH) / 2
+
+	// Panel — 4 rows × 76px + header + footer
+	const rowH = 76
+	boxW := float64(700)
+	boxH := float64(56 + len(classDefs)*rowH + 24)
+	bx := cx - boxW/2
+	by := cy - boxH/2
+
+	setFill(ctx, "#10101a")
+	ctx.Call("fillRect", bx, by, boxW, boxH)
+	ctx.Set("strokeStyle", ColorAccent)
+	ctx.Set("lineWidth", 1)
+	ctx.Call("strokeRect", bx+0.5, by+0.5, boxW-1, boxH-1)
+
+	ctx.Set("textBaseline", "top")
+
+	// Title
+	setFill(ctx, ColorAccent)
+	ctx.Set("font", "bold 20px Inter, system-ui, sans-serif")
+	ctx.Set("textAlign", "center")
+	ctx.Call("fillText", "CHOOSE YOUR CLASS", cx, by+14)
+
+	// Class rows
+	for i, def := range classDefs {
+		ry := by + 52 + float64(i)*rowH
+
+		// [N] ClassName
+		setFill(ctx, def.Color)
+		ctx.Set("font", "bold 14px Inter, system-ui, sans-serif")
+		ctx.Set("textAlign", "left")
+		ctx.Call("fillText", fmt.Sprintf("[%d] %s", i+1, def.Name), bx+20, ry)
+
+		// Stats right-aligned on the same line
+		setFill(ctx, ColorUIDim)
+		ctx.Set("font", UIFont)
+		ctx.Set("textAlign", "right")
+		ctx.Call("fillText",
+			fmt.Sprintf("HP %d   ATK %d   DEF %d", def.BaseHP, def.BaseAtk, def.BaseDef),
+			bx+boxW-20, ry+2)
+
+		// Starting item
+		item := def.StartItem
+		ctx.Set("textAlign", "left")
+		icon := string(item.Char) + " "
+		setFill(ctx, item.Color)
+		ctx.Set("font", UIFont)
+		ctx.Call("fillText", icon, bx+30, ry+22)
+		iconW := ctx.Call("measureText", icon).Get("width").Float()
+		setFill(ctx, ColorUI)
+		ctx.Call("fillText", item.Name+"  "+item.Desc, bx+30+iconW, ry+22)
+
+		// Flavor text
+		setFill(ctx, ColorUIDim)
+		ctx.Call("fillText", def.Flavor, bx+30, ry+42)
+
+		// Row separator (not after last)
+		if i < len(classDefs)-1 {
+			setFill(ctx, ColorSeparator)
+			ctx.Call("fillRect", bx+1, ry+float64(rowH)-2, boxW-2, 1)
+		}
+	}
+
+	// Footer
+	setFill(ctx, ColorUIDim)
+	ctx.Set("font", UIFont)
+	ctx.Set("textAlign", "center")
+	ctx.Call("fillText", "[1–4] Choose your class", cx, by+boxH-18)
 }
 
 func setFill(ctx js.Value, color string) {

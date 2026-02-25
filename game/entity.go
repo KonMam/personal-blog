@@ -181,7 +181,7 @@ func NewArcher(x, y int) *Entity {
 		Atk:         3,
 		Type:        EntityArcher,
 		Alive:       true,
-		RangeAttack: 4,
+		RangeAttack: 3,
 	}
 }
 
