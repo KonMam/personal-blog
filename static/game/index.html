@@ -73,6 +73,12 @@
       font-size: 0.75rem;
       color: #2d3748;
       text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      align-items: center;
+    }
+    footer .legend-row {
       line-height: 1.8;
     }
     footer span { color: #4a5568; }
@@ -120,17 +126,21 @@
   </div>
 
   <footer>
-    <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrow keys to move &nbsp;·&nbsp;
-    Bump enemies to attack &nbsp;·&nbsp;
-    <span style="color:#68D391">♥</span> picks up potion &nbsp;·&nbsp;
-    <kbd>U</kbd> use potion &nbsp;·&nbsp;
-    <kbd>E</kbd> equip gear &nbsp;·&nbsp;
-    <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> choose event option &nbsp;·&nbsp;
-    <span style="color:#F6E05E">■</span> chests &nbsp;·&nbsp;
-    <span style="color:#48BB78">$</span> merchant (floors 2–3) &nbsp;·&nbsp;
-    <span style="color:#6C8CFF">?</span> events &nbsp;·&nbsp;
-    Reach <span style="color:#F6E05E">▼</span> to descend &nbsp;·&nbsp;
-    <kbd>R</kbd> to restart
+    <div class="legend-row">
+      <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows: move &nbsp;·&nbsp;
+      Bump: attack &nbsp;·&nbsp;
+      <kbd>U</kbd> use potion &nbsp;·&nbsp;
+      <kbd>E</kbd> equip gear &nbsp;·&nbsp;
+      <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> event option &nbsp;·&nbsp;
+      <kbd>R</kbd> restart
+    </div>
+    <div class="legend-row">
+      <span style="color:#68D391">♥</span> potion &nbsp;·&nbsp;
+      <span style="color:#F6E05E">■</span> chest &nbsp;·&nbsp;
+      <span style="color:#48BB78">$</span> merchant (floors 2–3) &nbsp;·&nbsp;
+      <span style="color:#6C8CFF">?</span> event &nbsp;·&nbsp;
+      <span style="color:#F6E05E">▼</span> stairs
+    </div>
   </footer>
 
   <script src="wasm_exec.js"></script>
