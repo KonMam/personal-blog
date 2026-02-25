@@ -357,6 +357,11 @@ func (g *Game) Render(ctx js.Value) {
 		g.renderEventPanel(ctx)
 	}
 
+	// Drop potion picker
+	if g.ShowDropMode && g.Phase == PhasePlay {
+		g.renderDropPanel(ctx)
+	}
+
 	// First-run controls hint — shown once until dismissed
 	if g.ShowHint && g.Phase == PhasePlay {
 		g.renderHintOverlay(ctx)
@@ -1664,6 +1669,66 @@ func (g *Game) renderLogPanel(ctx js.Value) {
 	setFill(ctx, ColorUIDim)
 	ctx.Set("textAlign", "center")
 	ctx.Call("fillText", "[Tab] Close", cx, by+boxH-18)
+}
+
+func (g *Game) renderDropPanel(ctx js.Value) {
+	n := len(g.Player.PotionTypes)
+	if n == 0 {
+		g.ShowDropMode = false
+		return
+	}
+
+	cx := float64(CanvasW) / 2
+	cy := float64(MapH*TileH) / 2
+	boxW := 340.0
+	boxH := float64(42 + n*26 + 26)
+	bx := cx - boxW/2
+	by := cy - boxH/2
+
+	ctx.Set("fillStyle", "rgba(10, 10, 20, 0.82)")
+	ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
+
+	setFill(ctx, "#10101a")
+	ctx.Call("fillRect", bx, by, boxW, boxH)
+	ctx.Set("strokeStyle", ColorHPLow)
+	ctx.Set("lineWidth", 1)
+	ctx.Call("strokeRect", bx+0.5, by+0.5, boxW-1, boxH-1)
+
+	ctx.Set("textBaseline", "top")
+	setFill(ctx, ColorHPLow)
+	ctx.Set("font", UIBold)
+	ctx.Set("textAlign", "left")
+	ctx.Call("fillText", "DROP POTION", bx+14, by+14)
+
+	type potInfo struct{ letter, color, desc string }
+	info := [4]potInfo{
+		{"H", ColorPotion, "Healing Potion (+12 HP)"},
+		{"A", ColorFreeze, "Antidote (clear effects, +4 HP)"},
+		{"M", ColorBurn, "Might Draught (+5 ATK, 3 turns)"},
+		{"G", "#9AE6B4", "Greater Potion (+25 HP)"},
+	}
+
+	for i, pt := range g.Player.PotionTypes {
+		idx := int(pt)
+		if idx < 0 || idx > 3 {
+			idx = 0
+		}
+		p := info[idx]
+		iy := by + 38 + float64(i)*26
+		setFill(ctx, ColorUIDim)
+		ctx.Set("font", UIBold)
+		ctx.Call("fillText", fmt.Sprintf("[%d]", i+1), bx+14, iy)
+		setFill(ctx, p.color)
+		ctx.Call("fillText", p.letter, bx+42, iy)
+		setFill(ctx, ColorUI)
+		ctx.Set("font", UIFont)
+		ctx.Call("fillText", p.desc, bx+58, iy)
+	}
+
+	setFill(ctx, ColorUIDim)
+	ctx.Set("font", UIFont)
+	ctx.Set("textAlign", "center")
+	ctx.Call("fillText", "any other key cancels", cx, by+boxH-16)
 }
 
 func setFill(ctx js.Value, color string) {

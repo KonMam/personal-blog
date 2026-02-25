@@ -2,7 +2,6 @@
 
 package main
 
-import "math/rand"
 
 type EntityType int
 
@@ -191,6 +190,7 @@ type Entity struct {
 	BossPhase2   bool
 	EnrageStacks int
 	EnrageTurns  int
+	DropGear     *Gear // pre-rolled at spawn time; awarded on boss kill
 	// New enemy fields
 	MoveSpeed  int  // default 1, Brute = 2
 	IsRevealed bool // Mimic: false = appear as chest
@@ -480,7 +480,7 @@ func (e *Entity) CalcDamage() int {
 	if hi <= lo {
 		hi = lo + 1
 	}
-	dmg := lo + rand.Intn(hi-lo+1)
+	dmg := lo + rng.Intn(hi-lo+1)
 	if dmg < 1 {
 		dmg = 1
 	}
@@ -491,29 +491,29 @@ func (e *Entity) CalcDamage() int {
 func (e *Entity) goldDrop() int {
 	switch e.Type {
 	case EntityGoblin:
-		return 1 + rand.Intn(3) // 1-3
+		return 1 + rng.Intn(3) // 1-3
 	case EntityOrc:
-		return 3 + rand.Intn(5) // 3-7
+		return 3 + rng.Intn(5) // 3-7
 	case EntityTroll:
-		return 12 + rand.Intn(8) // 12-19
+		return 12 + rng.Intn(8) // 12-19
 	case EntityArcher:
-		return 2 + rand.Intn(4) // 2-5
+		return 2 + rng.Intn(4) // 2-5
 	case EntityVenomancer:
-		return 3 + rand.Intn(4) // 3-6
+		return 3 + rng.Intn(4) // 3-6
 	case EntityGuard:
-		return 8 + rand.Intn(7) // 8-14
+		return 8 + rng.Intn(7) // 8-14
 	case EntityGoblinKing:
-		return 14 + rand.Intn(9) // 14-22  (boss)
+		return 14 + rng.Intn(9) // 14-22  (boss)
 	case EntityOrcWarchief:
-		return 18 + rand.Intn(10) // 18-27  (boss)
+		return 18 + rng.Intn(10) // 18-27  (boss)
 	case EntityLich:
-		return 22 + rand.Intn(11) // 22-32  (boss)
+		return 22 + rng.Intn(11) // 22-32  (boss)
 	case EntityBrute:
-		return 6 + rand.Intn(6) // 6-11
+		return 6 + rng.Intn(6) // 6-11
 	case EntityMimic:
-		return 8 + rand.Intn(8) // 8-15
+		return 8 + rng.Intn(8) // 8-15
 	case EntitySalamander:
-		return 4 + rand.Intn(5) // 4-8
+		return 4 + rng.Intn(5) // 4-8
 	}
 	return 0
 }

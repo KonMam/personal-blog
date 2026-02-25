@@ -2,10 +2,7 @@
 
 package main
 
-import (
-	"fmt"
-	"math/rand"
-)
+import "fmt"
 
 type EventChoice struct {
 	Label  string
@@ -54,7 +51,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Defile it (risky)",
 				Effect: func(g *Game) string {
-					if rand.Intn(2) == 0 {
+					if rng.Intn(2) == 0 {
 						g.Player.BaseAtk += 3
 						g.Player.RecalcStats()
 						return "Dark power flows through you. +3 ATK."
@@ -82,7 +79,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Drink deeply (risky)",
 				Effect: func(g *Game) string {
-					if rand.Intn(2) == 0 {
+					if rng.Intn(2) == 0 {
 						g.Player.HP = g.Player.MaxHP
 						return "The water is pure. You feel restored. (full HP)"
 					}
@@ -161,7 +158,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Chug the whole thing (risky)",
 				Effect: func(g *Game) string {
-					if rand.Intn(2) == 0 {
+					if rng.Intn(2) == 0 {
 						heal := 20
 						if g.Player.HP+heal > g.Player.MaxHP {
 							heal = g.Player.MaxHP - g.Player.HP
@@ -223,7 +220,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Open it and read (risky)",
 				Effect: func(g *Game) string {
-					if rand.Intn(2) == 0 {
+					if rng.Intn(2) == 0 {
 						g.Player.BaseDef += 2
 						g.Player.RecalcStats()
 						return "The words rearrange themselves into something useful. +2 DEF."
@@ -313,7 +310,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Go through their pockets",
 				Effect: func(g *Game) string {
-					if rand.Intn(2) == 0 {
+					if rng.Intn(2) == 0 {
 						g.Player.Gold += 15
 						return "You find 15g in their pack."
 					}
@@ -336,7 +333,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Claim one",
 				Effect: func(g *Game) string {
-					g.PendingGear = GearEventWeapons[rand.Intn(len(GearEventWeapons))]
+					g.PendingGear = GearEventWeapons[rng.Intn(len(GearEventWeapons))]
 					g.UsedGear[g.PendingGear] = true
 					return fmt.Sprintf("You claim the %s.", g.PendingGear.Name)
 				},
@@ -357,7 +354,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Take it down",
 				Effect: func(g *Game) string {
-					g.PendingGear = GearEventArmors[rand.Intn(len(GearEventArmors))]
+					g.PendingGear = GearEventArmors[rng.Intn(len(GearEventArmors))]
 					g.UsedGear[g.PendingGear] = true
 					return fmt.Sprintf("You don the %s.", g.PendingGear.Name)
 				},
@@ -378,7 +375,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Break the seal",
 				Effect: func(g *Game) string {
-					g.PendingGear = GearEventTrinkets[rand.Intn(len(GearEventTrinkets))]
+					g.PendingGear = GearEventTrinkets[rng.Intn(len(GearEventTrinkets))]
 					g.UsedGear[g.PendingGear] = true
 					return fmt.Sprintf("You pocket the %s.", g.PendingGear.Name)
 				},
@@ -438,7 +435,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Study the runes (risky)",
 				Effect: func(g *Game) string {
-					if rand.Intn(2) == 0 {
+					if rng.Intn(2) == 0 {
 						g.Player.BaseAtk += 2
 						g.Player.RecalcStats()
 						return "The runes burn into your mind. +2 ATK."
@@ -545,7 +542,7 @@ var allEvents = []*EventDef{
 					if len(targets) == 0 {
 						return "No visible enemies. The spirit fades without claiming a victim."
 					}
-					target := targets[rand.Intn(len(targets))]
+					target := targets[rng.Intn(len(targets))]
 					target.Frozen = 3
 					g.Player.HP -= 8
 					if g.Player.HP < 1 {
@@ -663,7 +660,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Tear it open (risky)",
 				Effect: func(g *Game) string {
-					if rand.Intn(2) == 0 {
+					if rng.Intn(2) == 0 {
 						g.Player.Gold += 25
 						return "No spring, no needle. Just coin. +25g."
 					}
@@ -825,7 +822,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Wrench it open (risky)",
 				Effect: func(g *Game) string {
-					if rand.Intn(2) == 0 {
+					if rng.Intn(2) == 0 {
 						gear := g.pickAnyGear()
 						if gear != nil {
 							g.PendingGear = gear
@@ -911,7 +908,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Cup your hands and drink",
 				Effect: func(g *Game) string {
-					switch rand.Intn(3) {
+					switch rng.Intn(3) {
 					case 0:
 						g.Player.HP = g.Player.MaxHP
 						return "Cold and clean. You feel entirely restored."
@@ -1012,7 +1009,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Open yourself to them (risky)",
 				Effect: func(g *Game) string {
-					if rand.Intn(2) == 0 {
+					if rng.Intn(2) == 0 {
 						g.Player.BaseAtk += 2
 						g.Player.BaseDef += 2
 						g.Player.RecalcStats()
@@ -1111,7 +1108,7 @@ var allEvents = []*EventDef{
 						return "Not enough gold. (need 20g)"
 					}
 					g.Player.Gold -= 20
-					if rand.Intn(2) == 0 {
+					if rng.Intn(2) == 0 {
 						g.Player.Gold += 45
 						return "The dice like you tonight. +25g net."
 					}
@@ -1125,7 +1122,7 @@ var allEvents = []*EventDef{
 						return "Not enough gold. (need 40g)"
 					}
 					g.Player.Gold -= 40
-					if rand.Intn(20) < 7 {
+					if rng.Intn(20) < 7 {
 						g.Player.Gold += 120
 						return "You didn't deserve that. Take it anyway. +80g net."
 					}
@@ -1251,7 +1248,7 @@ var allEvents = []*EventDef{
 			{
 				Label: "Dig through it",
 				Effect: func(g *Game) string {
-					roll := rand.Intn(10)
+					roll := rng.Intn(10)
 					if roll < 5 {
 						gear := g.pickAnyGear()
 						if gear != nil {
@@ -1260,11 +1257,11 @@ var allEvents = []*EventDef{
 						}
 					}
 					if roll < 8 {
-						gold := 15 + rand.Intn(21)
+						gold := 15 + rng.Intn(21)
 						g.Player.Gold += gold
 						return fmt.Sprintf("You find %dg buried in the dust.", gold)
 					}
-					dmg := 5 + rand.Intn(8)
+					dmg := 5 + rng.Intn(8)
 					g.Player.HP -= dmg
 					if g.Player.HP < 1 {
 						g.Player.HP = 1

@@ -2,7 +2,6 @@
 
 package main
 
-import "math/rand"
 
 type TileType int
 
@@ -52,7 +51,16 @@ func GenerateDungeon(width, height int) ([][]Tile, []Room) {
 			sectors = append(sectors, sector{c, r})
 		}
 	}
-	rand.Shuffle(len(sectors), func(i, j int) { sectors[i], sectors[j] = sectors[j], sectors[i] })
+	rng.Shuffle(len(sectors), func(i, j int) { sectors[i], sectors[j] = sectors[j], sectors[i] })
+	// Ensure spawn (sectors[0]) and stairs (sectors[last]) are well-separated.
+	// Re-shuffle until their Manhattan distance in the sector grid is >= 3.
+	for {
+		first, last := sectors[0], sectors[len(sectors)-1]
+		if iAbs(first.col-last.col)+iAbs(first.row-last.row) >= 3 {
+			break
+		}
+		rng.Shuffle(len(sectors), func(i, j int) { sectors[i], sectors[j] = sectors[j], sectors[i] })
+	}
 
 	sectorW := width / gridCols  // 20
 	sectorH := height / gridRows // 7
@@ -79,14 +87,14 @@ func GenerateDungeon(width, height int) ([][]Tile, []Room) {
 		}
 
 		// Random room size within the sector interior
-		rw := 4 + rand.Intn(min(7, innerW-3))
-		rh := 4 + rand.Intn(min(4, innerH-3))
+		rw := 4 + rng.Intn(min(7, innerW-3))
+		rh := 4 + rng.Intn(min(4, innerH-3))
 
 		// Random position within the remaining slack
 		xSlack := innerW - rw
 		ySlack := innerH - rh
-		rx := sx + padding + rand.Intn(max(1, xSlack+1))
-		ry := sy + padding + rand.Intn(max(1, ySlack+1))
+		rx := sx + padding + rng.Intn(max(1, xSlack+1))
+		ry := sy + padding + rng.Intn(max(1, ySlack+1))
 
 		// Clamp to safe map bounds
 		if rx < 1 {
@@ -134,7 +142,7 @@ func GenerateDungeon(width, height int) ([][]Tile, []Room) {
 	// Assign visual variants to all floor and wall tiles
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			tiles[y][x].Variant = byte(rand.Intn(4))
+			tiles[y][x].Variant = byte(rng.Intn(4))
 		}
 	}
 
@@ -142,7 +150,7 @@ func GenerateDungeon(width, height int) ([][]Tile, []Room) {
 }
 
 func carveCorridors(tiles [][]Tile, x1, y1, x2, y2 int) {
-	if rand.Intn(2) == 0 {
+	if rng.Intn(2) == 0 {
 		carveH(tiles, x1, x2, y1)
 		carveV(tiles, y1, y2, x2)
 	} else {

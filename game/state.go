@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+// rng is the single seeded random source for all game logic.
+// Re-initialized at the start of each floor so floor content is always
+// f(seed, floor), regardless of rand consumption between floors.
+var rng = rand.New(rand.NewSource(1))
+
 const (
 	MapW      = 60
 	MapH      = 22
@@ -121,6 +126,7 @@ type Game struct {
 	UsedEvents    map[*EventDef]bool // tracks events spawned this run
 	LastDamagedAt time.Time         // for damage-flash animation
 	ShowLog       bool              // message log overlay visible
+	ShowDropMode  bool              // waiting for 1/2/3 to discard a potion
 	Difficulty    int               // 0=Normal,1=Hard,2=Nightmare,3=Daily
 	Seed          int64
 	IsDaily       bool
@@ -145,6 +151,13 @@ func NewGame() *Game {
 }
 
 func (g *Game) newFloor() {
+	// Re-initialize rng before each floor so content is reproducible for a given
+	// seed+floor, regardless of rand consumption between floors.
+	if g.Seed != 0 {
+		rng = rand.New(rand.NewSource(g.Seed + int64(g.Floor)))
+	} else {
+		rng = rand.New(rand.NewSource(time.Now().UnixNano()))
+	}
 	tiles, rooms := GenerateDungeon(MapW, MapH)
 	g.Tiles = tiles
 	g.Enemies = nil
@@ -230,13 +243,13 @@ func (g *Game) spawnEnemies(rooms []Room) {
 			}
 			if boss != nil {
 				g.applyDifficultyHP(boss)
+				boss.DropGear = g.pickAnyGear() // pre-rolled here so it's seeded with the floor
 				g.Enemies = append(g.Enemies, boss)
-				// Boss drops a guaranteed gear reward on death (tracked via flag)
 			}
 			// Spawn a couple extra enemies alongside boss
 			for n := 0; n < 2; n++ {
-				x := room.X + 1 + rand.Intn(room.W-2)
-				y := room.Y + 1 + rand.Intn(room.H-2)
+				x := room.X + 1 + rng.Intn(room.W-2)
+				y := room.Y + 1 + rng.Intn(room.H-2)
 				if g.enemyAt(x, y) != nil || (x == cx && y == cy) {
 					continue
 				}
@@ -247,11 +260,11 @@ func (g *Game) spawnEnemies(rooms []Room) {
 			continue
 		}
 
-		count := 1 + rand.Intn(2) + (g.Floor - 1)
+		count := 1 + rng.Intn(2) + (g.Floor - 1)
 
 		for n := 0; n < count; n++ {
-			x := room.X + 1 + rand.Intn(room.W-2)
-			y := room.Y + 1 + rand.Intn(room.H-2)
+			x := room.X + 1 + rng.Intn(room.W-2)
+			y := room.Y + 1 + rng.Intn(room.H-2)
 
 			if g.Tiles[y][x].Type == TileStairs {
 				continue
@@ -263,17 +276,17 @@ func (g *Game) spawnEnemies(rooms []Room) {
 			var e *Entity
 			switch g.Floor {
 			case 1:
-				if rand.Intn(6) == 0 {
+				if rng.Intn(6) == 0 {
 					e = NewArcher(x, y)
 				} else {
 					e = NewGoblin(x, y)
 				}
 			case 2:
 				// ~12% brute
-				if rand.Intn(8) == 0 {
+				if rng.Intn(8) == 0 {
 					e = NewBrute(x, y)
 				} else {
-					roll := rand.Intn(6)
+					roll := rng.Intn(6)
 					switch roll {
 					case 0:
 						e = NewArcher(x, y)
@@ -287,14 +300,14 @@ func (g *Game) spawnEnemies(rooms []Room) {
 				}
 			case 3:
 				// ~12% brute or salamander
-				if rand.Intn(8) == 0 {
-					if rand.Intn(2) == 0 {
+				if rng.Intn(8) == 0 {
+					if rng.Intn(2) == 0 {
 						e = NewBrute(x, y)
 					} else {
 						e = NewSalamander(x, y)
 					}
 				} else {
-					roll := rand.Intn(8)
+					roll := rng.Intn(8)
 					switch roll {
 					case 0:
 						e = NewArcher(x, y)
@@ -320,7 +333,7 @@ func (g *Game) spawnEnemies(rooms []Room) {
 	// Spawn 1 Mimic per floor on floor 2+
 	if g.Floor >= 2 && len(rooms) >= 3 {
 		for attempt := 0; attempt < 20; attempt++ {
-			idx := 1 + rand.Intn(len(rooms)-2)
+			idx := 1 + rng.Intn(len(rooms)-2)
 			room := rooms[idx]
 			cx, cy := room.Center()
 			if g.enemyAt(cx, cy) == nil && !g.occupied(cx, cy) {
@@ -337,13 +350,13 @@ func (g *Game) spawnItems(rooms []Room) {
 	if len(rooms) < 2 {
 		return
 	}
-	count := 1 + rand.Intn(2) // 1-2 potions
+	count := 1 + rng.Intn(2) // 1-2 potions
 	for range count {
 		for attempt := 0; attempt < 20; attempt++ {
-			idx := 1 + rand.Intn(len(rooms)-1)
+			idx := 1 + rng.Intn(len(rooms)-1)
 			room := rooms[idx]
-			x := room.X + 1 + rand.Intn(room.W-2)
-			y := room.Y + 1 + rand.Intn(room.H-2)
+			x := room.X + 1 + rng.Intn(room.W-2)
+			y := room.Y + 1 + rng.Intn(room.H-2)
 			if g.occupied(x, y) {
 				continue
 			}
@@ -354,7 +367,7 @@ func (g *Game) spawnItems(rooms []Room) {
 }
 
 func randomPotionType() PotionType {
-	r := rand.Intn(100)
+	r := rng.Intn(100)
 	switch {
 	case r < 60:
 		return PotionHealing
@@ -429,12 +442,12 @@ func (g *Game) spawnChests(rooms []Room) {
 	if len(rooms) < 3 {
 		return
 	}
-	count := 2 + rand.Intn(2) // 2-3 chests
+	count := 2 + rng.Intn(2) // 2-3 chests
 	used := map[int]bool{}
 	for range count {
 		for attempt := 0; attempt < 20; attempt++ {
 			// Not first room (player spawn), not last room (stairs)
-			idx := 1 + rand.Intn(len(rooms)-2)
+			idx := 1 + rng.Intn(len(rooms)-2)
 			if used[idx] {
 				continue
 			}
@@ -447,7 +460,7 @@ func (g *Game) spawnChests(rooms []Room) {
 
 			// 50% chance to contain gear (never repeat an item seen this run)
 			var gear *Gear
-			if rand.Intn(2) == 0 {
+			if rng.Intn(2) == 0 {
 				all := append(append(GearWeapons, GearArmors...), GearTrinkets...)
 				available := make([]*Gear, 0, len(all))
 				for _, item := range all {
@@ -456,14 +469,14 @@ func (g *Game) spawnChests(rooms []Room) {
 					}
 				}
 				if len(available) > 0 {
-					gear = available[rand.Intn(len(available))]
+					gear = available[rng.Intn(len(available))]
 					g.UsedGear[gear] = true
 				}
 			}
 			g.Chests = append(g.Chests, &Chest{
 				X:    cx,
 				Y:    cy,
-				Gold: 5 + rand.Intn(8), // 5-12g
+				Gold: 5 + rng.Intn(8), // 5-12g
 				Gear: gear,
 			})
 			break
@@ -482,7 +495,7 @@ func (g *Game) spawnMerchant(rooms []Room) {
 	// Pick a random middle room (not player spawn or stairs)
 	room := rooms[1] // fallback
 	for attempt := 0; attempt < 20; attempt++ {
-		idx := 1 + rand.Intn(len(rooms)-2)
+		idx := 1 + rng.Intn(len(rooms)-2)
 		r := rooms[idx]
 		rc, ry := r.Center()
 		if !g.occupied(rc, ry) {
@@ -502,7 +515,7 @@ func (g *Game) spawnMerchant(rooms []Room) {
 		if len(available) == 0 {
 			return nil
 		}
-		chosen := available[rand.Intn(len(available))]
+		chosen := available[rng.Intn(len(available))]
 		g.UsedGear[chosen] = true
 		return chosen
 	}
@@ -525,13 +538,13 @@ func (g *Game) spawnMerchant(rooms []Room) {
 		{Name: "Might Draught (+5 ATK, 3 turns)", Cost: scaleCost(30), PotionGrant: PotionMight},
 	}
 	if w != nil {
-		stock = append(stock, &ShopItem{Name: w.Name, Cost: scaleCost(55 + rand.Intn(25)), Gear: w})
+		stock = append(stock, &ShopItem{Name: w.Name, Cost: scaleCost(55 + rng.Intn(25)), Gear: w})
 	}
 	if a != nil {
-		stock = append(stock, &ShopItem{Name: a.Name, Cost: scaleCost(55 + rand.Intn(25)), Gear: a})
+		stock = append(stock, &ShopItem{Name: a.Name, Cost: scaleCost(55 + rng.Intn(25)), Gear: a})
 	}
 	if t != nil {
-		stock = append(stock, &ShopItem{Name: t.Name, Cost: scaleCost(65 + rand.Intn(25)), Gear: t})
+		stock = append(stock, &ShopItem{Name: t.Name, Cost: scaleCost(65 + rng.Intn(25)), Gear: t})
 	}
 
 	g.Merchant = &Merchant{X: cx, Y: cy, Stock: stock}
@@ -545,7 +558,7 @@ func (g *Game) spawnEvents(rooms []Room) {
 	usedRooms := map[int]bool{}
 	for attempt := 0; attempt < 40 && spawned < 2; attempt++ {
 		// Not first room (player spawn), not last room (stairs)
-		idx := 1 + rand.Intn(len(rooms)-2)
+		idx := 1 + rng.Intn(len(rooms)-2)
 		if usedRooms[idx] {
 			continue
 		}
@@ -567,7 +580,7 @@ func (g *Game) spawnEvents(rooms []Room) {
 			break
 		}
 		usedRooms[idx] = true
-		def := available[rand.Intn(len(available))]
+		def := available[rng.Intn(len(available))]
 		g.UsedEvents[def] = true
 		g.Events = append(g.Events, &EventSpawn{X: cx, Y: cy, Def: def})
 		spawned++
@@ -575,6 +588,15 @@ func (g *Game) spawnEvents(rooms []Room) {
 }
 
 func (g *Game) HandleInput(key string) {
+	// Drop mode: swallows the next keypress — 1/2/3 discards that slot, anything else cancels
+	if g.ShowDropMode {
+		g.ShowDropMode = false
+		if key == "1" || key == "2" || key == "3" {
+			g.dropPotionAt(int(key[0] - '1'))
+		}
+		return
+	}
+
 	// Message log overlay — Tab toggles; any other key dismisses it
 	if key == "Tab" {
 		g.ShowLog = !g.ShowLog
@@ -630,6 +652,15 @@ func (g *Game) HandleInput(key string) {
 		g.addMessage("You wait.")
 		g.enemyTurn()
 		g.recomputeFOV()
+		return
+	}
+
+	if key == "x" || key == "X" {
+		if g.Player.Potions > 0 {
+			g.ShowDropMode = true
+		} else {
+			g.addMessage("No potions to drop.")
+		}
 		return
 	}
 
@@ -790,6 +821,17 @@ func (g *Game) usePotionAt(idx int) {
 	g.recomputeFOV()
 }
 
+func (g *Game) dropPotionAt(idx int) {
+	if idx >= len(g.Player.PotionTypes) {
+		g.addMessage(fmt.Sprintf("No potion in slot %d.", idx+1))
+		return
+	}
+	name := potionTypeName(g.Player.PotionTypes[idx])
+	g.Player.PotionTypes = append(g.Player.PotionTypes[:idx], g.Player.PotionTypes[idx+1:]...)
+	g.Player.Potions--
+	g.addMessage(fmt.Sprintf("Dropped %s.", name))
+}
+
 func (g *Game) applyPotion(pt PotionType) {
 	g.Player.PotionsUsed++
 	switch pt {
@@ -841,6 +883,7 @@ func (g *Game) restart() {
 	g.UsedEvents = make(map[*EventDef]bool)
 	g.LastDamagedAt = time.Time{}
 	g.ShowLog = false
+	g.ShowDropMode = false
 	g.Traps = nil
 	g.MovingTraps = nil
 	g.Shooters = nil
@@ -889,7 +932,6 @@ func (g *Game) handleDifficultyInput(key string) {
 	case "1":
 		g.Difficulty = 0
 		g.Seed = time.Now().UnixNano()
-		rand.Seed(g.Seed)
 		g.Phase = PhaseClassSelect
 	case "2":
 		if victories < 1 {
@@ -897,7 +939,6 @@ func (g *Game) handleDifficultyInput(key string) {
 		}
 		g.Difficulty = 1
 		g.Seed = time.Now().UnixNano()
-		rand.Seed(g.Seed)
 		g.Phase = PhaseClassSelect
 	case "3":
 		if hardVictories < 1 {
@@ -905,14 +946,12 @@ func (g *Game) handleDifficultyInput(key string) {
 		}
 		g.Difficulty = 2
 		g.Seed = time.Now().UnixNano()
-		rand.Seed(g.Seed)
 		g.Phase = PhaseClassSelect
 	case "4":
 		g.Difficulty = 3
 		g.IsDaily = true
 		today := time.Now().Truncate(24 * time.Hour).Unix()
 		g.Seed = today
-		rand.Seed(g.Seed)
 		g.Phase = PhaseClassSelect
 	}
 }
@@ -1026,7 +1065,7 @@ func (g *Game) movePlayer(dx, dy int) {
 	for i, t := range g.Traps {
 		if t.X == nx && t.Y == ny {
 			g.Traps = append(g.Traps[:i], g.Traps[i+1:]...)
-			dmg := 6 + rand.Intn(5) // 6-10
+			dmg := 6 + rng.Intn(5) // 6-10
 			g.Player.HP -= dmg
 			if g.Player.HP < 0 {
 				g.Player.HP = 0
@@ -1048,7 +1087,7 @@ func (g *Game) movePlayer(dx, dy int) {
 	// Moving spike trap collision (player steps onto trap)
 	for _, mt := range g.MovingTraps {
 		if mt.X == nx && mt.Y == ny {
-			dmg := 6 + rand.Intn(5) // 6-10
+			dmg := 6 + rng.Intn(5) // 6-10
 			g.Player.HP -= dmg
 			if g.Player.HP < 0 {
 				g.Player.HP = 0
@@ -1070,7 +1109,7 @@ func (g *Game) movePlayer(dx, dy int) {
 	// Sacrifice altar
 	if sa := g.SacrificeAltar; sa != nil && !sa.Used && nx == sa.X && ny == sa.Y {
 		sa.Used = true
-		cost := 8 + rand.Intn(5) // 8-12
+		cost := 8 + rng.Intn(5) // 8-12
 		g.Player.HP -= cost
 		g.LastDamagedAt = time.Now()
 		if g.Player.HP <= 0 {
@@ -1082,7 +1121,7 @@ func (g *Game) movePlayer(dx, dy int) {
 			g.recomputeFOV()
 			return
 		}
-		gold := 12 + rand.Intn(12) // 12-23g
+		gold := 12 + rng.Intn(12) // 12-23g
 		g.Player.Gold += gold
 		if sa.RewardGear != nil {
 			g.addMessage(fmt.Sprintf("You offer blood at the altar. -%d HP. Found %s! +%dg.", cost, sa.RewardGear.Name, gold))
@@ -1101,11 +1140,11 @@ func (g *Game) movePlayer(dx, dy int) {
 		if inRoom(nx, ny, cr.Bounds) {
 			cr.Triggered = true
 			g.addMessage("You sense an ambush!")
-			count := 2 + rand.Intn(2) // 2-3 enemies
+			count := 2 + rng.Intn(2) // 2-3 enemies
 			for i := 0; i < count; i++ {
 				for attempt := 0; attempt < 20; attempt++ {
-					ex := cr.Bounds.X + 1 + rand.Intn(cr.Bounds.W-2)
-					ey := cr.Bounds.Y + 1 + rand.Intn(cr.Bounds.H-2)
+					ex := cr.Bounds.X + 1 + rng.Intn(cr.Bounds.W-2)
+					ey := cr.Bounds.Y + 1 + rng.Intn(cr.Bounds.H-2)
 					if g.enemyAt(ex, ey) == nil && (ex != nx || ey != ny) {
 						e := g.spawnEnemyForFloor(ex, ey)
 						cr.Enemies = append(cr.Enemies, e)
@@ -1229,8 +1268,8 @@ func (g *Game) applyHitToEnemy(enemy *Entity, isFirst bool) {
 		enemy.BossPhase2 = true
 		// Teleport to random floor tile in the map
 		for attempt := 0; attempt < 30; attempt++ {
-			tx := rand.Intn(MapW)
-			ty := rand.Intn(MapH)
+			tx := rng.Intn(MapW)
+			ty := rng.Intn(MapH)
 			if g.Tiles[ty][tx].Type == TileFloor && g.enemyAt(tx, ty) == nil {
 				enemy.X, enemy.Y = tx, ty
 				break
@@ -1249,12 +1288,9 @@ func (g *Game) applyHitToEnemy(enemy *Entity, isFirst bool) {
 			g.Player.ShieldCharges += g.Player.OnKillShield
 			suffix += fmt.Sprintf(" [+%dsh]", g.Player.OnKillShield)
 		}
-		// Boss gear reward
-		if enemy.IsBoss {
-			bossGear := g.pickAnyGear()
-			if bossGear != nil {
-				g.PendingGear = bossGear
-			}
+		// Boss gear reward (pre-rolled at spawn time for seeded reproducibility)
+		if enemy.IsBoss && enemy.DropGear != nil {
+			g.PendingGear = enemy.DropGear
 		}
 		playSound("kill")
 		if isFirst {
@@ -1295,7 +1331,7 @@ func (g *Game) applyHitToEnemy(enemy *Entity, isFirst bool) {
 		g.addMessage("It's a Mimic!")
 	}
 	// Freeze
-	if g.Player.FreezeChance > 0 && rand.Intn(100) < g.Player.FreezeChance && enemy.Alive {
+	if g.Player.FreezeChance > 0 && rng.Intn(100) < g.Player.FreezeChance && enemy.Alive {
 		enemy.Frozen = 2
 		g.addMessage(fmt.Sprintf("The %s is frozen!", enemy.Name))
 	}
@@ -1341,7 +1377,7 @@ func (g *Game) doEnemyAttack(e *Entity, isRanged bool) bool {
 	}
 
 	// Dodge check
-	if rand.Intn(100) < g.Player.Dodge {
+	if rng.Intn(100) < g.Player.Dodge {
 		playSound("miss")
 		g.addMessage(fmt.Sprintf("You dodge the %s's attack!", e.Name))
 		// Reactive synergy: on dodge, deal thorns damage to attacker
@@ -1752,7 +1788,7 @@ func (g *Game) pickAnyGear() *Gear {
 	if len(available) == 0 {
 		return nil
 	}
-	chosen := available[rand.Intn(len(available))]
+	chosen := available[rng.Intn(len(available))]
 	g.UsedGear[chosen] = true
 	return chosen
 }
@@ -1761,12 +1797,12 @@ func (g *Game) pickAnyGear() *Gear {
 func (g *Game) spawnEnemyForFloor(x, y int) *Entity {
 	switch g.Floor {
 	case 1:
-		if rand.Intn(4) == 0 {
+		if rng.Intn(4) == 0 {
 			return NewArcher(x, y)
 		}
 		return NewGoblin(x, y)
 	case 2:
-		switch rand.Intn(5) {
+		switch rng.Intn(5) {
 		case 0:
 			return NewArcher(x, y)
 		case 1:
@@ -1777,7 +1813,7 @@ func (g *Game) spawnEnemyForFloor(x, y int) *Entity {
 			return NewOrc(x, y)
 		}
 	default: // floor 3
-		switch rand.Intn(5) {
+		switch rng.Intn(5) {
 		case 0:
 			return NewGuard(x, y)
 		case 1:
@@ -1797,9 +1833,9 @@ func (g *Game) spawnSpecialRoom(rooms []Room) {
 	if len(rooms) < 3 {
 		return
 	}
-	roomType := rand.Intn(4)
+	roomType := rng.Intn(4)
 	for attempt := 0; attempt < 30; attempt++ {
-		idx := 1 + rand.Intn(len(rooms)-2)
+		idx := 1 + rng.Intn(len(rooms)-2)
 		room := rooms[idx]
 		cx, cy := room.Center()
 		if g.occupied(cx, cy) {
@@ -1828,8 +1864,8 @@ func (g *Game) spawnSacrificeRoom(room Room) {
 
 	// Surround altar with 2-3 spike traps
 	offsets := [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {1, 1}, {-1, 1}, {1, -1}}
-	rand.Shuffle(len(offsets), func(i, j int) { offsets[i], offsets[j] = offsets[j], offsets[i] })
-	count := 2 + rand.Intn(2)
+	rng.Shuffle(len(offsets), func(i, j int) { offsets[i], offsets[j] = offsets[j], offsets[i] })
+	count := 2 + rng.Intn(2)
 	placed := 0
 	for _, off := range offsets {
 		if placed >= count {
@@ -1858,7 +1894,7 @@ func (g *Game) spawnChallengeRoom(room Room) {
 func (g *Game) spawnShooterRoom(room Room) {
 	cx, cy := room.Center()
 	gear := g.pickAnyGear()
-	g.Chests = append(g.Chests, &Chest{X: cx, Y: cy, Gold: 8 + rand.Intn(9), Gear: gear})
+	g.Chests = append(g.Chests, &Chest{X: cx, Y: cy, Gold: 8 + rng.Intn(9), Gear: gear})
 
 	type candidate struct{ x, y, dx, dy int }
 	candidates := []candidate{
@@ -1867,16 +1903,16 @@ func (g *Game) spawnShooterRoom(room Room) {
 		{cx, room.Y - 1, 0, 1},         // top wall → shoots down
 		{cx, room.Y + room.H, 0, -1},   // bottom wall → shoots up
 	}
-	rand.Shuffle(len(candidates), func(i, j int) { candidates[i], candidates[j] = candidates[j], candidates[i] })
+	rng.Shuffle(len(candidates), func(i, j int) { candidates[i], candidates[j] = candidates[j], candidates[i] })
 
-	count := 1 + rand.Intn(2) // 1-2 shooters
+	count := 1 + rng.Intn(2) // 1-2 shooters
 	placed := 0
 	for _, c := range candidates {
 		if placed >= count {
 			break
 		}
 		if c.x >= 0 && c.y >= 0 && c.x < MapW && c.y < MapH && g.Tiles[c.y][c.x].Type == TileWall {
-			period := 3 + rand.Intn(2) // fire every 3-4 turns
+			period := 3 + rng.Intn(2) // fire every 3-4 turns
 			g.Shooters = append(g.Shooters, &Shooter{
 				X: c.x, Y: c.y, DX: c.dx, DY: c.dy,
 				Timer: period, Period: period,
@@ -1890,10 +1926,10 @@ func (g *Game) spawnShooterRoom(room Room) {
 func (g *Game) spawnMovingTrapRoom(room Room) {
 	cx, cy := room.Center()
 	gear := g.pickAnyGear()
-	g.Chests = append(g.Chests, &Chest{X: cx, Y: cy, Gold: 8 + rand.Intn(9), Gear: gear})
+	g.Chests = append(g.Chests, &Chest{X: cx, Y: cy, Gold: 8 + rng.Intn(9), Gear: gear})
 
 	useHoriz := room.W >= room.H
-	count := 2 + rand.Intn(2) // 2-3 moving traps
+	count := 2 + rng.Intn(2) // 2-3 moving traps
 
 	// Divide the primary axis into count segments so traps spread across the room.
 	// Alternate starting direction so they don't all move the same way.
@@ -1911,7 +1947,7 @@ func (g *Game) spawnMovingTrapRoom(room Room) {
 		}
 		offset := i * seg
 		if seg > 1 {
-			offset += rand.Intn(seg)
+			offset += rng.Intn(seg)
 		}
 		if offset >= inner {
 			offset = inner - 1
@@ -1926,10 +1962,10 @@ func (g *Game) spawnMovingTrapRoom(room Room) {
 		if useHoriz {
 			dx, dy = dir, 0
 			x = room.X + 1 + offset
-			y = room.Y + 1 + rand.Intn(room.H-2)
+			y = room.Y + 1 + rng.Intn(room.H-2)
 		} else {
 			dx, dy = 0, dir
-			x = room.X + 1 + rand.Intn(room.W-2)
+			x = room.X + 1 + rng.Intn(room.W-2)
 			y = room.Y + 1 + offset
 		}
 
@@ -1962,7 +1998,7 @@ func (g *Game) tickShooters() {
 		x, y := s.X+s.DX, s.Y+s.DY
 		for x >= 0 && y >= 0 && x < MapW && y < MapH && g.Tiles[y][x].Type != TileWall {
 			if g.Player.X == x && g.Player.Y == y {
-				dmg := 8 + rand.Intn(5) // 8-12
+				dmg := 8 + rng.Intn(5) // 8-12
 				g.Player.HP -= dmg
 				if g.Player.HP < 0 {
 					g.Player.HP = 0
@@ -1999,7 +2035,7 @@ func (g *Game) tickMovingTraps() {
 		}
 		mt.X, mt.Y = nx, ny
 		if g.Player.X == nx && g.Player.Y == ny {
-			dmg := 6 + rand.Intn(5) // 6-10
+			dmg := 6 + rng.Intn(5) // 6-10
 			g.Player.HP -= dmg
 			if g.Player.HP < 0 {
 				g.Player.HP = 0
@@ -2030,7 +2066,7 @@ func (g *Game) checkChallengeRooms() {
 	gear := g.pickAnyGear()
 	g.Chests = append(g.Chests, &Chest{
 		X: cr.RewardX, Y: cr.RewardY,
-		Gold: 8 + rand.Intn(9), // 8-16g
+		Gold: 8 + rng.Intn(9), // 8-16g
 		Gear: gear,
 	})
 	g.addMessage("Challenge cleared! A chest appears.")
