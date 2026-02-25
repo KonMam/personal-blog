@@ -53,8 +53,9 @@ Enemy turn runs immediately after every player action (bump attack, move, potion
 - Grid: `MapW=60 × MapH=22` tiles
 - Rooms: up to 9, `4-10 wide × 4-7 tall`, connected by L-shaped corridors
 - Room ordering is stable: `rooms[0]` = player spawn, `rooms[last]` = stairs
-- Spawn order in `newFloor()`: enemies → items → merchant (floor 2 only) → chests → events
+- Spawn order in `newFloor()`: enemies → merchant (floors 2+) → chests → events → items
   - Merchant spawns before chests so chest placement can avoid the merchant's room center
+  - Per floor: 2-3 chests, 2 events, 1-2 potions; merchant on floors 2 and 3
 
 ---
 
@@ -90,10 +91,11 @@ Enemy turn runs immediately after every player action (bump attack, move, potion
 - `Player.ShieldCharges`: refilled by `ShieldMod` at each `newFloor()`; absorbs one hit per charge
 
 **Gear catalog** (all slices in `entity.go`):
-- `GearWeapons` — 7 items, char `†`
-- `GearArmors` — 7 items, char `◈`
-- `GearTrinkets` — 5 items, char `◇`
-- Adding a new item: append to the relevant slice. Chests draw from all three pools; merchant stocks one of each.
+- `GearWeapons` — 10 items, char `†`
+- `GearArmors` — 10 items, char `◈`
+- `GearTrinkets` — 10 items, char `◇`
+- `GearEventWeapons` / `GearEventArmors` / `GearEventTrinkets` — 2 each, event-only (never in chests/merchant)
+- Adding a new item: append to the relevant slice. Chests draw from the three regular pools; merchant stocks one of each.
 
 **Slots:** `SlotWeapon = 0`, `SlotArmor = 1`, `SlotTrinket = 2` — index into `Entity.Equipped[3]`.
 
@@ -109,7 +111,7 @@ Events are spawned one per floor in a random non-spawn/non-stairs room center (a
 - `EventSpawn` — X/Y + pointer to def (consumed on trigger)
 - `ActiveEvent` — current def + result string (empty = choices showing)
 
-**`allEvents`** contains 8 events: Ancient Shrine, Murky Pool, Blood Altar, Crystal Vial, Alchemist's Fire, Dusty Tome, Lucky Bones, Dying Mercenary.
+**`allEvents`** contains 30 events. Three of them (Weapon Shrine, Armory of the Fallen, Sacred Reliquary) set `g.PendingGear` from the event-only gear slices; `handleEventInput` routes to `PhaseChest` after dismissal when `PendingGear != nil`.
 
 Adding a new event: append a `*EventDef` to `allEvents` in `events.go`. No other changes needed.
 
@@ -182,8 +184,9 @@ Canvas scaling: after WASM loads, `rescale()` applies `transform: scale(x)` if `
 
 **New gear:**
 - Append to `GearWeapons`, `GearArmors`, or `GearTrinkets` in `entity.go`
-- Set relevant new fields: `DoubleStrike`, `ReachMod`, `LifestealMod`, `DodgeMod`, `ShieldMod`, `BurnOnHit`
+- Set relevant new fields: `DoubleStrike`, `ReachMod`, `LifestealMod`, `DodgeMod`, `ShieldMod`, `BurnOnHit`, `BerserkerMod`, `OnKillShield`, `BurnBonus`
 - No other changes needed — chests and merchant pick from all three pools automatically
+- For event-only gear, append to `GearEventWeapons`, `GearEventArmors`, or `GearEventTrinkets` instead
 
 **New event:**
 - Append a `*EventDef` to `allEvents` in `events.go`. No other changes needed.

@@ -93,7 +93,7 @@ func (g *Game) newFloor() {
 	}
 
 	g.spawnEnemies(rooms)
-	if g.Floor == 2 {
+	if g.Floor >= 2 {
 		g.spawnMerchant(rooms)
 	}
 	g.spawnChests(rooms)
@@ -213,7 +213,7 @@ func (g *Game) spawnChests(rooms []Room) {
 	if len(rooms) < 3 {
 		return
 	}
-	count := 1 + rand.Intn(2) // 1-2 chests
+	count := 2 + rand.Intn(2) // 2-3 chests
 	used := map[int]bool{}
 	for range count {
 		for attempt := 0; attempt < 20; attempt++ {
@@ -272,33 +272,26 @@ func (g *Game) spawnEvents(rooms []Room) {
 	if len(rooms) < 3 {
 		return
 	}
-	for attempt := 0; attempt < 20; attempt++ {
+	spawned := 0
+	usedRooms := map[int]bool{}
+	for attempt := 0; attempt < 40 && spawned < 2; attempt++ {
 		// Not first room (player spawn), not last room (stairs)
 		idx := 1 + rand.Intn(len(rooms)-2)
+		if usedRooms[idx] {
+			continue
+		}
 		room := rooms[idx]
 		cx, cy := room.Center()
 
 		// Skip if occupied by enemy, chest, or merchant
-		if g.enemyAt(cx, cy) != nil {
-			continue
-		}
-		occupied := false
-		for _, chest := range g.Chests {
-			if chest.X == cx && chest.Y == cy {
-				occupied = true
-				break
-			}
-		}
-		if occupied {
-			continue
-		}
-		if g.Merchant != nil && g.Merchant.X == cx && g.Merchant.Y == cy {
+		if g.occupied(cx, cy) {
 			continue
 		}
 
+		usedRooms[idx] = true
 		def := allEvents[rand.Intn(len(allEvents))]
 		g.Events = append(g.Events, &EventSpawn{X: cx, Y: cy, Def: def})
-		return
+		spawned++
 	}
 }
 
@@ -406,7 +399,11 @@ func (g *Game) handleEventInput(key string) {
 	if g.ActiveEvent.Result != "" {
 		// Any key continues — events are free actions, no enemy turn
 		g.ActiveEvent = nil
-		g.Phase = PhasePlay
+		if g.PendingGear != nil {
+			g.Phase = PhaseChest
+		} else {
+			g.Phase = PhasePlay
+		}
 		return
 	}
 	// Process choice keys
@@ -580,7 +577,14 @@ func (g *Game) movePlayer(dx, dy int) {
 
 // doPlayerAttack handles a player bump attack with all combat mechanics.
 func (g *Game) doPlayerAttack(enemy *Entity) {
+	// First hit
 	dmg := g.Player.CalcDamage()
+	if g.Player.BerserkerMod > 0 && g.Player.HP*10 < g.Player.MaxHP*4 {
+		dmg += g.Player.BerserkerMod
+	}
+	if g.Player.BurnBonus > 0 && enemy.Burn > 0 {
+		dmg += g.Player.BurnBonus
+	}
 	enemy.HP -= dmg
 	if enemy.HP <= 0 {
 		enemy.HP = 0
@@ -588,6 +592,9 @@ func (g *Game) doPlayerAttack(enemy *Entity) {
 		g.Kills++
 		gold := enemy.goldDrop()
 		g.Player.Gold += gold
+		if g.Player.OnKillShield > 0 {
+			g.Player.ShieldCharges += g.Player.OnKillShield
+		}
 		g.addMessage(fmt.Sprintf("You slay the %s! +%dg", enemy.Name, gold))
 	} else {
 		g.addMessage(fmt.Sprintf("You hit the %s for %d damage.", enemy.Name, dmg))
@@ -598,8 +605,16 @@ func (g *Game) doPlayerAttack(enemy *Entity) {
 	if g.Player.BurnOnHit && enemy.Alive {
 		enemy.Burn = 3
 	}
+
+	// Double strike (second hit)
 	if g.Player.DoubleStrike && enemy.Alive {
 		dmg2 := g.Player.CalcDamage()
+		if g.Player.BerserkerMod > 0 && g.Player.HP*10 < g.Player.MaxHP*4 {
+			dmg2 += g.Player.BerserkerMod
+		}
+		if g.Player.BurnBonus > 0 && enemy.Burn > 0 {
+			dmg2 += g.Player.BurnBonus
+		}
 		enemy.HP -= dmg2
 		if enemy.HP <= 0 {
 			enemy.HP = 0
@@ -607,7 +622,10 @@ func (g *Game) doPlayerAttack(enemy *Entity) {
 			g.Kills++
 			gold := enemy.goldDrop()
 			g.Player.Gold += gold
-			g.addMessage(fmt.Sprintf("You slay the %s! +%dg", enemy.Name, gold))
+			if g.Player.OnKillShield > 0 {
+				g.Player.ShieldCharges += g.Player.OnKillShield
+			}
+			g.addMessage(fmt.Sprintf("Second strike slays the %s! +%dg", enemy.Name, gold))
 		} else {
 			g.addMessage(fmt.Sprintf("You strike again for %d damage.", dmg2))
 		}
