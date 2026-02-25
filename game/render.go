@@ -4,7 +4,9 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"syscall/js"
+	"time"
 )
 
 // Tile dimensions and canvas layout
@@ -103,6 +105,24 @@ func (g *Game) Render(ctx js.Value) {
 	for _, e := range g.Enemies {
 		if e.Alive && g.Tiles[e.Y][e.X].Visible {
 			g.drawChar(ctx, e.Char, e.X, e.Y, e.Color)
+			// Small HP bar at the bottom of the tile
+			bx := float64(e.X*TileW) + 2
+			by := float64(e.Y*TileH) + float64(TileH) - 3
+			bw := float64(TileW - 4)
+			ratio := float64(e.HP) / float64(e.MaxHP)
+			setFill(ctx, "#1a1d2e")
+			ctx.Call("fillRect", bx, by, bw, 2)
+			var hpColor string
+			switch {
+			case ratio > 0.6:
+				hpColor = ColorHPHigh
+			case ratio > 0.3:
+				hpColor = ColorHPMid
+			default:
+				hpColor = ColorHPLow
+			}
+			setFill(ctx, hpColor)
+			ctx.Call("fillRect", bx, by, bw*ratio, 2)
 		}
 	}
 
@@ -111,6 +131,15 @@ func (g *Game) Render(ctx js.Value) {
 
 	// UI strip
 	g.renderUI(ctx)
+
+	// Damage flash — red tint over the map fades out over 300ms
+	if !g.LastDamagedAt.IsZero() {
+		if elapsed := time.Since(g.LastDamagedAt).Milliseconds(); elapsed < 300 {
+			alpha := float64(300-elapsed) / 300.0 * 0.35
+			ctx.Set("fillStyle", fmt.Sprintf("rgba(200, 30, 30, %.3f)", alpha))
+			ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
+		}
+	}
 
 	// Overlays
 	switch g.Phase {
@@ -238,6 +267,13 @@ func (g *Game) renderUI(ctx js.Value) {
 		ctx.Set("font", UIBold)
 		ctx.Call("fillText", fmt.Sprintf("☠ %d", g.Player.Poison), 780, top)
 	}
+
+	// ATK / DEF — right-aligned
+	setFill(ctx, ColorUIDim)
+	ctx.Set("font", UIBold)
+	ctx.Set("textAlign", "right")
+	ctx.Call("fillText", fmt.Sprintf("† %d  ◈ %d", g.Player.Atk, g.Player.Def), float64(CanvasW)-12, top)
+	ctx.Set("textAlign", "left")
 
 	// --- Line 2: Gear slots ---
 	gearY := top + 22
@@ -429,7 +465,7 @@ func (g *Game) renderShopPanel(ctx js.Value) {
 	ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
 
 	// Panel box — sized dynamically for number of items
-	const itemH = 28
+	const itemH = 38
 	boxW := float64(440)
 	boxH := float64(44 + len(g.Merchant.Stock)*itemH + 22)
 	bx := cx - boxW/2
@@ -478,6 +514,12 @@ func (g *Game) renderShopPanel(ctx js.Value) {
 		ctx.Set("font", UIFont)
 		ctx.Call("fillText", label, bx+14, iy)
 
+		// Gear description on the line below (dimmed)
+		if item.Gear != nil && !item.Sold {
+			setFill(ctx, ColorUIDim)
+			ctx.Call("fillText", item.Gear.Desc, bx+26, iy+15)
+		}
+
 		if !item.Sold {
 			if canAfford {
 				setFill(ctx, ColorGold)
@@ -510,11 +552,19 @@ func (g *Game) renderEventPanel(ctx js.Value) {
 
 	def := g.ActiveEvent.Def
 
-	// Panel size depends on state
+	// Panel size depends on state; wrap result text first so we can size the box
 	boxW := float64(460)
+	var resultLines []string
+	if g.ActiveEvent.Result != "" {
+		ctx.Set("font", UIFont)
+		resultLines = wrapText(ctx, g.ActiveEvent.Result, boxW-28)
+	}
 	var boxH float64
 	if g.ActiveEvent.Result != "" {
-		boxH = 110
+		boxH = float64(20 + len(resultLines)*18 + 14 + 24) // top + lines + gap + footer
+		if boxH < 90 {
+			boxH = 90
+		}
 	} else {
 		boxH = float64(72 + len(def.Choices)*28)
 	}
@@ -530,13 +580,14 @@ func (g *Game) renderEventPanel(ctx js.Value) {
 	ctx.Set("textBaseline", "top")
 
 	if g.ActiveEvent.Result != "" {
-		// Post-choice: result
-		setFill(ctx, ColorMsgNew)
 		ctx.Set("font", UIFont)
 		ctx.Set("textAlign", "center")
-		ctx.Call("fillText", g.ActiveEvent.Result, cx, by+30)
+		for i, line := range resultLines {
+			setFill(ctx, ColorMsgNew)
+			ctx.Call("fillText", line, cx, by+16+float64(i)*18)
+		}
 		setFill(ctx, ColorUIDim)
-		ctx.Call("fillText", "[any key] Continue", cx, by+56)
+		ctx.Call("fillText", "[any key] Continue", cx, by+boxH-18)
 		return
 	}
 
@@ -883,4 +934,29 @@ func (g *Game) renderClassSelect(ctx js.Value) {
 
 func setFill(ctx js.Value, color string) {
 	ctx.Set("fillStyle", color)
+}
+
+// wrapText splits text into lines that fit within maxW pixels.
+// ctx font must be set before calling so measureText uses the right metrics.
+func wrapText(ctx js.Value, text string, maxW float64) []string {
+	words := strings.Fields(text)
+	var lines []string
+	cur := ""
+	for _, word := range words {
+		test := cur
+		if test != "" {
+			test += " "
+		}
+		test += word
+		if ctx.Call("measureText", test).Get("width").Float() > maxW && cur != "" {
+			lines = append(lines, cur)
+			cur = word
+		} else {
+			cur = test
+		}
+	}
+	if cur != "" {
+		lines = append(lines, cur)
+	}
+	return lines
 }

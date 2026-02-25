@@ -42,6 +42,15 @@ func main() {
 	})
 	js.Global().Set("gameInput", inputFn)
 
+	// Continuous render loop so time-based animations (damage flash) run smoothly
+	var renderLoop js.Func
+	renderLoop = js.FuncOf(func(_ js.Value, _ []js.Value) any {
+		g.Render(ctx)
+		js.Global().Call("requestAnimationFrame", renderLoop)
+		return nil
+	})
+	js.Global().Call("requestAnimationFrame", renderLoop)
+
 	// Block forever -- WASM must stay alive
 	<-make(chan struct{})
 }

@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"time"
 )
 
 const (
@@ -66,8 +67,9 @@ type Game struct {
 	Kills       int
 	ClassName   string
 	RunHistory  []RunRecord
-	UsedGear    map[*Gear]bool     // tracks gear placed in the world this run
-	UsedEvents  map[*EventDef]bool // tracks events spawned this run
+	UsedGear      map[*Gear]bool     // tracks gear placed in the world this run
+	UsedEvents    map[*EventDef]bool // tracks events spawned this run
+	LastDamagedAt time.Time         // for damage-flash animation
 }
 
 func NewGame() *Game {
@@ -139,7 +141,11 @@ func (g *Game) spawnEnemies(rooms []Room) {
 			var e *Entity
 			switch g.Floor {
 			case 1:
-				e = NewGoblin(x, y)
+				if rand.Intn(6) == 0 { // ~17% archers on floor 1
+					e = NewArcher(x, y)
+				} else {
+					e = NewGoblin(x, y)
+				}
 			case 2:
 				// archer 17%, goblin 17%, venomancer 16%, orc 50%
 				roll := rand.Intn(6)
@@ -376,6 +382,13 @@ func (g *Game) HandleInput(key string) {
 		return
 	}
 
+	// Wait / pass turn
+	if key == "." || key == " " {
+		g.enemyTurn()
+		ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
+		return
+	}
+
 	var dx, dy int
 	switch key {
 	case "ArrowUp", "w", "W":
@@ -499,6 +512,7 @@ func (g *Game) restart() {
 	g.ClassName = ""
 	g.UsedGear = make(map[*Gear]bool)
 	g.UsedEvents = make(map[*EventDef]bool)
+	g.LastDamagedAt = time.Time{}
 	// newFloor() is called by selectClass() once a class is chosen
 }
 
@@ -722,6 +736,7 @@ func (g *Game) doEnemyAttack(e *Entity, isRanged bool) bool {
 		finalDmg = 1
 	}
 	g.Player.HP -= finalDmg
+	g.LastDamagedAt = time.Now()
 	if g.Player.HP <= 0 {
 		g.Player.HP = 0
 		g.Player.Alive = false
