@@ -57,6 +57,11 @@ const (
 	ColorShooter     = "#ED8936" // shooter glyph * (orange, matches fire line)
 	ColorShooterWarn = "#F6E05E" // shooter warning (1 turn before fire)
 	ColorAltar       = "#E53E3E" // sacrifice altar +
+	ColorBossHP      = "#F6E05E" // boss HP bar background tint
+	ColorFreeze      = "#90CDF4"
+	ColorBleed       = "#FC8181"
+	ColorBurn        = "#ED8936"
+	ColorSalamander  = "#ED8936"
 
 	GameFont = "bold 15px 'Courier New', 'Lucida Console', monospace"
 	UIFont   = "12px Inter, system-ui, sans-serif"
@@ -64,6 +69,10 @@ const (
 )
 
 func (g *Game) Render(ctx js.Value) {
+	if g.Phase == PhaseDifficulty {
+		g.renderDifficultySelect(ctx)
+		return
+	}
 	if g.Phase == PhaseClassSelect {
 		g.renderClassSelect(ctx)
 		return
@@ -173,21 +182,33 @@ func (g *Game) Render(ctx js.Value) {
 	for _, e := range g.Enemies {
 		if e.Alive && g.Tiles[e.Y][e.X].Visible {
 			g.drawChar(ctx, e.Char, e.X, e.Y, e.Color)
+			// Skip HP bar for unrevealed Mimics
+			if e.Type == EntityMimic && !e.IsRevealed {
+				continue
+			}
 			// Small HP bar at the bottom of the tile
 			bx := float64(e.X*TileW) + 2
 			by := float64(e.Y*TileH) + float64(TileH) - 3
 			bw := float64(TileW - 4)
 			ratio := float64(e.HP) / float64(e.MaxHP)
-			setFill(ctx, "#1a1d2e")
+			trackColor := "#1a1d2e"
+			if e.IsBoss {
+				trackColor = "#2a1a00"
+			}
+			setFill(ctx, trackColor)
 			ctx.Call("fillRect", bx, by, bw, 2)
 			var hpColor string
-			switch {
-			case ratio > 0.6:
-				hpColor = ColorHPHigh
-			case ratio > 0.3:
-				hpColor = ColorHPMid
-			default:
-				hpColor = ColorHPLow
+			if e.IsBoss {
+				hpColor = ColorBossHP
+			} else {
+				switch {
+				case ratio > 0.6:
+					hpColor = ColorHPHigh
+				case ratio > 0.3:
+					hpColor = ColorHPMid
+				default:
+					hpColor = ColorHPLow
+				}
 			}
 			setFill(ctx, hpColor)
 			ctx.Call("fillRect", bx, by, bw*ratio, 2)
@@ -339,6 +360,13 @@ func (g *Game) renderUI(ctx js.Value) {
 		setFill(ctx, ColorPoisonUI)
 		ctx.Set("font", UIBold)
 		ctx.Call("fillText", fmt.Sprintf("☠ %d", g.Player.Poison), 780, top)
+	}
+
+	// PlayerBurn indicator
+	if g.Player.PlayerBurn > 0 {
+		setFill(ctx, ColorBurn)
+		ctx.Set("font", UIBold)
+		ctx.Call("fillText", fmt.Sprintf("🔥 %d", g.Player.PlayerBurn), 840, top)
 	}
 
 	// ATK / DEF — right-aligned
@@ -502,7 +530,11 @@ func (g *Game) renderChestPanel(ctx js.Value) {
 	// Gear name
 	setFill(ctx, g.PendingGear.Color)
 	ctx.Set("font", "bold 16px Inter, system-ui, sans-serif")
-	ctx.Call("fillText", string(g.PendingGear.Char)+" "+g.PendingGear.Name, cx, by+36)
+	gearLabel := string(g.PendingGear.Char) + " " + g.PendingGear.Name
+	if g.PendingGear.Cursed {
+		gearLabel += " (cursed)"
+	}
+	ctx.Call("fillText", gearLabel, cx, by+36)
 
 	// Gear description
 	setFill(ctx, ColorUI)
@@ -937,6 +969,61 @@ func (g *Game) renderVictoryPanel(ctx js.Value) {
 	ctx.Call("fillText", "[R] Play again", cx, by+boxH-18)
 }
 
+func (g *Game) renderDifficultySelect(ctx js.Value) {
+	setFill(ctx, ColorBg)
+	ctx.Call("fillRect", 0, 0, CanvasW, CanvasH)
+
+	cx := float64(CanvasW) / 2
+	cy := float64(CanvasH) / 2
+
+	boxW := float64(500)
+	boxH := float64(220)
+	bx := cx - boxW/2
+	by := cy - boxH/2
+
+	setFill(ctx, "#10101a")
+	ctx.Call("fillRect", bx, by, boxW, boxH)
+	ctx.Set("strokeStyle", ColorAccent)
+	ctx.Set("lineWidth", 1)
+	ctx.Call("strokeRect", bx+0.5, by+0.5, boxW-1, boxH-1)
+
+	ctx.Set("textBaseline", "top")
+	setFill(ctx, ColorAccent)
+	ctx.Set("font", "bold 20px Inter, system-ui, sans-serif")
+	ctx.Set("textAlign", "center")
+	ctx.Call("fillText", "SELECT DIFFICULTY", cx, by+14)
+
+	completedRuns := len(loadRunHistory())
+
+	type diffOpt struct {
+		key     string
+		label   string
+		locked  bool
+		lockMsg string
+		color   string
+	}
+	opts := []diffOpt{
+		{"1", "Normal", false, "", ColorHPHigh},
+		{"2", "Hard  (enemy HP ×1.25, no floor-2 merchant)", completedRuns < 1, "(complete 1 run to unlock)", ColorHPMid},
+		{"3", "Nightmare  (HP ×1.40, poison persists)", completedRuns < 10, fmt.Sprintf("(%d/10 runs to unlock)", completedRuns), ColorHPLow},
+		{"4", fmt.Sprintf("Daily Challenge  (%s)", time.Now().Format("Jan 02")), false, "", ColorAccent},
+	}
+
+	for i, opt := range opts {
+		oy := by + 48 + float64(i)*38
+		ctx.Set("textAlign", "left")
+		if opt.locked {
+			setFill(ctx, ColorUIDim)
+			ctx.Set("font", UIFont)
+			ctx.Call("fillText", fmt.Sprintf("[%s] %s  %s", opt.key, opt.label, opt.lockMsg), bx+20, oy)
+		} else {
+			setFill(ctx, opt.color)
+			ctx.Set("font", UIBold)
+			ctx.Call("fillText", fmt.Sprintf("[%s] %s", opt.key, opt.label), bx+20, oy)
+		}
+	}
+}
+
 func (g *Game) renderClassSelect(ctx js.Value) {
 	// Full dark background
 	setFill(ctx, ColorBg)
@@ -945,10 +1032,20 @@ func (g *Game) renderClassSelect(ctx js.Value) {
 	cx := float64(CanvasW) / 2
 	cy := float64(CanvasH) / 2
 
-	// Panel — 4 rows × 76px + header + footer
+	// Base classes (4) + variant classes (4, if any unlocked)
+	baseDefs := classDefs[:4]
+	variantDefs := classDefs[4:]
+
 	const rowH = 76
+	rowCount := len(baseDefs)
+	for i := range variantDefs {
+		req := variantUnlockReq(4 + i)
+		if req == "" || g.ClassWins[req] >= 3 {
+			rowCount++
+		}
+	}
 	boxW := float64(700)
-	boxH := float64(56 + len(classDefs)*rowH + 24)
+	boxH := float64(56 + rowCount*rowH + 24)
 	bx := cx - boxW/2
 	by := cy - boxH/2
 
@@ -966,51 +1063,72 @@ func (g *Game) renderClassSelect(ctx js.Value) {
 	ctx.Set("textAlign", "center")
 	ctx.Call("fillText", "CHOOSE YOUR CLASS", cx, by+14)
 
-	// Class rows
-	for i, def := range classDefs {
-		ry := by + 52 + float64(i)*rowH
-
-		// [N] ClassName
-		setFill(ctx, def.Color)
-		ctx.Set("font", "bold 14px Inter, system-ui, sans-serif")
-		ctx.Set("textAlign", "left")
-		ctx.Call("fillText", fmt.Sprintf("[%d] %s", i+1, def.Name), bx+20, ry)
-
-		// Stats right-aligned on the same line
-		setFill(ctx, ColorUIDim)
-		ctx.Set("font", UIFont)
-		ctx.Set("textAlign", "right")
-		ctx.Call("fillText",
-			fmt.Sprintf("HP %d   ATK %d   DEF %d", def.BaseHP, def.BaseAtk, def.BaseDef),
-			bx+boxW-20, ry+2)
-
-		// Starting item
-		item := def.StartItem
-		ctx.Set("textAlign", "left")
-		icon := string(item.Char) + " "
-		setFill(ctx, item.Color)
-		ctx.Set("font", UIFont)
-		ctx.Call("fillText", icon, bx+30, ry+22)
-		iconW := ctx.Call("measureText", icon).Get("width").Float()
-		setFill(ctx, ColorUI)
-		ctx.Call("fillText", item.Name+"  "+item.Desc, bx+30+iconW, ry+22)
-
-		// Flavor text
-		setFill(ctx, ColorUIDim)
-		ctx.Call("fillText", def.Flavor, bx+30, ry+42)
-
-		// Row separator (not after last)
-		if i < len(classDefs)-1 {
+	row := 0
+	for i, def := range baseDefs {
+		ry := by + 52 + float64(row)*rowH
+		renderClassRow(ctx, def, i+1, bx, ry, boxW, true, "")
+		if i < len(baseDefs)-1 || rowCount > len(baseDefs) {
 			setFill(ctx, ColorSeparator)
 			ctx.Call("fillRect", bx+1, ry+float64(rowH)-2, boxW-2, 1)
 		}
+		row++
+	}
+
+	for i, def := range variantDefs {
+		req := variantUnlockReq(4 + i)
+		wins := g.ClassWins[req]
+		unlocked := req == "" || wins >= 3
+		if !unlocked {
+			continue
+		}
+		ry := by + 52 + float64(row)*rowH
+		renderClassRow(ctx, def, 5+i, bx, ry, boxW, true, "")
+		if row < rowCount-1 {
+			setFill(ctx, ColorSeparator)
+			ctx.Call("fillRect", bx+1, ry+float64(rowH)-2, boxW-2, 1)
+		}
+		row++
 	}
 
 	// Footer
 	setFill(ctx, ColorUIDim)
 	ctx.Set("font", UIFont)
 	ctx.Set("textAlign", "center")
-	ctx.Call("fillText", "[1–4] Choose your class", cx, by+boxH-18)
+	ctx.Call("fillText", "[1–8] Choose your class", cx, by+boxH-18)
+}
+
+func renderClassRow(ctx js.Value, def *ClassDef, keyNum int, bx, ry, boxW float64, unlocked bool, lockMsg string) {
+	if !unlocked {
+		setFill(ctx, ColorUIDim)
+		ctx.Set("font", "bold 14px Inter, system-ui, sans-serif")
+		ctx.Set("textAlign", "left")
+		ctx.Call("fillText", fmt.Sprintf("[%d] %s  %s", keyNum, def.Name, lockMsg), bx+20, ry+28)
+		return
+	}
+	setFill(ctx, def.Color)
+	ctx.Set("font", "bold 14px Inter, system-ui, sans-serif")
+	ctx.Set("textAlign", "left")
+	ctx.Call("fillText", fmt.Sprintf("[%d] %s", keyNum, def.Name), bx+20, ry)
+
+	setFill(ctx, ColorUIDim)
+	ctx.Set("font", UIFont)
+	ctx.Set("textAlign", "right")
+	ctx.Call("fillText",
+		fmt.Sprintf("HP %d   ATK %d   DEF %d", def.BaseHP, def.BaseAtk, def.BaseDef),
+		bx+boxW-20, ry+2)
+
+	item := def.StartItem
+	ctx.Set("textAlign", "left")
+	icon := string(item.Char) + " "
+	setFill(ctx, item.Color)
+	ctx.Set("font", UIFont)
+	ctx.Call("fillText", icon, bx+30, ry+22)
+	iconW := ctx.Call("measureText", icon).Get("width").Float()
+	setFill(ctx, ColorUI)
+	ctx.Call("fillText", item.Name+"  "+item.Desc, bx+30+iconW, ry+22)
+
+	setFill(ctx, ColorUIDim)
+	ctx.Call("fillText", def.Flavor, bx+30, ry+42)
 }
 
 func (g *Game) renderLogPanel(ctx js.Value) {

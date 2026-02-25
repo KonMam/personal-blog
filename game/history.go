@@ -10,25 +10,32 @@ import (
 )
 
 const historyKey = "rogueHistory"
+const classWinsKey = "rogueClassWins"
 const maxHistoryRuns = 10
 
 type RunRecord struct {
-	Class   string
-	Outcome string // "Victory" or "Died"
-	Floor   int
-	Kills   int
-	Gold    int
-	Turns   int
+	Class      string
+	Outcome    string // "Victory" or "Died"
+	Floor      int
+	Kills      int
+	Gold       int
+	Turns      int
+	Difficulty int
+	IsDaily    bool
 }
 
 func (r RunRecord) encode() string {
-	return fmt.Sprintf("%s|%s|%d|%d|%d|%d",
-		r.Class, r.Outcome, r.Floor, r.Kills, r.Gold, r.Turns)
+	daily := "0"
+	if r.IsDaily {
+		daily = "1"
+	}
+	return fmt.Sprintf("%s|%s|%d|%d|%d|%d|%d|%s",
+		r.Class, r.Outcome, r.Floor, r.Kills, r.Gold, r.Turns, r.Difficulty, daily)
 }
 
 func decodeRun(s string) (RunRecord, bool) {
 	parts := strings.Split(s, "|")
-	if len(parts) != 6 {
+	if len(parts) < 6 {
 		return RunRecord{}, false
 	}
 	floor, e1 := strconv.Atoi(parts[2])
@@ -38,14 +45,22 @@ func decodeRun(s string) (RunRecord, bool) {
 	if e1 != nil || e2 != nil || e3 != nil || e4 != nil {
 		return RunRecord{}, false
 	}
-	return RunRecord{
+	r := RunRecord{
 		Class:   parts[0],
 		Outcome: parts[1],
 		Floor:   floor,
 		Kills:   kills,
 		Gold:    gold,
 		Turns:   turns,
-	}, true
+	}
+	// Backward compat: fields 6+ may not exist
+	if len(parts) >= 7 {
+		r.Difficulty, _ = strconv.Atoi(parts[6])
+	}
+	if len(parts) >= 8 {
+		r.IsDaily = parts[7] == "1"
+	}
+	return r, true
 }
 
 func loadRunHistory() []RunRecord {
@@ -76,17 +91,54 @@ func saveRunHistory(runs []RunRecord) {
 	ls.Call("setItem", historyKey, strings.Join(parts, ";"))
 }
 
+// ClassWins tracks victories per class name.
+type ClassWins map[string]int
+
+func loadClassWins() ClassWins {
+	w := make(ClassWins)
+	ls := js.Global().Get("localStorage")
+	val := ls.Call("getItem", classWinsKey)
+	if val.IsNull() || val.IsUndefined() {
+		return w
+	}
+	s := val.String()
+	if s == "" || s == "null" {
+		return w
+	}
+	for _, pair := range strings.Split(s, "|") {
+		kv := strings.SplitN(pair, ":", 2)
+		if len(kv) == 2 {
+			n, err := strconv.Atoi(kv[1])
+			if err == nil {
+				w[kv[0]] = n
+			}
+		}
+	}
+	return w
+}
+
+func saveClassWins(wins ClassWins) {
+	var parts []string
+	for k, v := range wins {
+		parts = append(parts, fmt.Sprintf("%s:%d", k, v))
+	}
+	ls := js.Global().Get("localStorage")
+	ls.Call("setItem", classWinsKey, strings.Join(parts, "|"))
+}
+
 func (g *Game) recordRun(outcome string) {
 	if g.ClassName == "" || g.Player == nil {
 		return
 	}
 	r := RunRecord{
-		Class:   g.ClassName,
-		Outcome: outcome,
-		Floor:   g.Floor,
-		Kills:   g.Kills,
-		Gold:    g.Player.Gold,
-		Turns:   g.Turns,
+		Class:      g.ClassName,
+		Outcome:    outcome,
+		Floor:      g.Floor,
+		Kills:      g.Kills,
+		Gold:       g.Player.Gold,
+		Turns:      g.Turns,
+		Difficulty: g.Difficulty,
+		IsDaily:    g.IsDaily,
 	}
 	history := loadRunHistory()
 	history = append([]RunRecord{r}, history...) // newest first
@@ -95,4 +147,12 @@ func (g *Game) recordRun(outcome string) {
 	}
 	saveRunHistory(history)
 	g.RunHistory = history
+
+	// Update class wins on victory
+	if outcome == "Victory" {
+		wins := loadClassWins()
+		wins[g.ClassName]++
+		saveClassWins(wins)
+		g.ClassWins = wins
+	}
 }

@@ -851,6 +851,40 @@ var allEvents = []*EventDef{
 			},
 		},
 	},
+	// 31
+	{
+		Title: "Altar of Cleansing",
+		Body:  "A purifying altar emanates light.",
+		Choices: []*EventChoice{
+			{
+				Label: "Cleanse (-25g)",
+				Effect: func(g *Game) string {
+					if g.Player.Gold < 25 {
+						return "Not enough gold. (need 25g)"
+					}
+					g.Player.Gold -= 25
+					lifted := 0
+					for i, gear := range g.Player.Equipped {
+						if gear != nil && gear.Cursed {
+							g.Player.Equipped[i] = nil
+							lifted++
+						}
+					}
+					g.Player.RecalcStats()
+					if lifted == 0 {
+						return "No cursed gear found. Gold spent anyway."
+					}
+					return fmt.Sprintf("Curses lifted. (%d item(s) removed)", lifted)
+				},
+			},
+			{
+				Label: "Leave",
+				Effect: func(g *Game) string {
+					return "You leave the altar behind."
+				},
+			},
+		},
+	},
 	// 30
 	{
 		Title: "Berserker's Trial",

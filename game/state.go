@@ -24,11 +24,12 @@ const (
 	PhaseShop
 	PhaseEvent
 	PhaseClassSelect
+	PhaseDifficulty
 )
 
 type Item struct {
-	X, Y       int
-	HealAmount int
+	X, Y int
+	Type PotionType
 }
 
 type Chest struct {
@@ -40,10 +41,11 @@ type Chest struct {
 }
 
 type ShopItem struct {
-	Name string
-	Cost int
-	Gear *Gear // nil = potion
-	Sold bool
+	Name        string
+	Cost        int
+	Gear        *Gear      // nil = potion
+	PotionGrant PotionType // used when Gear == nil
+	Sold        bool
 }
 
 type Merchant struct {
@@ -105,18 +107,23 @@ type Game struct {
 	Kills       int
 	ClassName   string
 	RunHistory  []RunRecord
+	ClassWins   ClassWins
 	UsedGear      map[*Gear]bool     // tracks gear placed in the world this run
 	UsedEvents    map[*EventDef]bool // tracks events spawned this run
 	LastDamagedAt time.Time         // for damage-flash animation
 	ShowLog       bool              // message log overlay visible
+	Difficulty    int               // 0=Normal,1=Hard,2=Nightmare,3=Daily
+	Seed          int64
+	IsDaily       bool
 }
 
 func NewGame() *Game {
 	return &Game{
 		Floor:      1,
-		Phase:      PhaseClassSelect,
+		Phase:      PhaseDifficulty,
 		UsedGear:   make(map[*Gear]bool),
 		UsedEvents: make(map[*EventDef]bool),
+		ClassWins:  loadClassWins(),
 	}
 }
 
@@ -159,16 +166,67 @@ func (g *Game) newFloor() {
 
 	// Refill shield charges from gear
 	g.Player.ShieldCharges += g.Player.ShieldMod
-	// Poison clears on floor descent
-	g.Player.Poison = 0
+	// Fortress synergy: +3 bonus shields
+	if g.Player.SynergyFortress {
+		g.Player.ShieldCharges += 3
+	}
+	// Poison clears on floor descent (except Nightmare)
+	if g.Difficulty < 2 {
+		g.Player.Poison = 0
+	}
+	// PlayerBurn always clears on floor descent
+	g.Player.PlayerBurn = 0
 
 	g.recomputeFOV()
 }
 
+func (g *Game) applyDifficultyHP(e *Entity) {
+	if g.Difficulty == 1 {
+		e.HP = e.HP * 5 / 4
+		e.MaxHP = e.HP
+	} else if g.Difficulty >= 2 {
+		e.HP = e.HP * 7 / 5
+		e.MaxHP = e.HP
+	}
+}
+
 func (g *Game) spawnEnemies(rooms []Room) {
+	lastRoom := len(rooms) - 1
+
 	for i, room := range rooms {
 		if i == 0 {
 			continue // player starts here
+		}
+
+		// Last room: spawn floor boss
+		if i == lastRoom {
+			cx, cy := room.Center()
+			var boss *Entity
+			switch g.Floor {
+			case 1:
+				boss = NewGoblinKing(cx, cy)
+			case 2:
+				boss = NewOrcWarchief(cx, cy)
+			case 3:
+				boss = NewLich(cx, cy)
+			}
+			if boss != nil {
+				g.applyDifficultyHP(boss)
+				g.Enemies = append(g.Enemies, boss)
+				// Boss drops a guaranteed gear reward on death (tracked via flag)
+			}
+			// Spawn a couple extra enemies alongside boss
+			for n := 0; n < 2; n++ {
+				x := room.X + 1 + rand.Intn(room.W-2)
+				y := room.Y + 1 + rand.Intn(room.H-2)
+				if g.enemyAt(x, y) != nil || (x == cx && y == cy) {
+					continue
+				}
+				e := g.spawnEnemyForFloor(x, y)
+				g.applyDifficultyHP(e)
+				g.Enemies = append(g.Enemies, e)
+			}
+			continue
 		}
 
 		count := 1 + rand.Intn(2) + (g.Floor - 1)
@@ -187,29 +245,37 @@ func (g *Game) spawnEnemies(rooms []Room) {
 			var e *Entity
 			switch g.Floor {
 			case 1:
-				if rand.Intn(6) == 0 { // ~17% archers on floor 1
+				if rand.Intn(6) == 0 {
 					e = NewArcher(x, y)
 				} else {
 					e = NewGoblin(x, y)
 				}
 			case 2:
-				// archer 17%, goblin 17%, venomancer 16%, orc 50%
-				roll := rand.Intn(6)
-				switch roll {
-				case 0:
-					e = NewArcher(x, y)
-				case 1:
-					e = NewGoblin(x, y)
-				case 2:
-					e = NewVenomancer(x, y)
-				default:
-					e = NewOrc(x, y)
+				// ~12% brute
+				if rand.Intn(8) == 0 {
+					e = NewBrute(x, y)
+				} else {
+					roll := rand.Intn(6)
+					switch roll {
+					case 0:
+						e = NewArcher(x, y)
+					case 1:
+						e = NewGoblin(x, y)
+					case 2:
+						e = NewVenomancer(x, y)
+					default:
+						e = NewOrc(x, y)
+					}
 				}
 			case 3:
-				if i == len(rooms)-1 && n == 0 {
-					e = NewTroll(x, y)
+				// ~12% brute or salamander
+				if rand.Intn(8) == 0 {
+					if rand.Intn(2) == 0 {
+						e = NewBrute(x, y)
+					} else {
+						e = NewSalamander(x, y)
+					}
 				} else {
-					// archer/goblin/venomancer/guard 12.5% each, orc 50%
 					roll := rand.Intn(8)
 					switch roll {
 					case 0:
@@ -226,7 +292,24 @@ func (g *Game) spawnEnemies(rooms []Room) {
 				}
 			}
 			if e != nil {
+				g.applyDifficultyHP(e)
 				g.Enemies = append(g.Enemies, e)
+			}
+			_ = n
+		}
+	}
+
+	// Spawn 1 Mimic per floor on floor 2+
+	if g.Floor >= 2 && len(rooms) >= 3 {
+		for attempt := 0; attempt < 20; attempt++ {
+			idx := 1 + rand.Intn(len(rooms)-2)
+			room := rooms[idx]
+			cx, cy := room.Center()
+			if g.enemyAt(cx, cy) == nil && !g.occupied(cx, cy) {
+				m := NewMimic(cx, cy)
+				g.applyDifficultyHP(m)
+				g.Enemies = append(g.Enemies, m)
+				break
 			}
 		}
 	}
@@ -246,9 +329,36 @@ func (g *Game) spawnItems(rooms []Room) {
 			if g.occupied(x, y) {
 				continue
 			}
-			g.Items = append(g.Items, &Item{X: x, Y: y, HealAmount: 12})
+			g.Items = append(g.Items, &Item{X: x, Y: y, Type: randomPotionType()})
 			break
 		}
+	}
+}
+
+func randomPotionType() PotionType {
+	r := rand.Intn(100)
+	switch {
+	case r < 60:
+		return PotionHealing
+	case r < 75:
+		return PotionAntidote
+	case r < 90:
+		return PotionMight
+	default:
+		return PotionGreater
+	}
+}
+
+func potionTypeName(t PotionType) string {
+	switch t {
+	case PotionAntidote:
+		return "Antidote"
+	case PotionMight:
+		return "Might Draught"
+	case PotionGreater:
+		return "Greater Potion"
+	default:
+		return "Healing Potion"
 	}
 }
 
@@ -347,6 +457,10 @@ func (g *Game) spawnMerchant(rooms []Room) {
 	if len(rooms) < 3 {
 		return
 	}
+	// Hard difficulty: no merchant on floor 2
+	if g.Difficulty == 1 && g.Floor == 2 {
+		return
+	}
 	// Pick a random middle room (not player spawn or stairs)
 	room := rooms[1] // fallback
 	for attempt := 0; attempt < 20; attempt++ {
@@ -379,18 +493,27 @@ func (g *Game) spawnMerchant(rooms []Room) {
 	a := pickUnused(GearArmors)
 	t := pickUnused(GearTrinkets)
 
+	costMult := 1.0
+	if g.Difficulty >= 2 {
+		costMult = 1.3
+	}
+	scaleCost := func(base int) int {
+		return int(float64(base) * costMult)
+	}
+
 	stock := []*ShopItem{
-		{Name: "Healing Potion (+12 HP)", Cost: 15},
-		{Name: "Greater Potion (+25 HP)", Cost: 28},
+		{Name: "Healing Potion (+12 HP)", Cost: scaleCost(15), PotionGrant: PotionHealing},
+		{Name: "Antidote (clear effects)", Cost: scaleCost(20), PotionGrant: PotionAntidote},
+		{Name: "Might Draught (+5 ATK, 3 turns)", Cost: scaleCost(25), PotionGrant: PotionMight},
 	}
 	if w != nil {
-		stock = append(stock, &ShopItem{Name: w.Name, Cost: 35 + rand.Intn(20), Gear: w})
+		stock = append(stock, &ShopItem{Name: w.Name, Cost: scaleCost(35 + rand.Intn(20)), Gear: w})
 	}
 	if a != nil {
-		stock = append(stock, &ShopItem{Name: a.Name, Cost: 35 + rand.Intn(20), Gear: a})
+		stock = append(stock, &ShopItem{Name: a.Name, Cost: scaleCost(35 + rand.Intn(20)), Gear: a})
 	}
 	if t != nil {
-		stock = append(stock, &ShopItem{Name: t.Name, Cost: 40 + rand.Intn(25), Gear: t})
+		stock = append(stock, &ShopItem{Name: t.Name, Cost: scaleCost(40 + rand.Intn(25)), Gear: t})
 	}
 
 	g.Merchant = &Merchant{X: cx, Y: cy, Stock: stock}
@@ -445,6 +568,9 @@ func (g *Game) HandleInput(key string) {
 	}
 
 	switch g.Phase {
+	case PhaseDifficulty:
+		g.handleDifficultyInput(key)
+		return
 	case PhaseClassSelect:
 		g.handleClassSelectInput(key)
 		return
@@ -499,12 +625,34 @@ func (g *Game) handleChestInput(key string) {
 	if (key == "e" || key == "E") && g.PendingGear != nil {
 		slot := g.PendingGear.Slot
 		old := g.Player.Equipped[slot]
+		// Record synergies before equipping
+		oldW := g.Player.SynergyWildfire
+		oldF := g.Player.SynergyFortress
+		oldR := g.Player.SynergyRageDrain
+		oldRe := g.Player.SynergyReactive
+		oldI := g.Player.SynergyInferno
 		g.Player.Equipped[slot] = g.PendingGear
 		g.Player.RecalcStats()
 		if old != nil {
 			g.addMessage(fmt.Sprintf("Equipped %s (replaced %s).", g.PendingGear.Name, old.Name))
 		} else {
 			g.addMessage(fmt.Sprintf("Equipped %s.", g.PendingGear.Name))
+		}
+		// Synergy notifications
+		if !oldW && g.Player.SynergyWildfire {
+			g.addMessage("Synergy active: Wildfire!")
+		}
+		if !oldF && g.Player.SynergyFortress {
+			g.addMessage("Synergy active: Fortress!")
+		}
+		if !oldR && g.Player.SynergyRageDrain {
+			g.addMessage("Synergy active: Rage Drain!")
+		}
+		if !oldRe && g.Player.SynergyReactive {
+			g.addMessage("Synergy active: Reactive!")
+		}
+		if !oldI && g.Player.SynergyInferno {
+			g.addMessage("Synergy active: Inferno!")
 		}
 		// Mark the chest as fully cleared so it disappears from the map
 		if g.PendingChest != nil {
@@ -547,6 +695,7 @@ func (g *Game) handleShopInput(key string) {
 			g.Phase = PhaseChest
 		} else {
 			g.Player.Potions++
+			g.Player.PotionTypes = append(g.Player.PotionTypes, item.PotionGrant)
 			g.addMessage(fmt.Sprintf("Bought %s. Potions: %d. [U] to use.", item.Name, g.Player.Potions))
 		}
 	}
@@ -583,12 +732,40 @@ func (g *Game) usePotion() {
 		return
 	}
 	g.Player.Potions--
-	heal := 12
-	if g.Player.HP+heal > g.Player.MaxHP {
-		heal = g.Player.MaxHP - g.Player.HP
+	var pt PotionType
+	if len(g.Player.PotionTypes) > 0 {
+		pt = g.Player.PotionTypes[0]
+		g.Player.PotionTypes = g.Player.PotionTypes[1:]
 	}
-	g.Player.HP += heal
-	g.addMessage(fmt.Sprintf("Used potion, +%d HP. (%d left)", heal, g.Player.Potions))
+	switch pt {
+	case PotionHealing:
+		heal := 12
+		if g.Player.HP+heal > g.Player.MaxHP {
+			heal = g.Player.MaxHP - g.Player.HP
+		}
+		g.Player.HP += heal
+		g.addMessage(fmt.Sprintf("Healing Potion: +%d HP. (%d left)", heal, g.Player.Potions))
+	case PotionAntidote:
+		g.Player.Poison = 0
+		g.Player.PlayerBurn = 0
+		heal := 4
+		if g.Player.HP+heal > g.Player.MaxHP {
+			heal = g.Player.MaxHP - g.Player.HP
+		}
+		g.Player.HP += heal
+		g.addMessage(fmt.Sprintf("Antidote: cleared effects, +%d HP. (%d left)", heal, g.Player.Potions))
+	case PotionMight:
+		g.Player.TempATKBonus = 5
+		g.Player.TempATKTurns = 3
+		g.addMessage(fmt.Sprintf("Might Draught: +5 ATK for 3 turns. (%d left)", g.Player.Potions))
+	case PotionGreater:
+		heal := 25
+		if g.Player.HP+heal > g.Player.MaxHP {
+			heal = g.Player.MaxHP - g.Player.HP
+		}
+		g.Player.HP += heal
+		g.addMessage(fmt.Sprintf("Greater Potion: +%d HP. (%d left)", heal, g.Player.Potions))
+	}
 	g.enemyTurn()
 	g.recomputeFOV()
 }
@@ -597,7 +774,7 @@ func (g *Game) restart() {
 	g.Floor = 1
 	g.Player = nil
 	g.Messages = nil
-	g.Phase = PhaseClassSelect
+	g.Phase = PhaseDifficulty
 	g.PendingGear = nil
 	g.Events = nil
 	g.ActiveEvent = nil
@@ -614,14 +791,79 @@ func (g *Game) restart() {
 	g.SacrificeAltar = nil
 	g.ChallengeRoom = nil
 	g.PendingChest = nil
+	g.Difficulty = 0
+	g.Seed = 0
+	g.IsDaily = false
+	g.ClassWins = loadClassWins()
 	// newFloor() is called by selectClass() once a class is chosen
+}
+
+func (g *Game) handleDifficultyInput(key string) {
+	completedRuns := len(loadRunHistory())
+	switch key {
+	case "1":
+		g.Difficulty = 0
+		g.Seed = time.Now().UnixNano()
+		rand.Seed(g.Seed)
+		g.Phase = PhaseClassSelect
+	case "2":
+		if completedRuns < 1 {
+			return // locked
+		}
+		g.Difficulty = 1
+		g.Seed = time.Now().UnixNano()
+		rand.Seed(g.Seed)
+		g.Phase = PhaseClassSelect
+	case "3":
+		if completedRuns < 10 {
+			return // locked
+		}
+		g.Difficulty = 2
+		g.Seed = time.Now().UnixNano()
+		rand.Seed(g.Seed)
+		g.Phase = PhaseClassSelect
+	case "4":
+		g.Difficulty = 3
+		g.IsDaily = true
+		today := time.Now().Truncate(24 * time.Hour).Unix()
+		g.Seed = today
+		rand.Seed(g.Seed)
+		g.Phase = PhaseClassSelect
+	}
 }
 
 func (g *Game) handleClassSelectInput(key string) {
 	switch key {
 	case "1", "2", "3", "4":
 		g.selectClass(int(key[0] - '1'))
+	case "5", "6", "7", "8":
+		idx := int(key[0]-'1') // 4-7
+		variantIdx := idx
+		if variantIdx >= len(classDefs) {
+			return
+		}
+		// Check unlock requirement
+		unlock := variantUnlockReq(variantIdx)
+		if unlock != "" && g.ClassWins[unlock] < 3 {
+			return
+		}
+		g.selectClass(variantIdx)
 	}
+}
+
+// variantUnlockReq returns the base class name required to unlock a variant class.
+func variantUnlockReq(idx int) string {
+	switch idx {
+	case 4:
+		return "Knight"
+	case 5:
+		return "Rogue"
+	case 6:
+		return "Berserker"
+	case 7:
+		return "Alchemist"
+	}
+	return ""
 }
 
 func (g *Game) selectClass(idx int) {
@@ -827,6 +1069,15 @@ func (g *Game) movePlayer(dx, dy int) {
 
 	// Stairs
 	if g.Tiles[ny][nx].Type == TileStairs {
+		// Block if any boss is alive
+		for _, e := range g.Enemies {
+			if e.IsBoss && e.Alive {
+				g.addMessage("Defeat the floor boss first!")
+				g.enemyTurn()
+				g.recomputeFOV()
+				return
+			}
+		}
 		if g.Floor < MaxFloors {
 			g.Floor++
 			g.newFloor()
@@ -842,7 +1093,8 @@ func (g *Game) movePlayer(dx, dy int) {
 	for i, item := range g.Items {
 		if item.X == nx && item.Y == ny {
 			g.Player.Potions++
-			g.addMessage(fmt.Sprintf("Picked up potion. (%d total) [U] to use.", g.Player.Potions))
+			g.Player.PotionTypes = append(g.Player.PotionTypes, item.Type)
+			g.addMessage(fmt.Sprintf("Picked up %s. (%d total) [U] to use.", potionTypeName(item.Type), g.Player.Potions))
 			g.Items = append(g.Items[:i], g.Items[i+1:]...)
 			break
 		}
@@ -857,7 +1109,8 @@ func (g *Game) movePlayer(dx, dy int) {
 func (g *Game) applyHitToEnemy(enemy *Entity, isFirst bool) {
 	dmg := g.Player.CalcDamage()
 	suffix := ""
-	if g.Player.BerserkerMod > 0 && g.Player.HP*10 < g.Player.MaxHP*4 {
+	berserkerActive := g.Player.BerserkerMod > 0 && g.Player.HP*10 < g.Player.MaxHP*4
+	if berserkerActive {
 		dmg += g.Player.BerserkerMod
 		suffix += " [Rage!]"
 	}
@@ -865,7 +1118,27 @@ func (g *Game) applyHitToEnemy(enemy *Entity, isFirst bool) {
 		dmg += g.Player.BurnBonus
 		suffix += " [Pyro!]"
 	}
+	if g.Player.TempATKBonus > 0 {
+		dmg += g.Player.TempATKBonus
+		suffix += " [Might!]"
+	}
 	enemy.HP -= dmg
+
+	// Lich phase-2 trigger (on HP reduction, before kill check)
+	if enemy.Type == EntityLich && !enemy.BossPhase2 && enemy.HP*10 < enemy.MaxHP*3 {
+		enemy.BossPhase2 = true
+		// Teleport to random floor tile in the map
+		for attempt := 0; attempt < 30; attempt++ {
+			tx := rand.Intn(MapW)
+			ty := rand.Intn(MapH)
+			if g.Tiles[ty][tx].Type == TileFloor && g.enemyAt(tx, ty) == nil {
+				enemy.X, enemy.Y = tx, ty
+				break
+			}
+		}
+		g.addMessage("The Lich vanishes in a puff of shadow!")
+	}
+
 	if enemy.HP <= 0 {
 		enemy.HP = 0
 		enemy.Alive = false
@@ -876,10 +1149,20 @@ func (g *Game) applyHitToEnemy(enemy *Entity, isFirst bool) {
 			g.Player.ShieldCharges += g.Player.OnKillShield
 			suffix += fmt.Sprintf(" [+%dsh]", g.Player.OnKillShield)
 		}
+		// Boss gear reward
+		if enemy.IsBoss {
+			bossGear := g.pickAnyGear()
+			if bossGear != nil {
+				g.PendingGear = bossGear
+			}
+		}
 		if isFirst {
 			g.addMessage(fmt.Sprintf("You slay the %s! +%dg%s", enemy.Name, gold, suffix))
 		} else {
 			g.addMessage(fmt.Sprintf("Second strike slays the %s! +%dg%s", enemy.Name, gold, suffix))
+		}
+		if enemy.IsBoss && g.PendingGear != nil {
+			g.Phase = PhaseChest
 		}
 	} else {
 		if isFirst {
@@ -888,11 +1171,36 @@ func (g *Game) applyHitToEnemy(enemy *Entity, isFirst bool) {
 			g.addMessage(fmt.Sprintf("You strike again for %d damage.%s", dmg, suffix))
 		}
 	}
-	if g.Player.Lifesteal > 0 {
-		g.Player.HP = min(g.Player.MaxHP, g.Player.HP+g.Player.Lifesteal)
+	lifestealAmt := g.Player.Lifesteal
+	if berserkerActive && g.Player.SynergyRageDrain {
+		lifestealAmt++
+	}
+	if lifestealAmt > 0 {
+		g.Player.HP = min(g.Player.MaxHP, g.Player.HP+lifestealAmt)
 	}
 	if isFirst && g.Player.BurnOnHit && enemy.Alive {
 		enemy.Burn = 3
+	}
+	// Wildfire synergy: second hit also burns
+	if !isFirst && g.Player.SynergyWildfire && enemy.Alive {
+		enemy.Burn = 3
+	}
+	// Mimic reveal on first hit
+	if enemy.Type == EntityMimic && !enemy.IsRevealed {
+		enemy.IsRevealed = true
+		enemy.Char = 'M'
+		suffix += " [It's a Mimic!]"
+		g.addMessage("It's a Mimic!")
+	}
+	// Freeze
+	if g.Player.FreezeChance > 0 && rand.Intn(100) < g.Player.FreezeChance && enemy.Alive {
+		enemy.Frozen = 2
+		g.addMessage(fmt.Sprintf("The %s is frozen!", enemy.Name))
+	}
+	// Bleed
+	if g.Player.BleedOnHit && enemy.Alive {
+		enemy.Bleed = min(6, enemy.Bleed+2)
+		g.addMessage(fmt.Sprintf("The %s bleeds!", enemy.Name))
 	}
 }
 
@@ -932,6 +1240,20 @@ func (g *Game) doEnemyAttack(e *Entity, isRanged bool) bool {
 	// Dodge check
 	if rand.Intn(100) < g.Player.Dodge {
 		g.addMessage(fmt.Sprintf("You dodge the %s's attack!", e.Name))
+		// Reactive synergy: on dodge, deal thorns damage to attacker
+		if g.Player.SynergyReactive && g.Player.Thorns > 0 {
+			e.HP -= g.Player.Thorns
+			if e.HP <= 0 {
+				e.HP = 0
+				e.Alive = false
+				g.Kills++
+				gold := e.goldDrop()
+				g.Player.Gold += gold
+				g.addMessage(fmt.Sprintf("Reactive thorns slay the %s! +%dg", e.Name, gold))
+			} else {
+				g.addMessage(fmt.Sprintf("Reactive thorns deal %d to the %s.", g.Player.Thorns, e.Name))
+			}
+		}
 		return false
 	}
 
@@ -939,6 +1261,7 @@ func (g *Game) doEnemyAttack(e *Entity, isRanged bool) bool {
 	if finalDmg < 1 {
 		finalDmg = 1
 	}
+	finalDmg += g.Player.CursePenalty
 	g.Player.HP -= finalDmg
 	g.LastDamagedAt = time.Now()
 	if g.Player.HP <= 0 {
@@ -979,6 +1302,11 @@ func (g *Game) doEnemyAttack(e *Entity, isRanged bool) bool {
 		}
 		g.addMessage(fmt.Sprintf("Venom seeps in! Poison: %d turns.", g.Player.Poison))
 	}
+	// Salamander applies PlayerBurn on melee hit
+	if e.Type == EntitySalamander && !isRanged {
+		g.Player.PlayerBurn = min(6, g.Player.PlayerBurn+2)
+		g.addMessage("The salamander's flames scorch you! Burning!")
+	}
 	return false
 }
 
@@ -1000,12 +1328,58 @@ func (g *Game) enemyTurn() {
 		g.addMessage(fmt.Sprintf("Poison deals 3 damage. (%d turns left)", g.Player.Poison))
 	}
 
+	// Player burn tick
+	if g.Player.PlayerBurn > 0 {
+		g.Player.HP -= 3
+		g.Player.PlayerBurn--
+		g.LastDamagedAt = time.Now()
+		if g.Player.HP <= 0 {
+			g.Player.HP = 0
+			g.Player.Alive = false
+			g.Phase = PhaseGameOver
+			g.recordRun("Died")
+			g.addMessage("You burn to death. Press R to restart.")
+			return
+		}
+		g.addMessage(fmt.Sprintf("You are burning! -3 HP. (%d turns)", g.Player.PlayerBurn))
+	}
+
+	// TempATK countdown
+	if g.Player.TempATKTurns > 0 {
+		g.Player.TempATKTurns--
+		if g.Player.TempATKTurns == 0 {
+			g.Player.TempATKBonus = 0
+			g.addMessage("Might fades.")
+		}
+	}
+
 	g.cleanupDeadEnemies()
 	for _, e := range g.Enemies {
 		if !e.Alive {
 			continue
 		}
 		if !g.Tiles[e.Y][e.X].Visible {
+			continue
+		}
+
+		// Bleed tick
+		if e.Bleed > 0 {
+			e.HP -= 2
+			e.Bleed--
+			if e.HP <= 0 {
+				e.HP = 0
+				e.Alive = false
+				g.Kills++
+				gold := e.goldDrop()
+				g.Player.Gold += gold
+				g.addMessage(fmt.Sprintf("The %s bleeds to death! +%dg", e.Name, gold))
+				continue
+			}
+			g.addMessage(fmt.Sprintf("The %s bleeds for 2 damage.", e.Name))
+		}
+
+		// Mimic stays still until revealed
+		if e.Type == EntityMimic && !e.IsRevealed {
 			continue
 		}
 
@@ -1025,10 +1399,45 @@ func (g *Game) enemyTurn() {
 			g.addMessage(fmt.Sprintf("The %s burns for 3 damage.", e.Name))
 		}
 
+		// Boss phase-2 triggers (before action)
+		if e.Type == EntityGoblinKing && !e.BossPhase2 && e.HP*2 < e.MaxHP {
+			e.BossPhase2 = true
+			g.addMessage("The Goblin King calls for aid!")
+			// Spawn 1 goblin adjacent
+			for _, off := range [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+				ax, ay := e.X+off[0], e.Y+off[1]
+				if ax >= 0 && ay >= 0 && ax < MapW && ay < MapH &&
+					g.Tiles[ay][ax].Type == TileFloor && g.enemyAt(ax, ay) == nil {
+					minion := NewGoblin(ax, ay)
+					g.applyDifficultyHP(minion)
+					g.Enemies = append(g.Enemies, minion)
+					break
+				}
+			}
+		}
+		if e.Type == EntityOrcWarchief {
+			e.EnrageTurns--
+			if e.EnrageTurns <= 0 {
+				e.EnrageTurns = 2
+				if e.EnrageStacks < 5 {
+					e.EnrageStacks++
+					e.Atk++
+					g.addMessage("The Warchief rages! [ATK↑]")
+				}
+			}
+		}
+
+		// Freeze check
+		if e.Frozen > 0 {
+			e.Frozen--
+			g.addMessage(fmt.Sprintf("The %s is frozen! (skips turn)", e.Name))
+			continue
+		}
+
 		dx := g.Player.X - e.X
 		dy := g.Player.Y - e.Y
 
-		// Ranged attack (Archer)
+		// Ranged attack
 		if e.RangeAttack > 0 {
 			cheby := max(iAbs(dx), iAbs(dy))
 			if cheby <= e.RangeAttack {
@@ -1049,7 +1458,19 @@ func (g *Game) enemyTurn() {
 			continue
 		}
 
-		g.moveEnemy(e)
+		// Move (Brute moves twice)
+		steps := e.MoveSpeed
+		if steps < 1 {
+			steps = 1
+		}
+		for i := 0; i < steps; i++ {
+			ddx := g.Player.X - e.X
+			ddy := g.Player.Y - e.Y
+			if iAbs(ddx)+iAbs(ddy) == 1 {
+				break // already adjacent
+			}
+			g.moveEnemy(e)
+		}
 	}
 	g.cleanupDeadEnemies()
 	g.tickShooters()
@@ -1177,8 +1598,18 @@ func (g *Game) checkFirstSightings() {
 	}
 	for _, e := range g.Enemies {
 		if e.Alive && !e.Announced && g.Tiles[e.Y][e.X].Visible {
-			if e.Type == EntityTroll {
-				g.addMessage("A massive troll blocks the path to the stairs!")
+			switch e.Type {
+			case EntityTroll:
+				g.addMessage("A massive troll blocks the path!")
+				e.Announced = true
+			case EntityGoblinKing:
+				g.addMessage("The Goblin King roars!")
+				e.Announced = true
+			case EntityOrcWarchief:
+				g.addMessage("The Orc Warchief raises his axe!")
+				e.Announced = true
+			case EntityLich:
+				g.addMessage("The Lich awakens!")
 				e.Announced = true
 			}
 		}
@@ -1216,20 +1647,26 @@ func (g *Game) spawnEnemyForFloor(x, y int) *Entity {
 		}
 		return NewGoblin(x, y)
 	case 2:
-		switch rand.Intn(4) {
+		switch rand.Intn(5) {
 		case 0:
 			return NewArcher(x, y)
 		case 1:
 			return NewVenomancer(x, y)
+		case 2:
+			return NewBrute(x, y)
 		default:
 			return NewOrc(x, y)
 		}
 	default: // floor 3
-		switch rand.Intn(4) {
+		switch rand.Intn(5) {
 		case 0:
 			return NewGuard(x, y)
 		case 1:
 			return NewArcher(x, y)
+		case 2:
+			return NewSalamander(x, y)
+		case 3:
+			return NewBrute(x, y)
 		default:
 			return NewOrc(x, y)
 		}

@@ -14,6 +14,12 @@ const (
 	EntityArcher
 	EntityVenomancer
 	EntityGuard
+	EntityGoblinKing
+	EntityOrcWarchief
+	EntityLich
+	EntityBrute
+	EntityMimic
+	EntitySalamander
 )
 
 type GearSlot int
@@ -22,6 +28,15 @@ const (
 	SlotWeapon  GearSlot = 0
 	SlotArmor   GearSlot = 1
 	SlotTrinket GearSlot = 2
+)
+
+type PotionType int
+
+const (
+	PotionHealing  PotionType = iota
+	PotionAntidote            // clear burn+poison, +4 HP
+	PotionMight               // TempATK+5 for 3 turns
+	PotionGreater             // +25 HP
 )
 
 type Gear struct {
@@ -43,6 +58,10 @@ type Gear struct {
 	BerserkerMod int // bonus flat ATK when HP < 40%
 	OnKillShield int // shield charges gained on each kill
 	BurnBonus    int // bonus flat damage to burning enemies
+	Cursed       bool
+	CursePenalty int  // extra incoming damage per hit while equipped
+	FreezeChance int  // % chance to freeze enemy on hit
+	BleedOnHit   bool // apply Bleed 2 on each hit
 	Desc         string
 }
 
@@ -59,6 +78,9 @@ var GearWeapons = []*Gear{
 	{Name: "Warhammer", Char: '†', Color: "#F6AD55", Slot: SlotWeapon, AtkMod: 6, Thorns: 1, Desc: "+6 ATK, thorns 1."},
 	{Name: "Twin Daggers", Char: '†', Color: "#68D391", Slot: SlotWeapon, AtkMod: 4, DoubleStrike: true, Desc: "+4 ATK, double strike."},
 	{Name: "Soul Reaper", Char: '†', Color: "#9F7AEA", Slot: SlotWeapon, AtkMod: 5, OnKillShield: 1, Desc: "+5 ATK, 1 shield per kill."},
+	{Name: "Plague Dagger", Char: '†', Color: "#FC8181", Slot: SlotWeapon, AtkMod: 8, DoubleStrike: true, Cursed: true, CursePenalty: 4, Desc: "+8 ATK, double strike (cursed: +4 dmg/hit)"},
+	{Name: "Glacial Edge", Char: '†', Color: "#90CDF4", Slot: SlotWeapon, AtkMod: 5, FreezeChance: 30, Desc: "+5 ATK, 30% freeze on hit"},
+	{Name: "Serrated Blade", Char: '†', Color: "#FC8181", Slot: SlotWeapon, AtkMod: 5, BleedOnHit: true, Desc: "+5 ATK, bleed on hit (+2 bleed)"},
 }
 
 var GearArmors = []*Gear{
@@ -72,6 +94,7 @@ var GearArmors = []*Gear{
 	{Name: "Scale Armor", Char: '◈', Color: "#F6AD55", Slot: SlotArmor, DefMod: 3, AtkMod: 1, Desc: "+3 DEF, +1 ATK."},
 	{Name: "Thornweave", Char: '◈', Color: "#FC8181", Slot: SlotArmor, DefMod: 1, Thorns: 3, LifestealMod: 1, Desc: "+1 DEF, thorns 3, lifesteal 1."},
 	{Name: "Battle Harness", Char: '◈', Color: "#F6AD55", Slot: SlotArmor, DefMod: 2, AtkMod: 1, ShieldMod: 2, Desc: "+2 DEF, +1 ATK, 2 shields/floor."},
+	{Name: "Hexplate", Char: '◈', Color: "#FC8181", Slot: SlotArmor, DefMod: 8, Cursed: true, CursePenalty: 3, Desc: "+8 DEF (cursed: +3 dmg/hit)"},
 }
 
 var GearTrinkets = []*Gear{
@@ -85,6 +108,7 @@ var GearTrinkets = []*Gear{
 	{Name: "Pyromancer's Lens", Char: '◇', Color: "#F6AD55", Slot: SlotTrinket, BurnBonus: 4, Desc: "+4 damage to burning enemies."},
 	{Name: "Ring of Fortitude", Char: '◇', Color: "#48BB78", Slot: SlotTrinket, HPMod: 12, ShieldMod: 1, Desc: "+12 max HP, 1 shield/floor."},
 	{Name: "Thorn Ring", Char: '◇', Color: "#FC8181", Slot: SlotTrinket, Thorns: 2, DefMod: 1, Desc: "Thorns 2, +1 DEF."},
+	{Name: "Soulbane Ring", Char: '◇', Color: "#9F7AEA", Slot: SlotTrinket, AtkMod: 4, DodgeMod: 15, Cursed: true, CursePenalty: 3, Desc: "+4 ATK, 15% dodge (cursed: +3 dmg/hit)"},
 }
 
 // Event-only gear — never spawns in chests or merchant stock.
@@ -123,6 +147,7 @@ type Entity struct {
 	Thorns        int
 	Gold          int
 	Potions       int
+	PotionTypes   []PotionType // typed potion inventory
 	Equipped      [3]*Gear
 	ShieldCharges int
 	ShieldMod     int
@@ -131,10 +156,22 @@ type Entity struct {
 	Lifesteal     int
 	Dodge         int
 	Poison        int
+	PlayerBurn    int // turns of 3-dmg fire from Salamander
 	BurnOnHit     bool
 	BerserkerMod  int
 	OnKillShield  int
 	BurnBonus     int
+	CursePenalty  int // accumulated from equipped cursed gear
+	FreezeChance  int // accumulated from equipped gear
+	BleedOnHit    bool
+	TempATKBonus  int
+	TempATKTurns  int
+	// Synergy flags
+	SynergyWildfire  bool
+	SynergyFortress  bool
+	SynergyRageDrain bool
+	SynergyReactive  bool
+	SynergyInferno   bool
 	// Enemy-only fields
 	Burn        int
 	RangeAttack int
@@ -142,6 +179,17 @@ type Entity struct {
 	WasSeen     bool // has ever entered player FOV
 	LastSeenX   int  // position when last visible
 	LastSeenY   int
+	// Boss fields
+	IsBoss       bool
+	BossPhase2   bool
+	EnrageStacks int
+	EnrageTurns  int
+	// New enemy fields
+	MoveSpeed  int  // default 1, Brute = 2
+	IsRevealed bool // Mimic: false = appear as chest
+	// Status effect fields (enemy-only)
+	Frozen int // turns remaining frozen
+	Bleed  int // turns remaining bleeding
 }
 
 func NewPlayer(x, y int) *Entity {
@@ -257,6 +305,54 @@ func NewGuard(x, y int) *Entity {
 	}
 }
 
+func NewGoblinKing(x, y int) *Entity {
+	return &Entity{
+		X: x, Y: y, Char: 'K', Color: "#FC8181",
+		Name: "Goblin King", HP: 22, MaxHP: 22, Atk: 5,
+		Type: EntityGoblinKing, Alive: true, IsBoss: true, MoveSpeed: 1,
+	}
+}
+
+func NewOrcWarchief(x, y int) *Entity {
+	return &Entity{
+		X: x, Y: y, Char: 'W', Color: "#F6AD55",
+		Name: "Orc Warchief", HP: 30, MaxHP: 30, Atk: 6,
+		Type: EntityOrcWarchief, Alive: true, IsBoss: true, EnrageTurns: 2, MoveSpeed: 1,
+	}
+}
+
+func NewLich(x, y int) *Entity {
+	return &Entity{
+		X: x, Y: y, Char: 'L', Color: "#9F7AEA",
+		Name: "Lich", HP: 28, MaxHP: 28, Atk: 6, RangeAttack: 4,
+		Type: EntityLich, Alive: true, IsBoss: true, MoveSpeed: 1,
+	}
+}
+
+func NewBrute(x, y int) *Entity {
+	return &Entity{
+		X: x, Y: y, Char: 'B', Color: "#E53E3E",
+		Name: "Brute", HP: 22, MaxHP: 22, Atk: 8, Def: 1,
+		Type: EntityBrute, Alive: true, MoveSpeed: 2,
+	}
+}
+
+func NewMimic(x, y int) *Entity {
+	return &Entity{
+		X: x, Y: y, Char: '■', Color: "#F6E05E",
+		Name: "Mimic", HP: 15, MaxHP: 15, Atk: 7,
+		Type: EntityMimic, Alive: true, IsRevealed: false, MoveSpeed: 1,
+	}
+}
+
+func NewSalamander(x, y int) *Entity {
+	return &Entity{
+		X: x, Y: y, Char: 's', Color: "#ED8936",
+		Name: "Salamander", HP: 14, MaxHP: 14, Atk: 5,
+		Type: EntitySalamander, Alive: true, MoveSpeed: 1,
+	}
+}
+
 // RecalcStats recomputes derived stats from base values + equipped gear.
 func (p *Entity) RecalcStats() {
 	atk := p.BaseAtk
@@ -320,6 +416,34 @@ func (p *Entity) RecalcStats() {
 		lifesteal = 4
 	}
 
+	// New gear fields
+	cursePenalty := 0
+	freezeChance := 0
+	bleedOnHit := false
+	for _, g := range p.Equipped {
+		if g == nil {
+			continue
+		}
+		cursePenalty += g.CursePenalty
+		freezeChance += g.FreezeChance
+		if g.BleedOnHit {
+			bleedOnHit = true
+		}
+	}
+	if freezeChance > 100 {
+		freezeChance = 100
+	}
+
+	// Synergies
+	p.SynergyWildfire = doubleStrike && burnOnHit
+	p.SynergyFortress = shieldMod >= 2 && onKillShield >= 1
+	p.SynergyRageDrain = berserkerMod >= 3 && lifesteal >= 1
+	p.SynergyReactive = thorns >= 2 && dodge >= 15
+	p.SynergyInferno = burnBonus >= 3 && doubleStrike
+	if p.SynergyInferno {
+		burnOnHit = true
+	}
+
 	p.Atk = atk
 	p.Def = def
 	p.Thorns = thorns
@@ -337,6 +461,9 @@ func (p *Entity) RecalcStats() {
 	p.BerserkerMod = berserkerMod
 	p.OnKillShield = onKillShield
 	p.BurnBonus = burnBonus
+	p.CursePenalty = cursePenalty
+	p.FreezeChance = freezeChance
+	p.BleedOnHit = bleedOnHit
 }
 
 // CalcDamage returns a randomized damage roll for this entity.
@@ -368,6 +495,18 @@ func (e *Entity) goldDrop() int {
 		return 5 + rand.Intn(4) // 5-8
 	case EntityGuard:
 		return 15 + rand.Intn(8) // 15-22
+	case EntityGoblinKing:
+		return 30 + rand.Intn(11) // 30-40
+	case EntityOrcWarchief:
+		return 35 + rand.Intn(16) // 35-50
+	case EntityLich:
+		return 40 + rand.Intn(16) // 40-55
+	case EntityBrute:
+		return 12 + rand.Intn(8) // 12-19
+	case EntityMimic:
+		return 15 + rand.Intn(11) // 15-25
+	case EntitySalamander:
+		return 8 + rand.Intn(6) // 8-13
 	}
 	return 0
 }
