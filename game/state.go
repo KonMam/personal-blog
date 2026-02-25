@@ -463,7 +463,7 @@ func (g *Game) spawnChests(rooms []Room) {
 			g.Chests = append(g.Chests, &Chest{
 				X:    cx,
 				Y:    cy,
-				Gold: 10 + rand.Intn(11), // 10-20g
+				Gold: 5 + rand.Intn(8), // 5-12g
 				Gear: gear,
 			})
 			break
@@ -520,18 +520,18 @@ func (g *Game) spawnMerchant(rooms []Room) {
 	}
 
 	stock := []*ShopItem{
-		{Name: "Healing Potion (+12 HP)", Cost: scaleCost(15), PotionGrant: PotionHealing},
-		{Name: "Antidote (clear effects)", Cost: scaleCost(20), PotionGrant: PotionAntidote},
-		{Name: "Might Draught (+5 ATK, 3 turns)", Cost: scaleCost(25), PotionGrant: PotionMight},
+		{Name: "Healing Potion (+12 HP)", Cost: scaleCost(18), PotionGrant: PotionHealing},
+		{Name: "Antidote (clear effects)", Cost: scaleCost(24), PotionGrant: PotionAntidote},
+		{Name: "Might Draught (+5 ATK, 3 turns)", Cost: scaleCost(30), PotionGrant: PotionMight},
 	}
 	if w != nil {
-		stock = append(stock, &ShopItem{Name: w.Name, Cost: scaleCost(35 + rand.Intn(20)), Gear: w})
+		stock = append(stock, &ShopItem{Name: w.Name, Cost: scaleCost(55 + rand.Intn(25)), Gear: w})
 	}
 	if a != nil {
-		stock = append(stock, &ShopItem{Name: a.Name, Cost: scaleCost(35 + rand.Intn(20)), Gear: a})
+		stock = append(stock, &ShopItem{Name: a.Name, Cost: scaleCost(55 + rand.Intn(25)), Gear: a})
 	}
 	if t != nil {
-		stock = append(stock, &ShopItem{Name: t.Name, Cost: scaleCost(40 + rand.Intn(25)), Gear: t})
+		stock = append(stock, &ShopItem{Name: t.Name, Cost: scaleCost(65 + rand.Intn(25)), Gear: t})
 	}
 
 	g.Merchant = &Merchant{X: cx, Y: cy, Stock: stock}
@@ -588,6 +588,7 @@ func (g *Game) HandleInput(key string) {
 	switch g.Phase {
 	case PhaseTitle:
 		g.Phase = PhaseDifficulty
+		startTitleMusic()
 		return
 	case PhaseDifficulty:
 		g.handleDifficultyInput(key)
@@ -697,10 +698,18 @@ func (g *Game) handleChestInput(key string) {
 		if g.PendingChest != nil {
 			g.PendingChest.Opened = true
 		}
+		g.PendingGear = nil
+		g.PendingChest = nil
+		g.Phase = PhasePlay
+		return
 	}
-	g.PendingGear = nil
-	g.PendingChest = nil
-	g.Phase = PhasePlay
+	// Only Escape explicitly dismisses without equipping
+	if key == "Escape" {
+		g.PendingGear = nil
+		g.PendingChest = nil
+		g.Phase = PhasePlay
+	}
+	// Any other key does nothing — prevents accidental dismissal
 }
 
 func (g *Game) handleShopInput(key string) {
@@ -746,7 +755,10 @@ func (g *Game) handleEventInput(key string) {
 		return
 	}
 	if g.ActiveEvent.Result != "" {
-		// Any key continues — events are free actions, no enemy turn
+		// Only Escape dismisses the result screen
+		if key != "Escape" {
+			return
+		}
 		g.ActiveEvent = nil
 		if g.PendingGear != nil {
 			g.Phase = PhaseChest
@@ -850,6 +862,7 @@ func (g *Game) restart() {
 	g.BossAnnounce = ""
 	g.BossAnnounceTimer = 0
 	g.ShowHint = false
+	startTitleMusic()
 	// newFloor() is called by selectClass() once a class is chosen
 }
 
@@ -945,6 +958,7 @@ func variantUnlockReq(idx int) string {
 
 func (g *Game) selectClass(idx int) {
 	def := classDefs[idx]
+	stopTitleMusic()
 	g.newFloor() // generates dungeon, creates player with default stats
 
 	// Apply class base stats
@@ -1073,7 +1087,7 @@ func (g *Game) movePlayer(dx, dy int) {
 			g.recomputeFOV()
 			return
 		}
-		gold := 20 + rand.Intn(16) // 20-35g
+		gold := 12 + rand.Intn(12) // 12-23g
 		g.Player.Gold += gold
 		if sa.RewardGear != nil {
 			g.addMessage(fmt.Sprintf("You offer blood at the altar. -%d HP. Found %s! +%dg.", cost, sa.RewardGear.Name, gold))
@@ -1849,7 +1863,7 @@ func (g *Game) spawnChallengeRoom(room Room) {
 func (g *Game) spawnShooterRoom(room Room) {
 	cx, cy := room.Center()
 	gear := g.pickAnyGear()
-	g.Chests = append(g.Chests, &Chest{X: cx, Y: cy, Gold: 15 + rand.Intn(11), Gear: gear})
+	g.Chests = append(g.Chests, &Chest{X: cx, Y: cy, Gold: 8 + rand.Intn(9), Gear: gear})
 
 	type candidate struct{ x, y, dx, dy int }
 	candidates := []candidate{
@@ -1881,7 +1895,7 @@ func (g *Game) spawnShooterRoom(room Room) {
 func (g *Game) spawnMovingTrapRoom(room Room) {
 	cx, cy := room.Center()
 	gear := g.pickAnyGear()
-	g.Chests = append(g.Chests, &Chest{X: cx, Y: cy, Gold: 15 + rand.Intn(11), Gear: gear})
+	g.Chests = append(g.Chests, &Chest{X: cx, Y: cy, Gold: 8 + rand.Intn(9), Gear: gear})
 
 	useHoriz := room.W >= room.H
 	count := 2 + rand.Intn(2) // 2-3 moving traps
@@ -2021,7 +2035,7 @@ func (g *Game) checkChallengeRooms() {
 	gear := g.pickAnyGear()
 	g.Chests = append(g.Chests, &Chest{
 		X: cr.RewardX, Y: cr.RewardY,
-		Gold: 15 + rand.Intn(11), // 15-25g
+		Gold: 8 + rand.Intn(9), // 8-16g
 		Gear: gear,
 	})
 	g.addMessage("Challenge cleared! A chest appears.")

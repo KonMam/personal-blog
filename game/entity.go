@@ -491,29 +491,29 @@ func (e *Entity) CalcDamage() int {
 func (e *Entity) goldDrop() int {
 	switch e.Type {
 	case EntityGoblin:
-		return 2 + rand.Intn(4) // 2-5
+		return 1 + rand.Intn(3) // 1-3
 	case EntityOrc:
-		return 6 + rand.Intn(7) // 6-12
+		return 3 + rand.Intn(5) // 3-7
 	case EntityTroll:
-		return 20 + rand.Intn(11) // 20-30
-	case EntityArcher:
-		return 4 + rand.Intn(5) // 4-8
-	case EntityVenomancer:
-		return 5 + rand.Intn(4) // 5-8
-	case EntityGuard:
-		return 15 + rand.Intn(8) // 15-22
-	case EntityGoblinKing:
-		return 30 + rand.Intn(11) // 30-40
-	case EntityOrcWarchief:
-		return 35 + rand.Intn(16) // 35-50
-	case EntityLich:
-		return 40 + rand.Intn(16) // 40-55
-	case EntityBrute:
 		return 12 + rand.Intn(8) // 12-19
+	case EntityArcher:
+		return 2 + rand.Intn(4) // 2-5
+	case EntityVenomancer:
+		return 3 + rand.Intn(4) // 3-6
+	case EntityGuard:
+		return 8 + rand.Intn(7) // 8-14
+	case EntityGoblinKing:
+		return 14 + rand.Intn(9) // 14-22  (boss)
+	case EntityOrcWarchief:
+		return 18 + rand.Intn(10) // 18-27  (boss)
+	case EntityLich:
+		return 22 + rand.Intn(11) // 22-32  (boss)
+	case EntityBrute:
+		return 6 + rand.Intn(6) // 6-11
 	case EntityMimic:
-		return 15 + rand.Intn(11) // 15-25
+		return 8 + rand.Intn(8) // 8-15
 	case EntitySalamander:
-		return 8 + rand.Intn(6) // 8-13
+		return 4 + rand.Intn(5) // 4-8
 	}
 	return 0
 }

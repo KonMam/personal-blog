@@ -31,3 +31,21 @@ func stopAmbient() {
 	}
 	fn.Invoke()
 }
+
+// startTitleMusic begins the melodic title screen loop.
+func startTitleMusic() {
+	fn := js.Global().Get("startTitleMusic")
+	if fn.IsUndefined() || fn.IsNull() {
+		return
+	}
+	fn.Invoke()
+}
+
+// stopTitleMusic fades out and stops the title music.
+func stopTitleMusic() {
+	fn := js.Global().Get("stopTitleMusic")
+	if fn.IsUndefined() || fn.IsNull() {
+		return
+	}
+	fn.Invoke()
+}

@@ -319,6 +319,117 @@
       }
       stopAmbientNow(nodes, master);
     };
+
+    // --- Title music ---
+    // A melodic A-minor theme that loops on the title / class-select screens.
+    // Plucked triangle oscillator notes with bass drone.
+    let titleMaster = null;
+    let titleNodes = [];
+    let titleLoopTimer = null;
+    let titlePlaying = false;
+
+    // Sequence: [freq_hz, start_sec, dur_sec, vol]
+    // Melody spans ~7s; full loop period is 9.5s (leaves ~2.5s rest).
+    const TITLE_SEQ = [
+      // Bar 1 — opening call
+      [220,   0.00, 0.45, 0.30],  // A3
+      [329.6, 0.55, 0.25, 0.24],  // E4
+      [392,   0.85, 0.25, 0.24],  // G4
+      [440,   1.15, 0.65, 0.32],  // A4 (held)
+      // Bar 2 — descend
+      [392,   2.25, 0.25, 0.24],  // G4
+      [329.6, 2.55, 0.25, 0.24],  // E4
+      [293.7, 2.85, 0.25, 0.22],  // D4
+      [261.6, 3.15, 0.25, 0.22],  // C4
+      // Bar 3 — tension
+      [246.9, 3.45, 0.25, 0.22],  // B3
+      [261.6, 3.75, 0.25, 0.22],  // C4
+      [293.7, 4.05, 0.25, 0.22],  // D4
+      [329.6, 4.35, 0.45, 0.26],  // E4 (held)
+      // Bar 4 — resolve
+      [392,   5.00, 0.25, 0.24],  // G4
+      [329.6, 5.30, 0.25, 0.22],  // E4
+      [261.6, 5.60, 0.25, 0.22],  // C4
+      [220,   5.90, 0.80, 0.28],  // A3 (long resolve)
+    ];
+    const TITLE_LOOP = 9.5;
+
+    function titleNote(c, freq, when, dur, vol) {
+      try {
+        const osc = c.createOscillator();
+        const env = c.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, when);
+        env.gain.setValueAtTime(0, when);
+        env.gain.linearRampToValueAtTime(vol, when + 0.018);
+        env.gain.setValueAtTime(vol * 0.65, when + Math.min(dur * 0.4, 0.28));
+        env.gain.exponentialRampToValueAtTime(0.001, when + dur);
+        osc.connect(env);
+        env.connect(titleMaster);
+        osc.start(when);
+        osc.stop(when + dur + 0.05);
+        titleNodes.push(osc, env);
+      } catch(e) {}
+    }
+
+    function scheduleTitleLoop(startAt) {
+      if (!titlePlaying) return;
+      const c = ctx();
+      // Bass: A2 + E2 fifth (fade over the loop)
+      [[110, 0.10], [82.4, 0.05]].forEach(([f, v]) => {
+        try {
+          const o = c.createOscillator();
+          const g2 = c.createGain();
+          o.type = 'sine';
+          o.frequency.setValueAtTime(f, startAt);
+          g2.gain.setValueAtTime(v, startAt);
+          g2.gain.linearRampToValueAtTime(0.01, startAt + TITLE_LOOP);
+          o.connect(g2); g2.connect(titleMaster);
+          o.start(startAt); o.stop(startAt + TITLE_LOOP);
+          titleNodes.push(o, g2);
+        } catch(e) {}
+      });
+      // Melody
+      for (const [f, when, dur, vol] of TITLE_SEQ) {
+        titleNote(c, f, startAt + when, dur, vol);
+      }
+      const waitMs = Math.max(0, (startAt - c.currentTime + TITLE_LOOP - 0.15) * 1000);
+      titleLoopTimer = setTimeout(() => scheduleTitleLoop(startAt + TITLE_LOOP), waitMs);
+    }
+
+    window.startTitleMusic = function() {
+      if (titlePlaying) return;
+      titlePlaying = true;
+      titleNodes = [];
+      try {
+        const c = ctx();
+        titleMaster = c.createGain();
+        titleMaster.gain.setValueAtTime(0, c.currentTime);
+        titleMaster.gain.linearRampToValueAtTime(0.20, c.currentTime + 1.5);
+        titleMaster.connect(c.destination);
+        scheduleTitleLoop(c.currentTime + 0.2);
+      } catch(e) {}
+    };
+
+    window.stopTitleMusic = function() {
+      if (!titlePlaying) return;
+      titlePlaying = false;
+      if (titleLoopTimer) { clearTimeout(titleLoopTimer); titleLoopTimer = null; }
+      const m = titleMaster;
+      const n = titleNodes;
+      titleMaster = null;
+      titleNodes = [];
+      if (m) {
+        try {
+          const c = ctx();
+          m.gain.linearRampToValueAtTime(0, c.currentTime + 0.5);
+          setTimeout(() => {
+            n.forEach(nd => { try { nd.disconnect(); if (nd.stop) nd.stop(); } catch(e) {} });
+            try { m.disconnect(); } catch(e) {}
+          }, 600);
+        } catch(e) {}
+      }
+    };
   })();
   </script>
   <script src="wasm_exec.js"></script>

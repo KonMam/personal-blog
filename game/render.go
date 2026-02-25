@@ -619,9 +619,9 @@ func (g *Game) renderGearSlot(ctx js.Value, x, y float64, slot GearSlot) {
 	ctx.Call("fillText", icon, x, y)
 	iconW := ctx.Call("measureText", icon).Get("width").Float()
 
-	// Name + desc in UI color, positioned after icon
+	// Name only — descriptions are too long for the UI strip
 	setFill(ctx, ColorUI)
-	ctx.Call("fillText", fmt.Sprintf("%s  %s", gear.Name, gear.Desc), x+iconW, y)
+	ctx.Call("fillText", gear.Name, x+iconW, y)
 }
 
 // renderClassSlotRight draws the class slot right-aligned at rightX,
@@ -759,6 +759,9 @@ func (g *Game) renderChestPanel(ctx js.Value) {
 		return
 	}
 
+	slot := g.PendingGear.Slot
+	current := g.Player.Equipped[slot]
+
 	cx := float64(CanvasW) / 2
 	cy := float64(MapH*TileH) / 2
 
@@ -766,9 +769,9 @@ func (g *Game) renderChestPanel(ctx js.Value) {
 	ctx.Set("fillStyle", "rgba(10, 10, 20, 0.85)")
 	ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
 
-	// Panel box
-	boxW := float64(380)
-	boxH := float64(130)
+	// Panel grows when there is an item to compare against
+	boxW := float64(400)
+	boxH := float64(168)
 	bx := cx - boxW/2
 	by := cy - boxH/2
 
@@ -786,35 +789,51 @@ func (g *Game) renderChestPanel(ctx js.Value) {
 	ctx.Set("font", UIBold)
 	ctx.Call("fillText", "GEAR FOUND", cx, by+14)
 
-	// Gear name + rarity tag
+	// New gear — name + rarity
 	setFill(ctx, g.PendingGear.Color)
-	ctx.Set("font", "bold 16px Inter, system-ui, sans-serif")
+	ctx.Set("font", "bold 15px Inter, system-ui, sans-serif")
 	rarity := gearRarityName(g.PendingGear)
 	gearLabel := string(g.PendingGear.Char) + " " + g.PendingGear.Name
 	if rarity != "" {
-		gearLabel += "   [" + rarity + "]"
+		gearLabel += "  [" + rarity + "]"
 	}
-	ctx.Call("fillText", gearLabel, cx, by+36)
+	ctx.Call("fillText", gearLabel, cx, by+34)
 
-	// Gear description
+	// New gear — description
 	setFill(ctx, ColorUI)
 	ctx.Set("font", UIFont)
-	ctx.Call("fillText", g.PendingGear.Desc, cx, by+58)
+	ctx.Call("fillText", g.PendingGear.Desc, cx, by+54)
 
-	// Current equipped
-	slot := g.PendingGear.Slot
-	current := g.Player.Equipped[slot]
-	currentText := "(empty slot)"
-	if current != nil {
-		currentText = "Replaces: " + current.Name
-	}
+	// Divider
 	setFill(ctx, ColorUIDim)
-	ctx.Call("fillText", currentText, cx, by+76)
+	ctx.Call("fillRect", bx+20, by+72, boxW-40, 1)
+
+	// Current slot section
+	if current != nil {
+		// Label
+		setFill(ctx, ColorUIDim)
+		ctx.Set("font", "11px Inter, system-ui, sans-serif")
+		ctx.Call("fillText", "replaces", cx, by+78)
+
+		// Current item name
+		setFill(ctx, current.Color)
+		ctx.Set("font", "bold 13px Inter, system-ui, sans-serif")
+		ctx.Call("fillText", string(current.Char)+" "+current.Name, cx, by+94)
+
+		// Current item description
+		setFill(ctx, ColorUIDim)
+		ctx.Set("font", UIFont)
+		ctx.Call("fillText", current.Desc, cx, by+112)
+	} else {
+		setFill(ctx, ColorUIDim)
+		ctx.Set("font", UIFont)
+		ctx.Call("fillText", "(empty slot)", cx, by+90)
+	}
 
 	// Actions
 	setFill(ctx, ColorMsgNew)
 	ctx.Set("font", UIBold)
-	ctx.Call("fillText", "[E] Equip     [any key] Leave", cx, by+100)
+	ctx.Call("fillText", "[E] Equip     [Esc] Leave", cx, by+148)
 }
 
 func (g *Game) renderShopPanel(ctx js.Value) {
@@ -966,7 +985,7 @@ func (g *Game) renderEventPanel(ctx js.Value) {
 			ctx.Call("fillText", line, cx, by+16+float64(i)*18)
 		}
 		setFill(ctx, ColorUIDim)
-		ctx.Call("fillText", "[any key] Continue", cx, by+boxH-18)
+		ctx.Call("fillText", "[Esc] Continue", cx, by+boxH-18)
 		return
 	}
 
