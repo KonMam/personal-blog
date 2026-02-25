@@ -619,11 +619,6 @@ func (g *Game) HandleInput(key string) {
 		return
 	}
 
-	if key == "u" || key == "U" {
-		g.usePotionAt(0)
-		return
-	}
-
 	// Numbered potion slots
 	if key == "1" || key == "2" || key == "3" {
 		g.usePotionAt(int(key[0] - '1'))
