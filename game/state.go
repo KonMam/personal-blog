@@ -64,10 +64,17 @@ type Game struct {
 	PendingGear *Gear
 	Turns       int
 	Kills       int
+	UsedGear    map[*Gear]bool     // tracks gear placed in the world this run
+	UsedEvents  map[*EventDef]bool // tracks events spawned this run
 }
 
 func NewGame() *Game {
-	return &Game{Floor: 1, Phase: PhaseClassSelect}
+	return &Game{
+		Floor:      1,
+		Phase:      PhaseClassSelect,
+		UsedGear:   make(map[*Gear]bool),
+		UsedEvents: make(map[*EventDef]bool),
+	}
 }
 
 func (g *Game) newFloor() {
@@ -226,11 +233,20 @@ func (g *Game) spawnChests(rooms []Room) {
 			room := rooms[idx]
 			cx, cy := room.Center()
 
-			// 50% chance to contain gear
+			// 50% chance to contain gear (never repeat an item seen this run)
 			var gear *Gear
 			if rand.Intn(2) == 0 {
 				all := append(append(GearWeapons, GearArmors...), GearTrinkets...)
-				gear = all[rand.Intn(len(all))]
+				available := make([]*Gear, 0, len(all))
+				for _, item := range all {
+					if !g.UsedGear[item] {
+						available = append(available, item)
+					}
+				}
+				if len(available) > 0 {
+					gear = available[rand.Intn(len(available))]
+					g.UsedGear[gear] = true
+				}
 			}
 			g.Chests = append(g.Chests, &Chest{
 				X:    cx,
@@ -250,19 +266,37 @@ func (g *Game) spawnMerchant(rooms []Room) {
 	room := rooms[2]
 	cx, cy := room.Center()
 
-	wi := rand.Intn(len(GearWeapons))
-	ai := rand.Intn(len(GearArmors))
-	ti := rand.Intn(len(GearTrinkets))
-	w := GearWeapons[wi]
-	a := GearArmors[ai]
-	t := GearTrinkets[ti]
+	pickUnused := func(pool []*Gear) *Gear {
+		available := make([]*Gear, 0, len(pool))
+		for _, item := range pool {
+			if !g.UsedGear[item] {
+				available = append(available, item)
+			}
+		}
+		if len(available) == 0 {
+			return nil
+		}
+		chosen := available[rand.Intn(len(available))]
+		g.UsedGear[chosen] = true
+		return chosen
+	}
+
+	w := pickUnused(GearWeapons)
+	a := pickUnused(GearArmors)
+	t := pickUnused(GearTrinkets)
 
 	stock := []*ShopItem{
 		{Name: "Healing Potion (+12 HP)", Cost: 15},
 		{Name: "Greater Potion (+25 HP)", Cost: 28},
-		{Name: w.Name, Cost: 35 + rand.Intn(20), Gear: w},
-		{Name: a.Name, Cost: 35 + rand.Intn(20), Gear: a},
-		{Name: t.Name, Cost: 40 + rand.Intn(25), Gear: t},
+	}
+	if w != nil {
+		stock = append(stock, &ShopItem{Name: w.Name, Cost: 35 + rand.Intn(20), Gear: w})
+	}
+	if a != nil {
+		stock = append(stock, &ShopItem{Name: a.Name, Cost: 35 + rand.Intn(20), Gear: a})
+	}
+	if t != nil {
+		stock = append(stock, &ShopItem{Name: t.Name, Cost: 40 + rand.Intn(25), Gear: t})
 	}
 
 	g.Merchant = &Merchant{X: cx, Y: cy, Stock: stock}
@@ -288,8 +322,18 @@ func (g *Game) spawnEvents(rooms []Room) {
 			continue
 		}
 
+		available := make([]*EventDef, 0, len(allEvents))
+		for _, def := range allEvents {
+			if !g.UsedEvents[def] {
+				available = append(available, def)
+			}
+		}
+		if len(available) == 0 {
+			break
+		}
 		usedRooms[idx] = true
-		def := allEvents[rand.Intn(len(allEvents))]
+		def := available[rand.Intn(len(available))]
+		g.UsedEvents[def] = true
 		g.Events = append(g.Events, &EventSpawn{X: cx, Y: cy, Def: def})
 		spawned++
 	}
@@ -442,6 +486,8 @@ func (g *Game) restart() {
 	g.ActiveEvent = nil
 	g.Turns = 0
 	g.Kills = 0
+	g.UsedGear = make(map[*Gear]bool)
+	g.UsedEvents = make(map[*EventDef]bool)
 	// newFloor() is called by selectClass() once a class is chosen
 }
 

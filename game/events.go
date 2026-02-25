@@ -287,6 +287,7 @@ var allEvents = []*EventDef{
 				Label: "Take the best one",
 				Effect: func(g *Game) string {
 					g.PendingGear = GearEventWeapons[rand.Intn(len(GearEventWeapons))]
+					g.UsedGear[g.PendingGear] = true
 					return fmt.Sprintf("You claim the %s.", g.PendingGear.Name)
 				},
 			},
@@ -307,6 +308,7 @@ var allEvents = []*EventDef{
 				Label: "Claim it",
 				Effect: func(g *Game) string {
 					g.PendingGear = GearEventArmors[rand.Intn(len(GearEventArmors))]
+					g.UsedGear[g.PendingGear] = true
 					return fmt.Sprintf("You don the %s.", g.PendingGear.Name)
 				},
 			},
@@ -327,6 +329,7 @@ var allEvents = []*EventDef{
 				Label: "Take it",
 				Effect: func(g *Game) string {
 					g.PendingGear = GearEventTrinkets[rand.Intn(len(GearEventTrinkets))]
+					g.UsedGear[g.PendingGear] = true
 					return fmt.Sprintf("You pocket the %s.", g.PendingGear.Name)
 				},
 			},
