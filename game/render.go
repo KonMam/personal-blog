@@ -711,6 +711,26 @@ func (g *Game) renderOverlay(ctx js.Value, title, sub, titleColor string) {
 	ctx.Call("fillText", sub, cx, cy+18)
 }
 
+// gearRarityName returns the rarity label for a gear item based on its color.
+func gearRarityName(gear *Gear) string {
+	if gear.Cursed {
+		return "Cursed"
+	}
+	switch gear.Color {
+	case "#718096":
+		return "Common"
+	case "#68D391":
+		return "Uncommon"
+	case "#63B3ED":
+		return "Rare"
+	case "#9F7AEA":
+		return "Epic"
+	case "#F6E05E":
+		return "Event"
+	}
+	return ""
+}
+
 func (g *Game) renderChestPanel(ctx js.Value) {
 	if g.PendingGear == nil {
 		return
@@ -743,12 +763,13 @@ func (g *Game) renderChestPanel(ctx js.Value) {
 	ctx.Set("font", UIBold)
 	ctx.Call("fillText", "GEAR FOUND", cx, by+14)
 
-	// Gear name
+	// Gear name + rarity tag
 	setFill(ctx, g.PendingGear.Color)
 	ctx.Set("font", "bold 16px Inter, system-ui, sans-serif")
+	rarity := gearRarityName(g.PendingGear)
 	gearLabel := string(g.PendingGear.Char) + " " + g.PendingGear.Name
-	if g.PendingGear.Cursed {
-		gearLabel += " (cursed)"
+	if rarity != "" {
+		gearLabel += "   [" + rarity + "]"
 	}
 	ctx.Call("fillText", gearLabel, cx, by+36)
 
@@ -826,6 +847,12 @@ func (g *Game) renderShopPanel(ctx js.Value) {
 			label = fmt.Sprintf("[%d] %s", i+1, item.Name+" (sold)")
 		case !canAfford:
 			textColor = "#5a5f6e"
+		case item.Gear != nil:
+			r := gearRarityName(item.Gear)
+			if r != "" {
+				label = fmt.Sprintf("[%d] %s  [%s]", i+1, item.Name, r)
+			}
+			textColor = item.Gear.Color
 		default:
 			textColor = ColorUI
 		}

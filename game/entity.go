@@ -67,65 +67,66 @@ type Gear struct {
 
 // Gear catalogs — these are the regular pools for chests and merchant.
 
+// Rarity colors: Common="#718096" Uncommon="#68D391" Rare="#63B3ED" Epic="#9F7AEA" Event="#F6E05E" Cursed="#FC8181"
 var GearWeapons = []*Gear{
-	{Name: "Rusty Sword", Char: '†', Color: "#a0aec0", Slot: SlotWeapon, AtkMod: 2, Desc: "+2 ATK."},
-	{Name: "Iron Sword", Char: '†', Color: "#e2e8f0", Slot: SlotWeapon, AtkMod: 5, Desc: "+5 ATK."},
+	{Name: "Rusty Sword", Char: '†', Color: "#718096", Slot: SlotWeapon, AtkMod: 2, Desc: "+2 ATK."},
+	{Name: "Iron Sword", Char: '†', Color: "#68D391", Slot: SlotWeapon, AtkMod: 5, Desc: "+5 ATK."},
 	{Name: "Thief's Dagger", Char: '†', Color: "#68D391", Slot: SlotWeapon, AtkMod: 3, FOVMod: 2, Desc: "+3 ATK, +2 vision."},
-	{Name: "Cursed Blade", Char: '†', Color: "#FC8181", Slot: SlotWeapon, AtkMod: 9, HPMod: -10, Desc: "+9 ATK, -10 max HP."},
-	{Name: "Battle Axe", Char: '†', Color: "#F6AD55", Slot: SlotWeapon, AtkMod: 7, DefMod: -1, Desc: "+7 ATK, -1 DEF."},
-	{Name: "Vampire Fang", Char: '†', Color: "#FC8181", Slot: SlotWeapon, AtkMod: 3, LifestealMod: 1, Desc: "+3 ATK, lifesteal 1."},
-	{Name: "Longspear", Char: '†', Color: "#e2e8f0", Slot: SlotWeapon, AtkMod: 5, ReachMod: 1, Desc: "+5 ATK, reach +1."},
-	{Name: "Warhammer", Char: '†', Color: "#F6AD55", Slot: SlotWeapon, AtkMod: 6, Thorns: 1, Desc: "+6 ATK, thorns 1."},
-	{Name: "Twin Daggers", Char: '†', Color: "#68D391", Slot: SlotWeapon, AtkMod: 4, DoubleStrike: true, Desc: "+4 ATK, double strike."},
-	{Name: "Soul Reaper", Char: '†', Color: "#9F7AEA", Slot: SlotWeapon, AtkMod: 5, OnKillShield: 1, Desc: "+5 ATK, 1 shield per kill."},
-	{Name: "Plague Dagger", Char: '†', Color: "#FC8181", Slot: SlotWeapon, AtkMod: 8, DoubleStrike: true, Cursed: true, CursePenalty: 4, Desc: "+8 ATK, double strike (cursed: +4 dmg/hit)"},
-	{Name: "Glacial Edge", Char: '†', Color: "#90CDF4", Slot: SlotWeapon, AtkMod: 5, FreezeChance: 30, Desc: "+5 ATK, 30% freeze on hit"},
-	{Name: "Serrated Blade", Char: '†', Color: "#FC8181", Slot: SlotWeapon, AtkMod: 5, BleedOnHit: true, Desc: "+5 ATK, bleed on hit (+2 bleed)"},
+	{Name: "Vampire Fang", Char: '†', Color: "#68D391", Slot: SlotWeapon, AtkMod: 4, LifestealMod: 1, Desc: "+4 ATK, lifesteal 1."},
+	{Name: "Longspear", Char: '†', Color: "#68D391", Slot: SlotWeapon, AtkMod: 5, ReachMod: 1, Desc: "+5 ATK, reach +1."},
+	{Name: "Battle Axe", Char: '†', Color: "#63B3ED", Slot: SlotWeapon, AtkMod: 7, DefMod: -1, Desc: "+7 ATK, -1 DEF."},
+	{Name: "Warhammer", Char: '†', Color: "#63B3ED", Slot: SlotWeapon, AtkMod: 6, Thorns: 2, Desc: "+6 ATK, thorns 2."},
+	{Name: "Soul Reaper", Char: '†', Color: "#63B3ED", Slot: SlotWeapon, AtkMod: 5, OnKillShield: 1, Desc: "+5 ATK, 1 shield per kill."},
+	{Name: "Glacial Edge", Char: '†', Color: "#63B3ED", Slot: SlotWeapon, AtkMod: 5, FreezeChance: 30, Desc: "+5 ATK, 30% freeze on hit."},
+	{Name: "Serrated Blade", Char: '†', Color: "#63B3ED", Slot: SlotWeapon, AtkMod: 5, BleedOnHit: true, Desc: "+5 ATK, bleed on hit (+2 bleed)."},
+	{Name: "Twin Daggers", Char: '†', Color: "#9F7AEA", Slot: SlotWeapon, AtkMod: 4, DoubleStrike: true, Desc: "+4 ATK, double strike."},
+	{Name: "Pact Blade", Char: '†', Color: "#9F7AEA", Slot: SlotWeapon, AtkMod: 9, HPMod: -10, Desc: "+9 ATK, -10 max HP."},
+	{Name: "Plague Dagger", Char: '†', Color: "#FC8181", Slot: SlotWeapon, AtkMod: 8, DoubleStrike: true, Cursed: true, CursePenalty: 4, Desc: "+8 ATK, double strike, cursed: +4 dmg/hit."},
 }
 
 var GearArmors = []*Gear{
-	{Name: "Leather Armor", Char: '◈', Color: "#a0aec0", Slot: SlotArmor, DefMod: 2, Desc: "+2 DEF."},
-	{Name: "Chain Mail", Char: '◈', Color: "#e2e8f0", Slot: SlotArmor, DefMod: 4, AtkMod: -2, Desc: "+4 DEF, -2 ATK."},
-	{Name: "Spiked Armor", Char: '◈', Color: "#FC8181", Slot: SlotArmor, DefMod: 2, Thorns: 2, Desc: "+2 DEF, thorns 2."},
-	{Name: "Shadow Cloak", Char: '◈', Color: "#9F7AEA", Slot: SlotArmor, DefMod: 1, FOVMod: 2, Desc: "+1 DEF, +2 vision."},
-	{Name: "Cursed Plate", Char: '◈', Color: "#E53E3E", Slot: SlotArmor, DefMod: 7, HPMod: -8, Desc: "+7 DEF, -8 max HP."},
-	{Name: "Aegis", Char: '◈', Color: "#9F7AEA", Slot: SlotArmor, DefMod: 2, ShieldMod: 4, Desc: "+2 DEF, 4 shields/floor."},
-	{Name: "Evasion Cloak", Char: '◈', Color: "#68D391", Slot: SlotArmor, DefMod: 1, DodgeMod: 20, Desc: "+1 DEF, 20% dodge."},
-	{Name: "Scale Armor", Char: '◈', Color: "#F6AD55", Slot: SlotArmor, DefMod: 3, AtkMod: 1, Desc: "+3 DEF, +1 ATK."},
-	{Name: "Thornweave", Char: '◈', Color: "#FC8181", Slot: SlotArmor, DefMod: 1, Thorns: 3, LifestealMod: 1, Desc: "+1 DEF, thorns 3, lifesteal 1."},
-	{Name: "Battle Harness", Char: '◈', Color: "#F6AD55", Slot: SlotArmor, DefMod: 2, AtkMod: 1, ShieldMod: 2, Desc: "+2 DEF, +1 ATK, 2 shields/floor."},
-	{Name: "Hexplate", Char: '◈', Color: "#FC8181", Slot: SlotArmor, DefMod: 8, Cursed: true, CursePenalty: 3, Desc: "+8 DEF (cursed: +3 dmg/hit)"},
+	{Name: "Leather Armor", Char: '◈', Color: "#718096", Slot: SlotArmor, DefMod: 2, Desc: "+2 DEF."},
+	{Name: "Chain Mail", Char: '◈', Color: "#68D391", Slot: SlotArmor, DefMod: 4, AtkMod: -2, Desc: "+4 DEF, -2 ATK."},
+	{Name: "Spiked Armor", Char: '◈', Color: "#68D391", Slot: SlotArmor, DefMod: 2, Thorns: 2, Desc: "+2 DEF, thorns 2."},
+	{Name: "Shadow Cloak", Char: '◈', Color: "#68D391", Slot: SlotArmor, DefMod: 1, FOVMod: 2, Desc: "+1 DEF, +2 vision."},
+	{Name: "Scale Armor", Char: '◈', Color: "#68D391", Slot: SlotArmor, DefMod: 3, AtkMod: 1, Desc: "+3 DEF, +1 ATK."},
+	{Name: "Aegis", Char: '◈', Color: "#63B3ED", Slot: SlotArmor, DefMod: 2, ShieldMod: 4, Desc: "+2 DEF, 4 shields/floor."},
+	{Name: "Evasion Cloak", Char: '◈', Color: "#63B3ED", Slot: SlotArmor, DefMod: 1, DodgeMod: 20, Desc: "+1 DEF, 20% dodge."},
+	{Name: "Battle Harness", Char: '◈', Color: "#63B3ED", Slot: SlotArmor, DefMod: 2, AtkMod: 1, ShieldMod: 2, Desc: "+2 DEF, +1 ATK, 2 shields/floor."},
+	{Name: "Thornweave", Char: '◈', Color: "#9F7AEA", Slot: SlotArmor, DefMod: 1, Thorns: 3, LifestealMod: 1, Desc: "+1 DEF, thorns 3, lifesteal 1."},
+	{Name: "Martyr's Plate", Char: '◈', Color: "#9F7AEA", Slot: SlotArmor, DefMod: 7, HPMod: -8, Desc: "+7 DEF, -8 max HP."},
+	{Name: "Hexplate", Char: '◈', Color: "#FC8181", Slot: SlotArmor, DefMod: 8, Cursed: true, CursePenalty: 3, Desc: "+8 DEF, cursed: +3 dmg/hit."},
 }
 
 var GearTrinkets = []*Gear{
-	{Name: "Ring of Haste", Char: '◇', Color: "#F6AD55", Slot: SlotTrinket, DoubleStrike: true, Desc: "Attack twice per bump."},
-	{Name: "Ring of Life", Char: '◇', Color: "#FC8181", Slot: SlotTrinket, LifestealMod: 2, Desc: "Lifesteal 2 per hit."},
-	{Name: "Blazing Ring", Char: '◇', Color: "#F6AD55", Slot: SlotTrinket, BurnOnHit: true, Desc: "Attacks apply Burn 3."},
-	{Name: "Ring of Warding", Char: '◇', Color: "#9F7AEA", Slot: SlotTrinket, ShieldMod: 6, Desc: "6 shield charges/floor."},
-	{Name: "Twin Fangs", Char: '◇', Color: "#FC8181", Slot: SlotTrinket, AtkMod: 2, DoubleStrike: true, LifestealMod: 1, Desc: "+2 ATK, double strike, lifesteal 1."},
-	{Name: "Berserker's Mark", Char: '◇', Color: "#FC8181", Slot: SlotTrinket, BerserkerMod: 5, Desc: "+5 ATK when below 40% HP."},
-	{Name: "Executioner's Seal", Char: '◇', Color: "#9F7AEA", Slot: SlotTrinket, OnKillShield: 1, Desc: "+1 shield charge per kill."},
-	{Name: "Pyromancer's Lens", Char: '◇', Color: "#F6AD55", Slot: SlotTrinket, BurnBonus: 4, Desc: "+4 damage to burning enemies."},
-	{Name: "Ring of Fortitude", Char: '◇', Color: "#48BB78", Slot: SlotTrinket, HPMod: 12, ShieldMod: 1, Desc: "+12 max HP, 1 shield/floor."},
-	{Name: "Thorn Ring", Char: '◇', Color: "#FC8181", Slot: SlotTrinket, Thorns: 2, DefMod: 1, Desc: "Thorns 2, +1 DEF."},
-	{Name: "Soulbane Ring", Char: '◇', Color: "#9F7AEA", Slot: SlotTrinket, AtkMod: 4, DodgeMod: 15, Cursed: true, CursePenalty: 3, Desc: "+4 ATK, 15% dodge (cursed: +3 dmg/hit)"},
+	{Name: "Ring of Life", Char: '◇', Color: "#68D391", Slot: SlotTrinket, LifestealMod: 2, Desc: "Lifesteal 2 per hit."},
+	{Name: "Pyromancer's Lens", Char: '◇', Color: "#68D391", Slot: SlotTrinket, BurnBonus: 4, Desc: "+4 damage to burning enemies."},
+	{Name: "Ring of Fortitude", Char: '◇', Color: "#68D391", Slot: SlotTrinket, HPMod: 12, ShieldMod: 1, Desc: "+12 max HP, 1 shield/floor."},
+	{Name: "Thorn Ring", Char: '◇', Color: "#68D391", Slot: SlotTrinket, Thorns: 2, DefMod: 1, Desc: "Thorns 2, +1 DEF."},
+	{Name: "Ring of Haste", Char: '◇', Color: "#63B3ED", Slot: SlotTrinket, AtkMod: 1, DoubleStrike: true, DodgeMod: 10, Desc: "+1 ATK, double strike, 10% dodge."},
+	{Name: "Blazing Ring", Char: '◇', Color: "#63B3ED", Slot: SlotTrinket, BurnOnHit: true, Desc: "Attacks apply Burn 3."},
+	{Name: "Ring of Warding", Char: '◇', Color: "#63B3ED", Slot: SlotTrinket, ShieldMod: 6, Desc: "6 shield charges/floor."},
+	{Name: "Executioner's Seal", Char: '◇', Color: "#63B3ED", Slot: SlotTrinket, OnKillShield: 2, Desc: "+2 shield charges per kill."},
+	{Name: "Twin Fangs", Char: '◇', Color: "#9F7AEA", Slot: SlotTrinket, AtkMod: 2, DoubleStrike: true, LifestealMod: 1, Desc: "+2 ATK, double strike, lifesteal 1."},
+	{Name: "Berserker's Mark", Char: '◇', Color: "#9F7AEA", Slot: SlotTrinket, BerserkerMod: 5, Desc: "+5 ATK when below 40% HP."},
+	{Name: "Soulbane Ring", Char: '◇', Color: "#FC8181", Slot: SlotTrinket, AtkMod: 4, DodgeMod: 15, Cursed: true, CursePenalty: 3, Desc: "+4 ATK, 15% dodge, cursed: +3 dmg/hit."},
 }
 
 // Event-only gear — never spawns in chests or merchant stock.
 
 var GearEventWeapons = []*Gear{
 	{Name: "Champion's Blade", Char: '†', Color: "#F6E05E", Slot: SlotWeapon, AtkMod: 8, DefMod: 2, Desc: "+8 ATK, +2 DEF."},
-	{Name: "Wraithblade", Char: '†', Color: "#9F7AEA", Slot: SlotWeapon, AtkMod: 6, BurnOnHit: true, LifestealMod: 2, Desc: "+6 ATK, burn on hit, lifesteal 2."},
+	{Name: "Wraithblade", Char: '†', Color: "#F6E05E", Slot: SlotWeapon, AtkMod: 6, BurnOnHit: true, LifestealMod: 2, Desc: "+6 ATK, burn on hit, lifesteal 2."},
 }
 
 var GearEventArmors = []*Gear{
-	{Name: "Phantom Cloak", Char: '◈', Color: "#9F7AEA", Slot: SlotArmor, DefMod: 1, DodgeMod: 30, Desc: "+1 DEF, 30% dodge."},
+	{Name: "Phantom Cloak", Char: '◈', Color: "#F6E05E", Slot: SlotArmor, DefMod: 1, DodgeMod: 30, Desc: "+1 DEF, 30% dodge."},
 	{Name: "Blessed Plate", Char: '◈', Color: "#F6E05E", Slot: SlotArmor, DefMod: 4, ShieldMod: 4, HPMod: 8, Desc: "+4 DEF, 4 shields/floor, +8 max HP."},
 }
 
 var GearEventTrinkets = []*Gear{
-	{Name: "Void Ring", Char: '◇', Color: "#9F7AEA", Slot: SlotTrinket, HPMod: -8, DodgeMod: 30, LifestealMod: 2, Desc: "-8 max HP, 30% dodge, lifesteal 2."},
-	{Name: "Deathrattle Sigil", Char: '◇', Color: "#FC8181", Slot: SlotTrinket, OnKillShield: 2, BurnBonus: 3, Desc: "+2 shields per kill, +3 vs burning."},
+	{Name: "Void Ring", Char: '◇', Color: "#F6E05E", Slot: SlotTrinket, HPMod: -8, DodgeMod: 30, LifestealMod: 2, Desc: "-8 max HP, 30% dodge, lifesteal 2."},
+	{Name: "Deathrattle Sigil", Char: '◇', Color: "#F6E05E", Slot: SlotTrinket, OnKillShield: 2, BurnBonus: 3, Desc: "+2 shields per kill, +3 vs burning."},
 }
 
 type Entity struct {
