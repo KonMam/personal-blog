@@ -910,4 +910,185 @@ var allEvents = []*EventDef{
 			},
 		},
 	},
+	// 31
+	{
+		Title: "The Odds Game",
+		Body:  "A shadowy figure gestures to a table of bone dice. \"Care for a wager?\"",
+		Choices: []*EventChoice{
+			{
+				Label: "Bet 20g — 50% win 45g",
+				Effect: func(g *Game) string {
+					if g.Player.Gold < 20 {
+						return "Not enough gold. (need 20g)"
+					}
+					g.Player.Gold -= 20
+					if rand.Intn(2) == 0 {
+						g.Player.Gold += 45
+						return "The dice roll in your favour. +25g net."
+					}
+					return "Bad luck. 20g lost."
+				},
+			},
+			{
+				Label: "Bet 40g — 35% win 120g",
+				Effect: func(g *Game) string {
+					if g.Player.Gold < 40 {
+						return "Not enough gold. (need 40g)"
+					}
+					g.Player.Gold -= 40
+					if rand.Intn(20) < 7 {
+						g.Player.Gold += 120
+						return "Jackpot! +80g net."
+					}
+					return "Bust. 40g gone."
+				},
+			},
+			{
+				Label: "Leave",
+				Effect: func(g *Game) string {
+					return "You back away from the table."
+				},
+			},
+		},
+	},
+	// 32
+	{
+		Title: "Ancient Tome",
+		Body:  "Crumbling pages glow with faint runes. The knowledge is yours — but at a cost.",
+		Choices: []*EventChoice{
+			{
+				Label: "Study offense (+3 ATK, -5 Max HP)",
+				Effect: func(g *Game) string {
+					g.Player.BaseAtk += 3
+					g.Player.BaseMaxHP -= 5
+					if g.Player.BaseMaxHP < 5 {
+						g.Player.BaseMaxHP = 5
+					}
+					g.Player.RecalcStats()
+					if g.Player.HP > g.Player.MaxHP {
+						g.Player.HP = g.Player.MaxHP
+					}
+					return "Power surges through you. +3 ATK, -5 Max HP."
+				},
+			},
+			{
+				Label: "Study defence (+8 Max HP, -2 ATK)",
+				Effect: func(g *Game) string {
+					g.Player.BaseMaxHP += 8
+					g.Player.HP += 8
+					g.Player.BaseAtk -= 2
+					if g.Player.BaseAtk < 1 {
+						g.Player.BaseAtk = 1
+					}
+					g.Player.RecalcStats()
+					return "Resilience blooms. +8 Max HP, -2 ATK."
+				},
+			},
+			{
+				Label: "Leave",
+				Effect: func(g *Game) string {
+					return "You close the tome. Some knowledge is best left unread."
+				},
+			},
+		},
+	},
+	// 33
+	{
+		Title: "Fountain of Vigour",
+		Body:  "Crystal-clear water bubbles up through ancient stone.",
+		Choices: []*EventChoice{
+			{
+				Label: "Drink (+15 HP, cure ailments)",
+				Effect: func(g *Game) string {
+					heal := 15
+					if g.Player.HP+heal > g.Player.MaxHP {
+						heal = g.Player.MaxHP - g.Player.HP
+					}
+					g.Player.HP += heal
+					g.Player.Poison = 0
+					g.Player.PlayerBurn = 0
+					return fmt.Sprintf("Refreshed. +%d HP, all ailments cleared.", heal)
+				},
+			},
+			{
+				Label: "Fill a vial (+1 Healing Potion)",
+				Effect: func(g *Game) string {
+					g.Player.Potions++
+					g.Player.PotionTypes = append(g.Player.PotionTypes, PotionHealing)
+					return "You fill a vial from the fountain. +1 Healing Potion."
+				},
+			},
+			{
+				Label: "Leave",
+				Effect: func(g *Game) string {
+					return "You leave the fountain undisturbed."
+				},
+			},
+		},
+	},
+	// 34
+	{
+		Title: "Wandering Trader",
+		Body:  "A cloaked merchant eyes your coin pouch. \"Special price today. One item, one chance.\"",
+		Choices: []*EventChoice{
+			{
+				Label: "Browse (-15g, random gear)",
+				Effect: func(g *Game) string {
+					if g.Player.Gold < 15 {
+						return "Not enough gold. (need 15g)"
+					}
+					gear := g.pickAnyGear()
+					if gear == nil {
+						return "Nothing left to sell."
+					}
+					g.Player.Gold -= 15
+					g.PendingGear = gear
+					return "The trader reveals their wares."
+				},
+			},
+			{
+				Label: "Leave",
+				Effect: func(g *Game) string {
+					return "You wave the trader off."
+				},
+			},
+		},
+	},
+	// 35
+	{
+		Title: "Hidden Cache",
+		Body:  "A collapsed wall reveals a forgotten stash in the rubble.",
+		Choices: []*EventChoice{
+			{
+				Label: "Search",
+				Effect: func(g *Game) string {
+					roll := rand.Intn(10)
+					if roll < 5 {
+						gear := g.pickAnyGear()
+						if gear != nil {
+							g.PendingGear = gear
+							return "You uncover a piece of equipment in the rubble!"
+						}
+					}
+					if roll < 8 {
+						gold := 15 + rand.Intn(21)
+						g.Player.Gold += gold
+						return fmt.Sprintf("You find %dg buried in the dust.", gold)
+					}
+					dmg := 5 + rand.Intn(8)
+					g.Player.HP -= dmg
+					if g.Player.HP < 1 {
+						g.Player.HP = 1
+					}
+					return fmt.Sprintf("Something was hiding in there! -%d HP.", dmg)
+				},
+			},
+			{
+				Label: "Leave",
+				Effect: func(g *Game) string {
+					return "You leave the rubble undisturbed."
+				},
+			},
+		},
+	},
 }

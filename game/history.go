@@ -11,6 +11,7 @@ import (
 
 const historyKey = "rogueHistory"
 const classWinsKey = "rogueClassWins"
+const hintKey = "rogueHintSeen"
 const maxHistoryRuns = 10
 
 type RunRecord struct {
@@ -130,6 +131,7 @@ func (g *Game) recordRun(outcome string) {
 	if g.ClassName == "" || g.Player == nil {
 		return
 	}
+	stopAmbient()
 	r := RunRecord{
 		Class:      g.ClassName,
 		Outcome:    outcome,
@@ -155,4 +157,15 @@ func (g *Game) recordRun(outcome string) {
 		saveClassWins(wins)
 		g.ClassWins = wins
 	}
+}
+
+// hintSeen returns true if the first-run control hint has been dismissed.
+func hintSeen() bool {
+	val := js.Global().Get("localStorage").Call("getItem", hintKey)
+	return !val.IsNull() && !val.IsUndefined()
+}
+
+// markHintSeen saves the hint-seen flag so it never shows again.
+func markHintSeen() {
+	js.Global().Get("localStorage").Call("setItem", hintKey, "1")
 }

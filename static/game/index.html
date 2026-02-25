@@ -130,14 +130,14 @@
       <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows: move &nbsp;·&nbsp;
       Bump: attack &nbsp;·&nbsp;
       <kbd>.</kbd> wait &nbsp;·&nbsp;
-      <kbd>U</kbd> use potion &nbsp;·&nbsp;
+      <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> use potion slot (or <kbd>U</kbd> for slot 1) &nbsp;·&nbsp;
       <kbd>E</kbd> equip gear &nbsp;·&nbsp;
       <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> event option &nbsp;·&nbsp;
       <kbd>R</kbd> restart &nbsp;·&nbsp;
       <kbd>Tab</kbd> message log
     </div>
     <div class="legend-row">
-      <span style="color:#68D391">♥</span> potion &nbsp;·&nbsp;
+      <span style="color:#68D391">♥</span> potion (H=Heal · A=Antidote · M=Might · G=Greater) &nbsp;·&nbsp;
       <span style="color:#F6E05E">■</span> chest (or Mimic!) &nbsp;·&nbsp;
       <span style="color:#48BB78">$</span> merchant (floors 2–3) &nbsp;·&nbsp;
       <span style="color:#6C8CFF">?</span> event &nbsp;·&nbsp;
@@ -158,7 +158,7 @@
   </footer>
 
   <script>
-  // Web Audio sound system
+  // Web Audio sound system + ambient music
   (function () {
     let actx = null;
     function ctx() {
@@ -166,6 +166,8 @@
       if (actx.state === 'suspended') actx.resume();
       return actx;
     }
+
+    // --- Sound effects ---
     function tone(freq, type, dur, vol, freqEnd) {
       try {
         const c = ctx();
@@ -214,6 +216,99 @@
           setTimeout(() => tone(180, 'sawtooth', 0.18, 0.14, 150), 200);
           setTimeout(() => tone(150, 'sawtooth', 0.28, 0.14, 110), 400); break;
       }
+    };
+
+    // --- Ambient music ---
+    // Each floor has a distinct drone cluster. Multiple oscillators with slight
+    // detuning create natural beating. Slow LFO tremolo adds organic movement.
+    let ambientNodes = [];
+    let ambientMaster = null;
+
+    // Floor 1: A-minor stone dungeon — cold, sparse
+    // Floor 2: Diminished crypts — tense, tritone dissonance
+    // Floor 3: E-tritone abyss — deep, oppressive
+    const floorPartials = {
+      1: [[55, 0.38], [82.5, 0.22], [110, 0.14], [164.8, 0.07]],
+      2: [[55, 0.32], [77.8, 0.28], [116.5, 0.18], [155.6, 0.09]],
+      3: [[41.2, 0.42], [58.3, 0.28], [82.4, 0.18], [123.5, 0.09]],
+    };
+    const floorLFO = { 1: 0.04, 2: 0.07, 3: 0.13 };
+    const masterVol = 0.13;
+
+    function stopAmbientNow(nodes, master) {
+      nodes.forEach(n => { try { n.disconnect(); if (n.stop) n.stop(); } catch(e) {} });
+      if (master) { try { master.disconnect(); } catch(e) {} }
+    }
+
+    window.startAmbient = function(floor) {
+      // Fade out old ambient
+      const oldNodes = ambientNodes;
+      const oldMaster = ambientMaster;
+      ambientNodes = [];
+      ambientMaster = null;
+      if (oldMaster) {
+        try {
+          const c = ctx();
+          oldMaster.gain.linearRampToValueAtTime(0, c.currentTime + 0.8);
+          setTimeout(() => stopAmbientNow(oldNodes, oldMaster), 900);
+        } catch(e) { stopAmbientNow(oldNodes, oldMaster); }
+      }
+
+      try {
+        const c = ctx();
+        const master = c.createGain();
+        master.gain.setValueAtTime(0, c.currentTime);
+        master.gain.linearRampToValueAtTime(masterVol, c.currentTime + 3.5);
+        master.connect(c.destination);
+        ambientMaster = master;
+
+        const partials = floorPartials[floor] || floorPartials[1];
+        const lfoRate = floorLFO[floor] || 0.05;
+
+        for (const [freq, vol] of partials) {
+          const osc = c.createOscillator();
+          const oscGain = c.createGain();
+          const lfo = c.createOscillator();
+          const lfoGain = c.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, c.currentTime);
+          // Slight random detuning for natural beating between partials
+          osc.detune.setValueAtTime((Math.random() - 0.5) * 10, c.currentTime);
+
+          lfo.type = 'sine';
+          lfo.frequency.setValueAtTime(lfoRate * (0.75 + Math.random() * 0.5), c.currentTime);
+          const depth = vol * 0.35;
+          lfoGain.gain.setValueAtTime(depth, c.currentTime);
+          oscGain.gain.setValueAtTime(vol - depth, c.currentTime);
+
+          lfo.connect(lfoGain);
+          lfoGain.connect(oscGain.gain);
+          osc.connect(oscGain);
+          oscGain.connect(master);
+
+          osc.start(c.currentTime);
+          lfo.start(c.currentTime);
+
+          ambientNodes.push(osc, oscGain, lfo, lfoGain);
+        }
+      } catch(e) {}
+    };
+
+    window.stopAmbient = function() {
+      const nodes = ambientNodes;
+      const master = ambientMaster;
+      ambientNodes = [];
+      ambientMaster = null;
+      if (master) {
+        try {
+          const c = ctx();
+          master.gain.linearRampToValueAtTime(0, c.currentTime + 0.6);
+          setTimeout(() => stopAmbientNow(nodes, master), 700);
+          return;
+        } catch(e) {}
+      }
+      stopAmbientNow(nodes, master);
     };
   })();
   </script>

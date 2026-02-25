@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"syscall/js"
 	"time"
@@ -80,6 +81,16 @@ func (g *Game) Render(ctx js.Value) {
 	if g.Phase == PhaseClassSelect {
 		g.renderClassSelect(ctx)
 		return
+	}
+
+	// Screen shake — slight translate for heavy-hit frames
+	shaking := g.ShakeFrames > 0
+	if shaking {
+		g.ShakeFrames--
+		dx := rand.Intn(7) - 3
+		dy := rand.Intn(5) - 2
+		ctx.Call("save")
+		ctx.Call("translate", float64(dx), float64(dy))
 	}
 
 	// Background
@@ -217,6 +228,20 @@ func (g *Game) Render(ctx js.Value) {
 			setFill(ctx, hpColor)
 			ctx.Call("fillRect", bx, by, bw*ratio, 2)
 		}
+		// Freeze/Bleed status pips — tiny symbols in tile corners
+		ctx.Set("textBaseline", "top")
+		if e.Frozen > 0 {
+			setFill(ctx, ColorFreeze)
+			ctx.Set("font", "bold 8px 'Courier New', monospace")
+			ctx.Set("textAlign", "right")
+			ctx.Call("fillText", "*", float64((e.X+1)*TileW)-1, float64(e.Y*TileH)+1)
+			ctx.Set("textAlign", "left")
+		}
+		if e.Bleed > 0 {
+			setFill(ctx, ColorBleed)
+			ctx.Set("font", "bold 8px 'Courier New', monospace")
+			ctx.Call("fillText", ";", float64(e.X*TileW)+1, float64(e.Y*TileH)+1)
+		}
 	}
 
 	// Player
@@ -248,6 +273,64 @@ func (g *Game) Render(ctx js.Value) {
 		}
 	}
 
+	// Floating damage/heal numbers — drift upward and fade out
+	ctx.Set("textBaseline", "middle")
+	for i := len(g.FloatingNums) - 1; i >= 0; i-- {
+		fn := &g.FloatingNums[i]
+		fn.Age += 0.04
+		if fn.Age >= 1.0 {
+			g.FloatingNums = append(g.FloatingNums[:i], g.FloatingNums[i+1:]...)
+			continue
+		}
+		alpha := 1.0 - fn.Age
+		px := float64(fn.X*TileW) + float64(TileW)/2
+		py := float64(fn.Y*TileH) - fn.Age*18
+		ctx.Set("globalAlpha", alpha)
+		setFill(ctx, fn.Color)
+		ctx.Set("font", "bold 11px 'Courier New', monospace")
+		ctx.Set("textAlign", "center")
+		var label string
+		if fn.Value < 0 {
+			label = fmt.Sprintf("+%d", -fn.Value)
+		} else {
+			label = fmt.Sprintf("-%d", fn.Value)
+		}
+		ctx.Call("fillText", label, px, py)
+	}
+	ctx.Set("globalAlpha", 1.0)
+	ctx.Set("textAlign", "left")
+	ctx.Set("textBaseline", "top")
+
+	// Boss announcement banner — fades in and out at center of map
+	if g.BossAnnounceTimer > 0 {
+		g.BossAnnounceTimer -= 0.015
+		if g.BossAnnounceTimer < 0 {
+			g.BossAnnounceTimer = 0
+		}
+		alpha := g.BossAnnounceTimer * 2.0
+		if alpha > 1.0 {
+			alpha = 1.0
+		}
+		bannerCY := float64(MapH*TileH) / 2
+		ctx.Set("globalAlpha", alpha*0.90)
+		setFill(ctx, "#08080f")
+		ctx.Call("fillRect", 0, bannerCY-24, float64(CanvasW), 48)
+		ctx.Set("globalAlpha", alpha)
+		setFill(ctx, ColorHPLow)
+		ctx.Set("font", "bold 20px 'Courier New', monospace")
+		ctx.Set("textAlign", "center")
+		ctx.Set("textBaseline", "middle")
+		ctx.Call("fillText", "! "+g.BossAnnounce+" rises !", float64(CanvasW)/2, bannerCY)
+		ctx.Set("globalAlpha", 1.0)
+		ctx.Set("textAlign", "left")
+		ctx.Set("textBaseline", "top")
+	}
+
+	// End screen-shake frame
+	if shaking {
+		ctx.Call("restore")
+	}
+
 	// UI strip
 	g.renderUI(ctx)
 
@@ -257,6 +340,16 @@ func (g *Game) Render(ctx js.Value) {
 			alpha := float64(300-elapsed) / 300.0 * 0.35
 			ctx.Set("fillStyle", fmt.Sprintf("rgba(200, 30, 30, %.3f)", alpha))
 			ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
+		}
+	}
+
+	// Floor transition — black fade-in when descending stairs
+	if g.FloorTransition > 0 {
+		ctx.Set("fillStyle", fmt.Sprintf("rgba(0,0,0,%.3f)", g.FloorTransition))
+		ctx.Call("fillRect", 0, 0, float64(CanvasW), float64(CanvasH))
+		g.FloorTransition -= 0.06
+		if g.FloorTransition < 0 {
+			g.FloorTransition = 0
 		}
 	}
 
@@ -272,6 +365,11 @@ func (g *Game) Render(ctx js.Value) {
 		g.renderShopPanel(ctx)
 	case PhaseEvent:
 		g.renderEventPanel(ctx)
+	}
+
+	// First-run controls hint — shown once until dismissed
+	if g.ShowHint && g.Phase == PhasePlay {
+		g.renderHintOverlay(ctx)
 	}
 
 	// Message log — drawn on top of everything
@@ -292,25 +390,44 @@ func (g *Game) renderTile(ctx js.Value, x, y int) {
 	var bg, fg string
 	var ch rune
 
-	// Floor background variants (visible / explored)
-	floorBgV := [4]string{"#1e2236", "#1b1f33", "#212540", "#1e2236"}
-	floorDotV := [4]string{"#2e3450", "#2a3048", "#333a5a", "#282e4a"}
-	floorBgE := [4]string{"#111420", "#0f1119", "#131724", "#111420"}
-	floorDotE := [4]string{"#161825", "#131622", "#191e2c", "#141620"}
 	// Wall char variants — mostly solid, variant 1 uses ▓ for rougher look
 	wallChars := [4]rune{'█', '▓', '█', '█'}
 
 	v := int(tile.Variant)
+
+	// Biome color palettes by floor
+	var wallV, wallE string
+	var floorBgV, floorDotV, floorBgE, floorDotE [4]string
+	switch g.Floor {
+	case 2: // Purple/violet crypts
+		wallV, wallE = "#4a3363", "#1f1430"
+		floorBgV = [4]string{"#231e36", "#201b33", "#271f3d", "#231e36"}
+		floorDotV = [4]string{"#3a2b52", "#362848", "#40305c", "#342a4c"}
+		floorBgE = [4]string{"#130f1f", "#110d1c", "#150f23", "#130f1f"}
+		floorDotE = [4]string{"#1a1226", "#171022", "#1e142b", "#181023"}
+	case 3: // Deep red abyss
+		wallV, wallE = "#5c2a2a", "#2a1010"
+		floorBgV = [4]string{"#2a1515", "#271212", "#2d1818", "#2a1515"}
+		floorDotV = [4]string{"#452020", "#401c1c", "#4a2424", "#3e1e1e"}
+		floorBgE = [4]string{"#180a0a", "#150808", "#1a0c0c", "#180a0a"}
+		floorDotE = [4]string{"#1e0c0c", "#1b0b0b", "#210e0e", "#1c0b0b"}
+	default: // Floor 1: blue-gray stone
+		wallV, wallE = ColorWallVisible, ColorWallExplored
+		floorBgV = [4]string{"#1e2236", "#1b1f33", "#212540", "#1e2236"}
+		floorDotV = [4]string{"#2e3450", "#2a3048", "#333a5a", "#282e4a"}
+		floorBgE = [4]string{"#111420", "#0f1119", "#131724", "#111420"}
+		floorDotE = [4]string{"#161825", "#131622", "#191e2c", "#141620"}
+	}
 
 	switch tile.Type {
 	case TileWall:
 		ch = wallChars[v]
 		if tile.Visible {
 			bg = ColorBg
-			fg = ColorWallVisible
+			fg = wallV
 		} else {
 			bg = ColorBg
-			fg = ColorWallExplored
+			fg = wallE
 		}
 	case TileFloor:
 		ch = '·'
@@ -375,6 +492,22 @@ func (g *Game) renderUI(ctx js.Value) {
 	ctx.Set("font", UIBold)
 	ctx.Call("fillText", fmt.Sprintf("FLOOR %d/%d", g.Floor, MaxFloors), 12, top)
 
+	// Difficulty badge (shown for non-Normal difficulties)
+	if g.Difficulty > 0 {
+		var diffLabel, diffColor string
+		switch g.Difficulty {
+		case 1:
+			diffLabel, diffColor = "HARD", ColorHPMid
+		case 2:
+			diffLabel, diffColor = "NIGHTMARE", ColorHPLow
+		case 3:
+			diffLabel, diffColor = "DAILY", ColorFreeze
+		}
+		setFill(ctx, diffColor)
+		ctx.Set("font", UIBold)
+		ctx.Call("fillText", diffLabel, 100, top)
+	}
+
 	// HP bar
 	g.renderHPBar(ctx, top)
 
@@ -390,30 +523,61 @@ func (g *Game) renderUI(ctx js.Value) {
 	ctx.Set("font", UIBold)
 	ctx.Call("fillText", fmt.Sprintf("¤ %dg", g.Player.Gold), 580, top)
 
-	// Potions — show count and next type if known
+	// Potions — 3 individual labelled slots
 	setFill(ctx, ColorPotion)
 	ctx.Set("font", UIBold)
-	potLabel := fmt.Sprintf("♥ %d", g.Player.Potions)
-	if g.Player.Potions > 0 && len(g.Player.PotionTypes) > 0 {
-		switch g.Player.PotionTypes[0] {
-		case PotionAntidote:
-			potLabel += " [Antidote]"
-		case PotionMight:
-			potLabel += " [Might]"
-		case PotionGreater:
-			potLabel += " [Greater]"
-		}
-	}
-	ctx.Call("fillText", potLabel, 660, top)
+	ctx.Call("fillText", "♥", 640, top)
 
-	// Status effects — right-aligned cluster before ATK/DEF
-	statusX := float64(CanvasW) - 160.0
+	const slotW = 30.0
+	const slotH = 14.0
+	const slotGap = 3.0
+	potSlotX := 658.0
+	potSymbols := [4]string{"H", "A", "M", "G"}
+	potColors := [4]string{ColorPotion, ColorFreeze, ColorBurn, "#9AE6B4"}
+	for i := 0; i < 3; i++ {
+		sx := potSlotX + float64(i)*(slotW+slotGap)
+		// Slot background
+		setFill(ctx, "#1a1d2e")
+		ctx.Call("fillRect", sx, top-1, slotW, slotH)
+		if i < len(g.Player.PotionTypes) {
+			pt := int(g.Player.PotionTypes[i])
+			if pt < 0 || pt > 3 {
+				pt = 0
+			}
+			setFill(ctx, potColors[pt])
+			ctx.Set("font", UIBold)
+			ctx.Set("textAlign", "center")
+			ctx.Call("fillText", potSymbols[pt], sx+slotW/2, top)
+			ctx.Set("textAlign", "left")
+		} else {
+			setFill(ctx, "#2d3748")
+			ctx.Set("font", UIBold)
+			ctx.Set("textAlign", "center")
+			ctx.Call("fillText", "·", sx+slotW/2, top)
+			ctx.Set("textAlign", "left")
+		}
+		// Tiny slot number in corner
+		setFill(ctx, "#2d3748")
+		ctx.Set("font", "8px Inter, system-ui, sans-serif")
+		ctx.Set("textAlign", "right")
+		ctx.Call("fillText", fmt.Sprintf("%d", i+1), sx+slotW-1, top+12)
+		ctx.Set("textAlign", "left")
+	}
+
+	// Status effects + Might indicator — left-to-right cluster before ATK/DEF
+	statusX := 770.0
 	ctx.Set("textAlign", "left")
+	if g.Player.TempATKBonus > 0 {
+		setFill(ctx, ColorBurn)
+		ctx.Set("font", UIBold)
+		ctx.Call("fillText", fmt.Sprintf("⚡+%d(%dt)", g.Player.TempATKBonus, g.Player.TempATKTurns), statusX, top)
+		statusX += 70
+	}
 	if g.Player.Poison > 0 {
 		setFill(ctx, ColorPoisonUI)
 		ctx.Set("font", UIBold)
 		ctx.Call("fillText", fmt.Sprintf("PSN %d", g.Player.Poison), statusX, top)
-		statusX += 60
+		statusX += 52
 	}
 	if g.Player.PlayerBurn > 0 {
 		setFill(ctx, ColorBurn)
@@ -835,8 +999,8 @@ func (g *Game) renderDeathPanel(ctx js.Value) {
 		historyH = 18 + float64(len(runs))*14 + 8
 	}
 
-	boxW := float64(460)
-	boxH := 210 + historyH + 36
+	boxW := float64(480)
+	boxH := 240 + historyH + 36
 	bx := cx - boxW/2
 	by := float64(MapH*TileH)/2 - boxH/2
 
@@ -894,7 +1058,7 @@ func (g *Game) renderDeathPanel(ctx js.Value) {
 	setFill(ctx, ColorSeparator)
 	ctx.Call("fillRect", bx+14, by+132, boxW-28, 1)
 
-	// Stats
+	// Stats row 1
 	ctx.Set("textAlign", "center")
 	setFill(ctx, ColorUIDim)
 	ctx.Set("font", UIFont)
@@ -910,8 +1074,26 @@ func (g *Game) renderDeathPanel(ctx js.Value) {
 	setFill(ctx, ColorHPLow)
 	ctx.Call("fillText", fmt.Sprintf("%d", g.Kills), cx+110, by+162)
 
+	// Stats row 2
+	setFill(ctx, ColorUIDim)
+	ctx.Set("font", UIFont)
+	ctx.Call("fillText", "DMG OUT", cx-172, by+184)
+	ctx.Call("fillText", "DMG IN", cx-57, by+184)
+	ctx.Call("fillText", "POTIONS", cx+57, by+184)
+	ctx.Call("fillText", "STEPS", cx+172, by+184)
+
+	ctx.Set("font", "bold 14px Inter, system-ui, sans-serif")
+	setFill(ctx, ColorHPMid)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageDealt), cx-172, by+200)
+	setFill(ctx, ColorHPLow)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageTaken), cx-57, by+200)
+	setFill(ctx, ColorPotion)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.PotionsUsed), cx+57, by+200)
+	setFill(ctx, ColorUIDim)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.Steps), cx+172, by+200)
+
 	// History
-	g.renderEndHistory(ctx, bx, by+190, boxW)
+	g.renderEndHistory(ctx, bx, by+220, boxW)
 
 	// Footer
 	setFill(ctx, ColorUIDim)
@@ -936,8 +1118,8 @@ func (g *Game) renderVictoryPanel(ctx js.Value) {
 		historyH = 18 + float64(len(runs))*14 + 8
 	}
 
-	boxW := float64(460)
-	boxH := 220 + historyH + 36
+	boxW := float64(480)
+	boxH := 250 + historyH + 36
 	bx := cx - boxW/2
 	by := float64(MapH*TileH)/2 - boxH/2
 
@@ -1011,8 +1193,26 @@ func (g *Game) renderVictoryPanel(ctx js.Value) {
 	setFill(ctx, ColorHPHigh)
 	ctx.Call("fillText", fmt.Sprintf("%d", g.Kills), cx+110, by+164)
 
+	// Stats row 2
+	setFill(ctx, ColorUIDim)
+	ctx.Set("font", UIFont)
+	ctx.Call("fillText", "DMG OUT", cx-172, by+186)
+	ctx.Call("fillText", "DMG IN", cx-57, by+186)
+	ctx.Call("fillText", "POTIONS", cx+57, by+186)
+	ctx.Call("fillText", "STEPS", cx+172, by+186)
+
+	ctx.Set("font", "bold 14px Inter, system-ui, sans-serif")
+	setFill(ctx, ColorHPMid)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageDealt), cx-172, by+202)
+	setFill(ctx, ColorHPLow)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageTaken), cx-57, by+202)
+	setFill(ctx, ColorPotion)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.PotionsUsed), cx+57, by+202)
+	setFill(ctx, ColorUIDim)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.Steps), cx+172, by+202)
+
 	// History
-	g.renderEndHistory(ctx, bx, by+196, boxW)
+	g.renderEndHistory(ctx, bx, by+224, boxW)
 
 	// Footer
 	setFill(ctx, ColorUIDim)
@@ -1265,6 +1465,68 @@ func renderClassRow(ctx js.Value, def *ClassDef, keyNum int, bx, ry, boxW float6
 
 	setFill(ctx, ColorUIDim)
 	ctx.Call("fillText", def.Flavor, bx+30, ry+42)
+}
+
+func (g *Game) renderHintOverlay(ctx js.Value) {
+	cx := float64(CanvasW) / 2
+	boxW := 580.0
+	boxH := 260.0
+	bx := cx - boxW/2
+	by := float64(MapH*TileH)/2 - boxH/2
+
+	// Background
+	ctx.Set("fillStyle", "rgba(8, 8, 16, 0.94)")
+	ctx.Call("fillRect", bx, by, boxW, boxH)
+	ctx.Set("strokeStyle", ColorAccent)
+	ctx.Set("lineWidth", 1)
+	ctx.Call("strokeRect", bx+0.5, by+0.5, boxW-1, boxH-1)
+
+	ctx.Set("textBaseline", "top")
+	ctx.Set("textAlign", "center")
+	setFill(ctx, ColorAccent)
+	ctx.Set("font", "bold 14px Inter, system-ui, sans-serif")
+	ctx.Call("fillText", "CONTROLS", cx, by+12)
+
+	setFill(ctx, ColorSeparator)
+	ctx.Call("fillRect", bx+14, by+32, boxW-28, 1)
+
+	type hint struct{ key, desc string }
+	hints := []hint{
+		{"WASD / Arrows", "Move"},
+		{"Bump enemy", "Attack"},
+		{"1 / 2 / 3", "Use potion in slot"},
+		{"U", "Use potion (slot 1)"},
+		{"E", "Equip gear from chest"},
+		{".", "Wait one turn"},
+		{"1 / 2 / 3", "Event choice"},
+		{"R", "Restart after death"},
+		{"Tab", "Toggle message log"},
+	}
+
+	lx := bx + 26
+	rx := bx + 310
+	ctx.Set("textAlign", "left")
+	ctx.Set("font", UIFont)
+	for i, h := range hints {
+		col := lx
+		if i >= 5 {
+			col = rx
+		}
+		row := i
+		if i >= 5 {
+			row = i - 5
+		}
+		y := by + 46 + float64(row)*20
+		setFill(ctx, ColorAccent)
+		ctx.Call("fillText", h.key, col, y)
+		setFill(ctx, ColorUI)
+		ctx.Call("fillText", "  "+h.desc, col+90, y)
+	}
+
+	setFill(ctx, ColorUIDim)
+	ctx.Set("textAlign", "center")
+	ctx.Set("font", "11px Inter, system-ui, sans-serif")
+	ctx.Call("fillText", "[ Press any key to dismiss ]", cx, by+boxH-16)
 }
 
 func (g *Game) renderLogPanel(ctx js.Value) {

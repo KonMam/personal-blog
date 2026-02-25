@@ -166,6 +166,11 @@ type Entity struct {
 	BleedOnHit    bool
 	TempATKBonus  int
 	TempATKTurns  int
+	// Run statistics (player-only)
+	DamageDealt int
+	DamageTaken int
+	PotionsUsed int
+	Steps       int
 	// Synergy flags
 	SynergyWildfire  bool
 	SynergyFortress  bool

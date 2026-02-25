@@ -28,6 +28,14 @@ const (
 	PhaseTitle
 )
 
+// FloatingNum is a transient damage/heal number rendered over a tile.
+type FloatingNum struct {
+	X, Y  int
+	Value int     // positive = damage (red), negative = heal (green)
+	Age   float64 // 0.0–1.0; incremented each render frame
+	Color string
+}
+
 type Item struct {
 	X, Y int
 	Type PotionType
@@ -116,6 +124,14 @@ type Game struct {
 	Difficulty    int               // 0=Normal,1=Hard,2=Nightmare,3=Daily
 	Seed          int64
 	IsDaily       bool
+	// Visual effect state (advanced per render frame)
+	FloorTransition   float64 // 1.0 = full black, fades to 0
+	ShakeFrames       int     // remaining frames of screen shake
+	FloatingNums      []FloatingNum
+	BossAnnounce      string  // name of boss being announced
+	BossAnnounceTimer float64 // 1.0 → 0; shown as banner
+	// UI state
+	ShowHint bool // first-run controls overlay
 }
 
 func NewGame() *Game {
@@ -179,6 +195,7 @@ func (g *Game) newFloor() {
 	g.Player.PlayerBurn = 0
 
 	g.recomputeFOV()
+	startAmbient(g.Floor)
 }
 
 func (g *Game) applyDifficultyHP(e *Entity) {
@@ -594,9 +611,21 @@ func (g *Game) HandleInput(key string) {
 		return
 	}
 
-	// PhasePlay
+	// PhasePlay — dismiss first-run hint on any key press
+	if g.ShowHint {
+		g.ShowHint = false
+		markHintSeen()
+		return
+	}
+
 	if key == "u" || key == "U" {
-		g.usePotion()
+		g.usePotionAt(0)
+		return
+	}
+
+	// Numbered potion slots
+	if key == "1" || key == "2" || key == "3" {
+		g.usePotionAt(int(key[0] - '1'))
 		return
 	}
 
@@ -676,7 +705,7 @@ func (g *Game) handleShopInput(key string) {
 	case "ArrowUp", "w", "W", "ArrowDown", "s", "S",
 		"ArrowLeft", "a", "A", "ArrowRight", "d", "D":
 		g.Phase = PhasePlay
-	case "1", "2", "3", "4", "5":
+	case "1", "2", "3", "4", "5", "6":
 		if g.Merchant == nil {
 			return
 		}
@@ -731,18 +760,26 @@ func (g *Game) handleEventInput(key string) {
 	}
 }
 
-func (g *Game) usePotion() {
-	if g.Player.Potions <= 0 {
-		g.addMessage("No potions. [♥ 0]")
+func (g *Game) usePotionAt(idx int) {
+	if idx >= len(g.Player.PotionTypes) {
+		if g.Player.Potions <= 0 {
+			g.addMessage("No potions left.")
+		} else {
+			g.addMessage(fmt.Sprintf("No potion in slot %d.", idx+1))
+		}
 		return
 	}
+	pt := g.Player.PotionTypes[idx]
+	g.Player.PotionTypes = append(g.Player.PotionTypes[:idx], g.Player.PotionTypes[idx+1:]...)
 	g.Player.Potions--
 	playSound("potion")
-	var pt PotionType
-	if len(g.Player.PotionTypes) > 0 {
-		pt = g.Player.PotionTypes[0]
-		g.Player.PotionTypes = g.Player.PotionTypes[1:]
-	}
+	g.applyPotion(pt)
+	g.enemyTurn()
+	g.recomputeFOV()
+}
+
+func (g *Game) applyPotion(pt PotionType) {
+	g.Player.PotionsUsed++
 	switch pt {
 	case PotionHealing:
 		heal := 12
@@ -750,6 +787,7 @@ func (g *Game) usePotion() {
 			heal = g.Player.MaxHP - g.Player.HP
 		}
 		g.Player.HP += heal
+		g.spawnFloatingNum(g.Player.X, g.Player.Y, -heal, ColorPotion)
 		g.addMessage(fmt.Sprintf("Healing Potion: +%d HP. (%d left)", heal, g.Player.Potions))
 	case PotionAntidote:
 		g.Player.Poison = 0
@@ -759,6 +797,7 @@ func (g *Game) usePotion() {
 			heal = g.Player.MaxHP - g.Player.HP
 		}
 		g.Player.HP += heal
+		g.spawnFloatingNum(g.Player.X, g.Player.Y, -heal, ColorPotion)
 		g.addMessage(fmt.Sprintf("Antidote: cleared effects, +%d HP. (%d left)", heal, g.Player.Potions))
 	case PotionMight:
 		g.Player.TempATKBonus = 5
@@ -770,10 +809,9 @@ func (g *Game) usePotion() {
 			heal = g.Player.MaxHP - g.Player.HP
 		}
 		g.Player.HP += heal
+		g.spawnFloatingNum(g.Player.X, g.Player.Y, -heal, ColorPotion)
 		g.addMessage(fmt.Sprintf("Greater Potion: +%d HP. (%d left)", heal, g.Player.Potions))
 	}
-	g.enemyTurn()
-	g.recomputeFOV()
 }
 
 func (g *Game) restart() {
@@ -801,6 +839,12 @@ func (g *Game) restart() {
 	g.Seed = 0
 	g.IsDaily = false
 	g.ClassWins = loadClassWins()
+	g.FloorTransition = 0
+	g.ShakeFrames = 0
+	g.FloatingNums = nil
+	g.BossAnnounce = ""
+	g.BossAnnounceTimer = 0
+	g.ShowHint = false
 	// newFloor() is called by selectClass() once a class is chosen
 }
 
@@ -896,6 +940,14 @@ func (g *Game) selectClass(idx int) {
 	g.ClassName = def.Name
 	g.Phase = PhasePlay
 	g.addMessage(fmt.Sprintf("You descend as the %s.", def.Name))
+	if !hintSeen() {
+		g.ShowHint = true
+	}
+}
+
+// spawnFloatingNum adds a transient damage/heal number over tile (x,y).
+func (g *Game) spawnFloatingNum(x, y, value int, color string) {
+	g.FloatingNums = append(g.FloatingNums, FloatingNum{X: x, Y: y, Value: value, Color: color})
 }
 
 func (g *Game) movePlayer(dx, dy int) {
@@ -932,6 +984,7 @@ func (g *Game) movePlayer(dx, dy int) {
 
 	// Move
 	g.Player.X, g.Player.Y = nx, ny
+	g.Player.Steps++
 
 	// Static spike trap
 	for i, t := range g.Traps {
@@ -1087,6 +1140,7 @@ func (g *Game) movePlayer(dx, dy int) {
 		if g.Floor < MaxFloors {
 			g.Floor++
 			playSound("stairs")
+			g.FloorTransition = 1.0
 			g.newFloor()
 			return
 		}
@@ -1131,6 +1185,8 @@ func (g *Game) applyHitToEnemy(enemy *Entity, isFirst bool) {
 		suffix += " [Might!]"
 	}
 	enemy.HP -= dmg
+	g.Player.DamageDealt += dmg
+	g.spawnFloatingNum(enemy.X, enemy.Y, dmg, "#FC8181")
 
 	// Lich phase-2 trigger (on HP reduction, before kill check)
 	if enemy.Type == EntityLich && !enemy.BossPhase2 && enemy.HP*10 < enemy.MaxHP*3 {
@@ -1276,6 +1332,11 @@ func (g *Game) doEnemyAttack(e *Entity, isRanged bool) bool {
 	finalDmg += g.Player.CursePenalty
 	playSound("hurt")
 	g.Player.HP -= finalDmg
+	g.Player.DamageTaken += finalDmg
+	g.spawnFloatingNum(g.Player.X, g.Player.Y, finalDmg, "#E53E3E")
+	if finalDmg >= 8 {
+		g.ShakeFrames = 4
+	}
 	g.LastDamagedAt = time.Now()
 	if g.Player.HP <= 0 {
 		g.Player.HP = 0
@@ -1620,12 +1681,18 @@ func (g *Game) checkFirstSightings() {
 				e.Announced = true
 			case EntityGoblinKing:
 				g.addMessage("The Goblin King roars!")
+				g.BossAnnounce = "The Goblin King"
+				g.BossAnnounceTimer = 1.0
 				e.Announced = true
 			case EntityOrcWarchief:
 				g.addMessage("The Orc Warchief raises his axe!")
+				g.BossAnnounce = "Orc Warchief"
+				g.BossAnnounceTimer = 1.0
 				e.Announced = true
 			case EntityLich:
 				g.addMessage("The Lich awakens!")
+				g.BossAnnounce = "The Lich"
+				g.BossAnnounceTimer = 1.0
 				e.Announced = true
 			}
 		}
