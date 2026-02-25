@@ -64,6 +64,8 @@ type Game struct {
 	PendingGear *Gear
 	Turns       int
 	Kills       int
+	ClassName   string
+	RunHistory  []RunRecord
 	UsedGear    map[*Gear]bool     // tracks gear placed in the world this run
 	UsedEvents  map[*EventDef]bool // tracks events spawned this run
 }
@@ -139,12 +141,15 @@ func (g *Game) spawnEnemies(rooms []Room) {
 			case 1:
 				e = NewGoblin(x, y)
 			case 2:
-				roll := rand.Intn(4)
+				// archer 17%, goblin 17%, venomancer 16%, orc 50%
+				roll := rand.Intn(6)
 				switch roll {
 				case 0:
 					e = NewArcher(x, y)
 				case 1:
 					e = NewGoblin(x, y)
+				case 2:
+					e = NewVenomancer(x, y)
 				default:
 					e = NewOrc(x, y)
 				}
@@ -152,12 +157,17 @@ func (g *Game) spawnEnemies(rooms []Room) {
 				if i == len(rooms)-1 && n == 0 {
 					e = NewTroll(x, y)
 				} else {
-					roll := rand.Intn(5)
+					// archer/goblin/venomancer/guard 12.5% each, orc 50%
+					roll := rand.Intn(8)
 					switch roll {
 					case 0:
 						e = NewArcher(x, y)
 					case 1:
 						e = NewGoblin(x, y)
+					case 2:
+						e = NewVenomancer(x, y)
+					case 3:
+						e = NewGuard(x, y)
 					default:
 						e = NewOrc(x, y)
 					}
@@ -486,6 +496,7 @@ func (g *Game) restart() {
 	g.ActiveEvent = nil
 	g.Turns = 0
 	g.Kills = 0
+	g.ClassName = ""
 	g.UsedGear = make(map[*Gear]bool)
 	g.UsedEvents = make(map[*EventDef]bool)
 	// newFloor() is called by selectClass() once a class is chosen
@@ -519,6 +530,7 @@ func (g *Game) selectClass(idx int) {
 	// Re-run FOV in case FOVRadius changed
 	ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
 
+	g.ClassName = def.Name
 	g.Phase = PhasePlay
 	g.addMessage(fmt.Sprintf("You descend as the %s.", def.Name))
 }
@@ -603,6 +615,7 @@ func (g *Game) movePlayer(dx, dy int) {
 			return
 		}
 		g.Phase = PhaseVictory
+		g.recordRun("Victory")
 		g.addMessage("You escaped the dungeon. Victory!")
 		return
 	}
@@ -621,15 +634,18 @@ func (g *Game) movePlayer(dx, dy int) {
 	ComputeFOV(g.Tiles, g.Player.X, g.Player.Y, g.Player.FOVRadius, MapW, MapH)
 }
 
-// doPlayerAttack handles a player bump attack with all combat mechanics.
-func (g *Game) doPlayerAttack(enemy *Entity) {
-	// First hit
+// applyHitToEnemy resolves one hit with all player combat mechanics.
+// Synergy activations are appended to the hit message.
+func (g *Game) applyHitToEnemy(enemy *Entity, isFirst bool) {
 	dmg := g.Player.CalcDamage()
+	suffix := ""
 	if g.Player.BerserkerMod > 0 && g.Player.HP*10 < g.Player.MaxHP*4 {
 		dmg += g.Player.BerserkerMod
+		suffix += " [Rage!]"
 	}
 	if g.Player.BurnBonus > 0 && enemy.Burn > 0 {
 		dmg += g.Player.BurnBonus
+		suffix += " [Pyro!]"
 	}
 	enemy.HP -= dmg
 	if enemy.HP <= 0 {
@@ -640,43 +656,45 @@ func (g *Game) doPlayerAttack(enemy *Entity) {
 		g.Player.Gold += gold
 		if g.Player.OnKillShield > 0 {
 			g.Player.ShieldCharges += g.Player.OnKillShield
+			suffix += fmt.Sprintf(" [+%dsh]", g.Player.OnKillShield)
 		}
-		g.addMessage(fmt.Sprintf("You slay the %s! +%dg", enemy.Name, gold))
+		if isFirst {
+			g.addMessage(fmt.Sprintf("You slay the %s! +%dg%s", enemy.Name, gold, suffix))
+		} else {
+			g.addMessage(fmt.Sprintf("Second strike slays the %s! +%dg%s", enemy.Name, gold, suffix))
+		}
 	} else {
-		g.addMessage(fmt.Sprintf("You hit the %s for %d damage.", enemy.Name, dmg))
+		if isFirst {
+			g.addMessage(fmt.Sprintf("You hit the %s for %d damage.%s", enemy.Name, dmg, suffix))
+		} else {
+			g.addMessage(fmt.Sprintf("You strike again for %d damage.%s", dmg, suffix))
+		}
 	}
 	if g.Player.Lifesteal > 0 {
 		g.Player.HP = min(g.Player.MaxHP, g.Player.HP+g.Player.Lifesteal)
 	}
-	if g.Player.BurnOnHit && enemy.Alive {
+	if isFirst && g.Player.BurnOnHit && enemy.Alive {
 		enemy.Burn = 3
 	}
+}
 
-	// Double strike (second hit)
+// doPlayerAttack handles a player bump attack with all combat mechanics.
+func (g *Game) doPlayerAttack(enemy *Entity) {
+	// First hit — enemy shield absorbs entirely
+	if enemy.ShieldCharges > 0 {
+		enemy.ShieldCharges--
+		g.addMessage(fmt.Sprintf("The %s's shield absorbs your strike! (%d left)", enemy.Name, enemy.ShieldCharges))
+	} else {
+		g.applyHitToEnemy(enemy, true)
+	}
+
+	// Double strike
 	if g.Player.DoubleStrike && enemy.Alive {
-		dmg2 := g.Player.CalcDamage()
-		if g.Player.BerserkerMod > 0 && g.Player.HP*10 < g.Player.MaxHP*4 {
-			dmg2 += g.Player.BerserkerMod
-		}
-		if g.Player.BurnBonus > 0 && enemy.Burn > 0 {
-			dmg2 += g.Player.BurnBonus
-		}
-		enemy.HP -= dmg2
-		if enemy.HP <= 0 {
-			enemy.HP = 0
-			enemy.Alive = false
-			g.Kills++
-			gold := enemy.goldDrop()
-			g.Player.Gold += gold
-			if g.Player.OnKillShield > 0 {
-				g.Player.ShieldCharges += g.Player.OnKillShield
-			}
-			g.addMessage(fmt.Sprintf("Second strike slays the %s! +%dg", enemy.Name, gold))
+		if enemy.ShieldCharges > 0 {
+			enemy.ShieldCharges--
+			g.addMessage(fmt.Sprintf("Your second strike blocked! (%d shields left)", enemy.ShieldCharges))
 		} else {
-			g.addMessage(fmt.Sprintf("You strike again for %d damage.", dmg2))
-		}
-		if g.Player.Lifesteal > 0 {
-			g.Player.HP = min(g.Player.MaxHP, g.Player.HP+g.Player.Lifesteal)
+			g.applyHitToEnemy(enemy, false)
 		}
 	}
 }
@@ -708,6 +726,7 @@ func (g *Game) doEnemyAttack(e *Entity, isRanged bool) bool {
 		g.Player.HP = 0
 		g.Player.Alive = false
 		g.Phase = PhaseGameOver
+		g.recordRun("Died")
 		g.addMessage("You died. Press R to restart.")
 		return true
 	}
@@ -732,6 +751,15 @@ func (g *Game) doEnemyAttack(e *Entity, isRanged bool) bool {
 			g.addMessage(fmt.Sprintf("Thorns deal %d to the %s.", g.Player.Thorns, e.Name))
 		}
 	}
+
+	// Venomancer poisons on melee hit
+	if e.Type == EntityVenomancer && !isRanged {
+		g.Player.Poison += 2
+		if g.Player.Poison > 8 {
+			g.Player.Poison = 8
+		}
+		g.addMessage(fmt.Sprintf("Venom seeps in! Poison: %d turns.", g.Player.Poison))
+	}
 	return false
 }
 
@@ -746,6 +774,7 @@ func (g *Game) enemyTurn() {
 			g.Player.HP = 0
 			g.Player.Alive = false
 			g.Phase = PhaseGameOver
+			g.recordRun("Died")
 			g.addMessage("Poison kills you. Press R to restart.")
 			return
 		}

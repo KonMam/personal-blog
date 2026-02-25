@@ -48,6 +48,8 @@ const (
 	ColorShield         = "#9F7AEA"
 	ColorPoisonUI       = "#68D391"
 	ColorEvent          = "#6C8CFF"
+	ColorVenomancer     = "#9AE6B4"
+	ColorGuard          = "#90CDF4"
 
 	GameFont = "bold 15px 'Courier New', 'Lucida Console', monospace"
 	UIFont   = "12px Inter, system-ui, sans-serif"
@@ -113,7 +115,7 @@ func (g *Game) Render(ctx js.Value) {
 	// Overlays
 	switch g.Phase {
 	case PhaseGameOver:
-		g.renderOverlay(ctx, "YOU DIED", "Press R to restart", ColorHPLow)
+		g.renderDeathPanel(ctx)
 	case PhaseVictory:
 		g.renderVictoryPanel(ctx)
 	case PhaseChest:
@@ -557,19 +559,171 @@ func (g *Game) renderEventPanel(ctx js.Value) {
 	}
 }
 
-func (g *Game) renderVictoryPanel(ctx js.Value) {
+// renderEndHistory draws the run history section starting at (bx, startY).
+// Returns the Y coordinate after the last drawn element.
+func (g *Game) renderEndHistory(ctx js.Value, bx, startY, boxW float64) float64 {
+	runs := g.RunHistory
+	if len(runs) > 5 {
+		runs = runs[:5]
+	}
+	if len(runs) == 0 {
+		return startY
+	}
+
+	// Separator
+	setFill(ctx, ColorSeparator)
+	ctx.Call("fillRect", bx+14, startY, boxW-28, 1)
+
+	y := startY + 14
+	setFill(ctx, ColorUIDim)
+	ctx.Set("font", UIBold)
+	ctx.Set("textAlign", "left")
+	ctx.Call("fillText", "RECENT RUNS", bx+20, y)
+	y += 16
+
+	for i, r := range runs {
+		var color string
+		if i == 0 {
+			if r.Outcome == "Victory" {
+				color = ColorHPHigh
+			} else {
+				color = ColorHPLow
+			}
+		} else {
+			color = ColorMsgOld
+		}
+		setFill(ctx, color)
+		ctx.Set("font", UIFont)
+		ctx.Call("fillText",
+			fmt.Sprintf("%s — %s  F%d  %dK  %dg",
+				r.Outcome, r.Class, r.Floor, r.Kills, r.Gold),
+			bx+20, y)
+		y += 14
+	}
+	return y + 4
+}
+
+func (g *Game) renderDeathPanel(ctx js.Value) {
 	cx := float64(CanvasW) / 2
-	cy := float64(MapH*TileH) / 2
 
 	// Dim the map
 	ctx.Set("fillStyle", "rgba(10, 10, 20, 0.88)")
 	ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
 
-	// Panel box
-	boxW := float64(380)
-	boxH := float64(170)
+	runs := g.RunHistory
+	if len(runs) > 5 {
+		runs = runs[:5]
+	}
+	historyH := 0.0
+	if len(runs) > 0 {
+		historyH = 18 + float64(len(runs))*14 + 8
+	}
+
+	boxW := float64(460)
+	boxH := 210 + historyH + 36
 	bx := cx - boxW/2
-	by := cy - boxH/2
+	by := float64(MapH*TileH)/2 - boxH/2
+
+	setFill(ctx, "#10101a")
+	ctx.Call("fillRect", bx, by, boxW, boxH)
+	ctx.Set("strokeStyle", ColorHPLow)
+	ctx.Set("lineWidth", 1)
+	ctx.Call("strokeRect", bx+0.5, by+0.5, boxW-1, boxH-1)
+
+	ctx.Set("textBaseline", "top")
+	ctx.Set("textAlign", "center")
+
+	// Title
+	setFill(ctx, ColorHPLow)
+	ctx.Set("font", "bold 26px Inter, system-ui, sans-serif")
+	ctx.Call("fillText", "YOU DIED", cx, by+14)
+
+	// Class + floor
+	className := g.ClassName
+	if className == "" {
+		className = "Unknown"
+	}
+	classColor := ColorUIDim
+	for _, def := range classDefs {
+		if def.Name == className {
+			classColor = def.Color
+			break
+		}
+	}
+	setFill(ctx, classColor)
+	ctx.Set("font", UIBold)
+	ctx.Call("fillText", fmt.Sprintf("%s · Floor %d", className, g.Floor), cx, by+50)
+
+	// Separator
+	setFill(ctx, ColorSeparator)
+	ctx.Call("fillRect", bx+14, by+68, boxW-28, 1)
+
+	// Gear (3 lines)
+	ctx.Set("textAlign", "left")
+	ctx.Set("font", UIFont)
+	gearLabels := []string{"†", "◈", "◇"}
+	for i, slot := range []GearSlot{SlotWeapon, SlotArmor, SlotTrinket} {
+		gy := by + 80 + float64(i)*16
+		gear := g.Player.Equipped[slot]
+		if gear != nil {
+			setFill(ctx, gear.Color)
+			ctx.Call("fillText", fmt.Sprintf("%s %s", string(gear.Char), gear.Name), bx+20, gy)
+		} else {
+			setFill(ctx, ColorUIDim)
+			ctx.Call("fillText", gearLabels[i]+" (empty)", bx+20, gy)
+		}
+	}
+
+	// Separator
+	setFill(ctx, ColorSeparator)
+	ctx.Call("fillRect", bx+14, by+132, boxW-28, 1)
+
+	// Stats
+	ctx.Set("textAlign", "center")
+	setFill(ctx, ColorUIDim)
+	ctx.Set("font", UIFont)
+	ctx.Call("fillText", "TURNS", cx-110, by+146)
+	ctx.Call("fillText", "GOLD", cx, by+146)
+	ctx.Call("fillText", "KILLS", cx+110, by+146)
+
+	ctx.Set("font", "bold 16px Inter, system-ui, sans-serif")
+	setFill(ctx, ColorMsgNew)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Turns), cx-110, by+162)
+	setFill(ctx, ColorGold)
+	ctx.Call("fillText", fmt.Sprintf("%dg", g.Player.Gold), cx, by+162)
+	setFill(ctx, ColorHPLow)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Kills), cx+110, by+162)
+
+	// History
+	g.renderEndHistory(ctx, bx, by+190, boxW)
+
+	// Footer
+	setFill(ctx, ColorUIDim)
+	ctx.Set("font", UIFont)
+	ctx.Set("textAlign", "center")
+	ctx.Call("fillText", "[R] Play again", cx, by+boxH-18)
+}
+
+func (g *Game) renderVictoryPanel(ctx js.Value) {
+	cx := float64(CanvasW) / 2
+
+	// Dim the map
+	ctx.Set("fillStyle", "rgba(10, 10, 20, 0.88)")
+	ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
+
+	runs := g.RunHistory
+	if len(runs) > 5 {
+		runs = runs[:5]
+	}
+	historyH := 0.0
+	if len(runs) > 0 {
+		historyH = 18 + float64(len(runs))*14 + 8
+	}
+
+	boxW := float64(460)
+	boxH := 220 + historyH + 36
+	bx := cx - boxW/2
+	by := float64(MapH*TileH)/2 - boxH/2
 
 	setFill(ctx, "#10101a")
 	ctx.Call("fillRect", bx, by, boxW, boxH)
@@ -577,39 +731,78 @@ func (g *Game) renderVictoryPanel(ctx js.Value) {
 	ctx.Set("lineWidth", 1)
 	ctx.Call("strokeRect", bx+0.5, by+0.5, boxW-1, boxH-1)
 
-	ctx.Set("textAlign", "center")
 	ctx.Set("textBaseline", "top")
+	ctx.Set("textAlign", "center")
 
 	// Title
 	setFill(ctx, ColorAccent)
 	ctx.Set("font", "bold 26px Inter, system-ui, sans-serif")
 	ctx.Call("fillText", "VICTORY", cx, by+14)
 
-	// Subtitle
-	setFill(ctx, ColorUI)
-	ctx.Set("font", UIFont)
-	ctx.Call("fillText", "You escaped the dungeon!", cx, by+50)
+	// Class
+	className := g.ClassName
+	if className == "" {
+		className = "Unknown"
+	}
+	classColor := ColorUIDim
+	for _, def := range classDefs {
+		if def.Name == className {
+			classColor = def.Color
+			break
+		}
+	}
+	setFill(ctx, classColor)
+	ctx.Set("font", UIBold)
+	ctx.Call("fillText", fmt.Sprintf("%s · You escaped the dungeon!", className), cx, by+50)
 
-	// Stat labels
+	// Separator
+	setFill(ctx, ColorSeparator)
+	ctx.Call("fillRect", bx+14, by+68, boxW-28, 1)
+
+	// Gear (3 lines)
+	ctx.Set("textAlign", "left")
+	ctx.Set("font", UIFont)
+	gearLabels := []string{"†", "◈", "◇"}
+	for i, slot := range []GearSlot{SlotWeapon, SlotArmor, SlotTrinket} {
+		gy := by + 80 + float64(i)*16
+		gear := g.Player.Equipped[slot]
+		if gear != nil {
+			setFill(ctx, gear.Color)
+			ctx.Call("fillText", fmt.Sprintf("%s %s", string(gear.Char), gear.Name), bx+20, gy)
+		} else {
+			setFill(ctx, ColorUIDim)
+			ctx.Call("fillText", gearLabels[i]+" (empty)", bx+20, gy)
+		}
+	}
+
+	// Separator
+	setFill(ctx, ColorSeparator)
+	ctx.Call("fillRect", bx+14, by+132, boxW-28, 1)
+
+	// Stats
+	ctx.Set("textAlign", "center")
 	setFill(ctx, ColorUIDim)
 	ctx.Set("font", UIFont)
-	ctx.Call("fillText", "TURNS", cx-110, by+76)
-	ctx.Call("fillText", "GOLD", cx, by+76)
-	ctx.Call("fillText", "KILLS", cx+110, by+76)
+	ctx.Call("fillText", "TURNS", cx-110, by+146)
+	ctx.Call("fillText", "GOLD", cx, by+146)
+	ctx.Call("fillText", "KILLS", cx+110, by+146)
 
-	// Stat values
 	ctx.Set("font", "bold 18px Inter, system-ui, sans-serif")
 	setFill(ctx, ColorMsgNew)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Turns), cx-110, by+94)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Turns), cx-110, by+164)
 	setFill(ctx, ColorGold)
-	ctx.Call("fillText", fmt.Sprintf("%dg", g.Player.Gold), cx, by+94)
-	setFill(ctx, ColorHPLow)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Kills), cx+110, by+94)
+	ctx.Call("fillText", fmt.Sprintf("%dg", g.Player.Gold), cx, by+164)
+	setFill(ctx, ColorHPHigh)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Kills), cx+110, by+164)
+
+	// History
+	g.renderEndHistory(ctx, bx, by+196, boxW)
 
 	// Footer
 	setFill(ctx, ColorUIDim)
 	ctx.Set("font", UIFont)
-	ctx.Call("fillText", "[R] Play again", cx, by+boxH-22)
+	ctx.Set("textAlign", "center")
+	ctx.Call("fillText", "[R] Play again", cx, by+boxH-18)
 }
 
 func (g *Game) renderClassSelect(ctx js.Value) {

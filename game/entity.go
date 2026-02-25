@@ -12,6 +12,8 @@ const (
 	EntityOrc
 	EntityTroll
 	EntityArcher
+	EntityVenomancer
+	EntityGuard
 )
 
 type GearSlot int
@@ -220,6 +222,37 @@ func NewArcher(x, y int) *Entity {
 	}
 }
 
+func NewVenomancer(x, y int) *Entity {
+	return &Entity{
+		X:     x,
+		Y:     y,
+		Char:  'v',
+		Color: ColorVenomancer,
+		Name:  "Venomancer",
+		HP:    12,
+		MaxHP: 12,
+		Atk:   3,
+		Type:  EntityVenomancer,
+		Alive: true,
+	}
+}
+
+func NewGuard(x, y int) *Entity {
+	return &Entity{
+		X:             x,
+		Y:             y,
+		Char:          'G',
+		Color:         ColorGuard,
+		Name:          "Guard",
+		HP:            22,
+		MaxHP:         22,
+		Atk:           5,
+		Type:          EntityGuard,
+		Alive:         true,
+		ShieldCharges: 3,
+	}
+}
+
 // RecalcStats recomputes derived stats from base values + equipped gear.
 func (p *Entity) RecalcStats() {
 	atk := p.BaseAtk
@@ -327,6 +360,10 @@ func (e *Entity) goldDrop() int {
 		return 20 + rand.Intn(11) // 20-30
 	case EntityArcher:
 		return 4 + rand.Intn(5) // 4-8
+	case EntityVenomancer:
+		return 5 + rand.Intn(4) // 5-8
+	case EntityGuard:
+		return 15 + rand.Intn(8) // 15-22
 	}
 	return 0
 }
