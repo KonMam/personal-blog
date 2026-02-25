@@ -50,6 +50,37 @@ type Merchant struct {
 	Stock []*ShopItem
 }
 
+type Trap struct {
+	X, Y int
+}
+
+type Shooter struct {
+	X, Y   int
+	DX, DY int // direction of fire
+	Timer  int // turns until next shot
+	Period int // reset value
+}
+
+type MovingTrap struct {
+	X, Y   int
+	DX, DY int // current movement direction
+}
+
+type SacrificeAltar struct {
+	X, Y       int
+	RewardGear *Gear
+	Used       bool
+}
+
+type ChallengeRoom struct {
+	Bounds   Room
+	Triggered bool
+	Cleared  bool
+	Enemies  []*Entity
+	RewardX  int
+	RewardY  int
+}
+
 type Game struct {
 	Tiles       [][]Tile
 	Player      *Entity
@@ -59,6 +90,11 @@ type Game struct {
 	Merchant    *Merchant
 	Events      []*EventSpawn
 	ActiveEvent *ActiveEvent
+	Traps          []*Trap
+	MovingTraps    []*MovingTrap
+	Shooters       []*Shooter
+	SacrificeAltar *SacrificeAltar
+	ChallengeRoom  *ChallengeRoom
 	Phase       GamePhase
 	Floor       int
 	Messages    []string
@@ -91,6 +127,11 @@ func (g *Game) newFloor() {
 	g.Merchant = nil
 	g.Events = nil
 	g.ActiveEvent = nil
+	g.Traps = nil
+	g.MovingTraps = nil
+	g.Shooters = nil
+	g.SacrificeAltar = nil
+	g.ChallengeRoom = nil
 
 	g.addMessage(fmt.Sprintf("You descend to floor %d.", g.Floor))
 
@@ -108,6 +149,7 @@ func (g *Game) newFloor() {
 	if g.Floor >= 2 {
 		g.spawnMerchant(rooms)
 	}
+	g.spawnSpecialRoom(rooms) // must run before spawnChests so occupied() sees its chest/altar
 	g.spawnChests(rooms)
 	g.spawnEvents(rooms)
 	g.spawnItems(rooms)
@@ -207,7 +249,7 @@ func (g *Game) spawnItems(rooms []Room) {
 	}
 }
 
-// occupied returns true if a chest, merchant, event, enemy, or existing item is at (x, y).
+// occupied returns true if any game object occupies (x, y).
 func (g *Game) occupied(x, y int) bool {
 	for _, chest := range g.Chests {
 		if chest.X == x && chest.Y == y {
@@ -227,6 +269,25 @@ func (g *Game) occupied(x, y int) bool {
 	}
 	for _, item := range g.Items {
 		if item.X == x && item.Y == y {
+			return true
+		}
+	}
+	for _, t := range g.Traps {
+		if t.X == x && t.Y == y {
+			return true
+		}
+	}
+	for _, mt := range g.MovingTraps {
+		if mt.X == x && mt.Y == y {
+			return true
+		}
+	}
+	if sa := g.SacrificeAltar; sa != nil && !sa.Used && sa.X == x && sa.Y == y {
+		return true
+	}
+	if cr := g.ChallengeRoom; cr != nil && !cr.Cleared {
+		cx, cy := cr.Bounds.Center()
+		if cx == x && cy == y {
 			return true
 		}
 	}
@@ -536,6 +597,11 @@ func (g *Game) restart() {
 	g.UsedEvents = make(map[*EventDef]bool)
 	g.LastDamagedAt = time.Time{}
 	g.ShowLog = false
+	g.Traps = nil
+	g.MovingTraps = nil
+	g.Shooters = nil
+	g.SacrificeAltar = nil
+	g.ChallengeRoom = nil
 	// newFloor() is called by selectClass() once a class is chosen
 }
 
@@ -606,6 +672,79 @@ func (g *Game) movePlayer(dx, dy int) {
 
 	// Move
 	g.Player.X, g.Player.Y = nx, ny
+
+	// Static spike trap
+	for i, t := range g.Traps {
+		if t.X == nx && t.Y == ny {
+			g.Traps = append(g.Traps[:i], g.Traps[i+1:]...)
+			dmg := 6 + rand.Intn(5) // 6-10
+			g.Player.HP -= dmg
+			if g.Player.HP < 0 {
+				g.Player.HP = 0
+			}
+			g.addMessage(fmt.Sprintf("Spike trap! -%d HP.", dmg))
+			g.LastDamagedAt = time.Now()
+			if g.Player.HP <= 0 {
+				g.Player.Alive = false
+				g.recordRun("Died")
+				g.Phase = PhaseGameOver
+				g.enemyTurn()
+				g.recomputeFOV()
+				return
+			}
+			break
+		}
+	}
+
+	// Sacrifice altar
+	if sa := g.SacrificeAltar; sa != nil && !sa.Used && nx == sa.X && ny == sa.Y {
+		sa.Used = true
+		cost := 8 + rand.Intn(5) // 8-12
+		g.Player.HP -= cost
+		g.LastDamagedAt = time.Now()
+		if g.Player.HP <= 0 {
+			g.Player.HP = 0
+			g.Player.Alive = false
+			g.recordRun("Died")
+			g.Phase = PhaseGameOver
+			g.enemyTurn()
+			g.recomputeFOV()
+			return
+		}
+		gold := 20 + rand.Intn(16) // 20-35g
+		g.Player.Gold += gold
+		if sa.RewardGear != nil {
+			g.addMessage(fmt.Sprintf("You offer blood at the altar. -%d HP. Found %s! +%dg.", cost, sa.RewardGear.Name, gold))
+			g.PendingGear = sa.RewardGear
+			g.Phase = PhaseChest
+		} else {
+			g.addMessage(fmt.Sprintf("You offer blood at the altar. -%d HP. +%dg.", cost, gold))
+		}
+		g.enemyTurn()
+		g.recomputeFOV()
+		return
+	}
+
+	// Challenge room trigger
+	if cr := g.ChallengeRoom; cr != nil && !cr.Triggered {
+		if inRoom(nx, ny, cr.Bounds) {
+			cr.Triggered = true
+			g.addMessage("You sense an ambush!")
+			count := 2 + rand.Intn(2) // 2-3 enemies
+			for i := 0; i < count; i++ {
+				for attempt := 0; attempt < 20; attempt++ {
+					ex := cr.Bounds.X + 1 + rand.Intn(cr.Bounds.W-2)
+					ey := cr.Bounds.Y + 1 + rand.Intn(cr.Bounds.H-2)
+					if g.enemyAt(ex, ey) == nil && (ex != nx || ey != ny) {
+						e := g.spawnEnemyForFloor(ex, ey)
+						cr.Enemies = append(cr.Enemies, e)
+						g.Enemies = append(g.Enemies, e)
+						break
+					}
+				}
+			}
+		}
+	}
 
 	// Walk into merchant
 	if g.Merchant != nil && g.Merchant.X == nx && g.Merchant.Y == ny {
@@ -871,6 +1010,9 @@ func (g *Game) enemyTurn() {
 		g.moveEnemy(e)
 	}
 	g.cleanupDeadEnemies()
+	g.tickShooters()
+	g.tickMovingTraps()
+	g.checkChallengeRooms()
 }
 
 func (g *Game) cleanupDeadEnemies() {
@@ -999,6 +1141,266 @@ func (g *Game) checkFirstSightings() {
 			}
 		}
 	}
+}
+
+// inRoom returns true if (x,y) is within a room's floor interior.
+func inRoom(x, y int, r Room) bool {
+	return x >= r.X && x < r.X+r.W && y >= r.Y && y < r.Y+r.H
+}
+
+// pickAnyGear picks a random unused gear item from all regular pools.
+func (g *Game) pickAnyGear() *Gear {
+	all := append(append(append([]*Gear{}, GearWeapons...), GearArmors...), GearTrinkets...)
+	var available []*Gear
+	for _, item := range all {
+		if !g.UsedGear[item] {
+			available = append(available, item)
+		}
+	}
+	if len(available) == 0 {
+		return nil
+	}
+	chosen := available[rand.Intn(len(available))]
+	g.UsedGear[chosen] = true
+	return chosen
+}
+
+// spawnEnemyForFloor spawns a floor-appropriate enemy at (x,y).
+func (g *Game) spawnEnemyForFloor(x, y int) *Entity {
+	switch g.Floor {
+	case 1:
+		if rand.Intn(4) == 0 {
+			return NewArcher(x, y)
+		}
+		return NewGoblin(x, y)
+	case 2:
+		switch rand.Intn(4) {
+		case 0:
+			return NewArcher(x, y)
+		case 1:
+			return NewVenomancer(x, y)
+		default:
+			return NewOrc(x, y)
+		}
+	default: // floor 3
+		switch rand.Intn(4) {
+		case 0:
+			return NewGuard(x, y)
+		case 1:
+			return NewArcher(x, y)
+		default:
+			return NewOrc(x, y)
+		}
+	}
+}
+
+// spawnSpecialRoom picks one of the four special room types and sets it up.
+func (g *Game) spawnSpecialRoom(rooms []Room) {
+	if len(rooms) < 3 {
+		return
+	}
+	roomType := rand.Intn(4)
+	for attempt := 0; attempt < 30; attempt++ {
+		idx := 1 + rand.Intn(len(rooms)-2)
+		room := rooms[idx]
+		cx, cy := room.Center()
+		if g.occupied(cx, cy) {
+			continue
+		}
+		switch roomType {
+		case 0:
+			g.spawnSacrificeRoom(room)
+		case 1:
+			g.spawnChallengeRoom(room)
+		case 2:
+			g.spawnShooterRoom(room)
+		case 3:
+			g.spawnMovingTrapRoom(room)
+		}
+		return
+	}
+}
+
+// spawnSacrificeRoom: altar at center surrounded by static spike traps.
+// Player steps on altar, pays HP, and receives a gear reward.
+func (g *Game) spawnSacrificeRoom(room Room) {
+	cx, cy := room.Center()
+	gear := g.pickAnyGear()
+	g.SacrificeAltar = &SacrificeAltar{X: cx, Y: cy, RewardGear: gear}
+
+	// Surround altar with 2-3 spike traps
+	offsets := [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {1, 1}, {-1, 1}, {1, -1}}
+	rand.Shuffle(len(offsets), func(i, j int) { offsets[i], offsets[j] = offsets[j], offsets[i] })
+	count := 2 + rand.Intn(2)
+	placed := 0
+	for _, off := range offsets {
+		if placed >= count {
+			break
+		}
+		tx, ty := cx+off[0], cy+off[1]
+		if ty >= 0 && ty < MapH && tx >= 0 && tx < MapW &&
+			g.Tiles[ty][tx].Type == TileFloor && !g.occupied(tx, ty) {
+			g.Traps = append(g.Traps, &Trap{X: tx, Y: ty})
+			placed++
+		}
+	}
+}
+
+// spawnChallengeRoom: enemies spawn on entry; clear them for a chest.
+func (g *Game) spawnChallengeRoom(room Room) {
+	cx, cy := room.Center()
+	g.ChallengeRoom = &ChallengeRoom{
+		Bounds:  room,
+		RewardX: cx,
+		RewardY: cy,
+	}
+}
+
+// spawnShooterRoom: wall-mounted launchers fire periodically; chest in center.
+func (g *Game) spawnShooterRoom(room Room) {
+	cx, cy := room.Center()
+	gear := g.pickAnyGear()
+	g.Chests = append(g.Chests, &Chest{X: cx, Y: cy, Gold: 15 + rand.Intn(11), Gear: gear})
+
+	type candidate struct{ x, y, dx, dy int }
+	candidates := []candidate{
+		{room.X - 1, cy, 1, 0},         // left wall → shoots right
+		{room.X + room.W, cy, -1, 0},   // right wall → shoots left
+		{cx, room.Y - 1, 0, 1},         // top wall → shoots down
+		{cx, room.Y + room.H, 0, -1},   // bottom wall → shoots up
+	}
+	rand.Shuffle(len(candidates), func(i, j int) { candidates[i], candidates[j] = candidates[j], candidates[i] })
+
+	count := 1 + rand.Intn(2) // 1-2 shooters
+	placed := 0
+	for _, c := range candidates {
+		if placed >= count {
+			break
+		}
+		if c.x >= 0 && c.y >= 0 && c.x < MapW && c.y < MapH && g.Tiles[c.y][c.x].Type == TileWall {
+			period := 3 + rand.Intn(2) // fire every 3-4 turns
+			g.Shooters = append(g.Shooters, &Shooter{
+				X: c.x, Y: c.y, DX: c.dx, DY: c.dy,
+				Timer: period, Period: period,
+			})
+			placed++
+		}
+	}
+}
+
+// spawnMovingTrapRoom: bouncing spike traps; chest in center.
+func (g *Game) spawnMovingTrapRoom(room Room) {
+	cx, cy := room.Center()
+	gear := g.pickAnyGear()
+	g.Chests = append(g.Chests, &Chest{X: cx, Y: cy, Gold: 15 + rand.Intn(11), Gear: gear})
+
+	useHoriz := room.W >= room.H
+	count := 2 + rand.Intn(2) // 2-3 moving traps
+	for i := 0; i < count; i++ {
+		var x, y, dx, dy int
+		if useHoriz {
+			dx, dy = 1, 0
+			x = room.X + 1 + (i*2)%(room.W-2)
+			y = room.Y + 1 + rand.Intn(room.H-2)
+		} else {
+			dx, dy = 0, 1
+			x = room.X + 1 + rand.Intn(room.W-2)
+			y = room.Y + 1 + (i*2)%(room.H-2)
+		}
+		if x == cx && y == cy {
+			continue // don't start on chest
+		}
+		g.MovingTraps = append(g.MovingTraps, &MovingTrap{X: x, Y: y, DX: dx, DY: dy})
+	}
+}
+
+// tickShooters advances all shooter timers and fires when they reach zero.
+func (g *Game) tickShooters() {
+	if g.Phase == PhaseGameOver || g.Phase == PhaseVictory {
+		return
+	}
+	for _, s := range g.Shooters {
+		s.Timer--
+		if s.Timer > 0 {
+			continue
+		}
+		s.Timer = s.Period
+		// Trace the ray; hit player if in line
+		x, y := s.X+s.DX, s.Y+s.DY
+		for x >= 0 && y >= 0 && x < MapW && y < MapH && g.Tiles[y][x].Type != TileWall {
+			if g.Player.X == x && g.Player.Y == y {
+				dmg := 8 + rand.Intn(5) // 8-12
+				g.Player.HP -= dmg
+				if g.Player.HP < 0 {
+					g.Player.HP = 0
+				}
+				g.addMessage(fmt.Sprintf("Fireball! -%d HP.", dmg))
+				g.LastDamagedAt = time.Now()
+				if g.Player.HP <= 0 {
+					g.Player.Alive = false
+					g.recordRun("Died")
+					g.Phase = PhaseGameOver
+				}
+				break
+			}
+			x += s.DX
+			y += s.DY
+		}
+	}
+}
+
+// tickMovingTraps moves all bouncing spike traps and damages the player on collision.
+func (g *Game) tickMovingTraps() {
+	if g.Phase == PhaseGameOver || g.Phase == PhaseVictory {
+		return
+	}
+	for _, mt := range g.MovingTraps {
+		nx, ny := mt.X+mt.DX, mt.Y+mt.DY
+		// Reverse on wall hit
+		if nx < 0 || ny < 0 || nx >= MapW || ny >= MapH || g.Tiles[ny][nx].Type == TileWall {
+			mt.DX, mt.DY = -mt.DX, -mt.DY
+			nx, ny = mt.X+mt.DX, mt.Y+mt.DY
+			if nx < 0 || ny < 0 || nx >= MapW || ny >= MapH || g.Tiles[ny][nx].Type == TileWall {
+				continue // pinned, stay
+			}
+		}
+		mt.X, mt.Y = nx, ny
+		if g.Player.X == nx && g.Player.Y == ny {
+			dmg := 6 + rand.Intn(5) // 6-10
+			g.Player.HP -= dmg
+			if g.Player.HP < 0 {
+				g.Player.HP = 0
+			}
+			g.addMessage(fmt.Sprintf("Moving spike! -%d HP.", dmg))
+			g.LastDamagedAt = time.Now()
+			if g.Player.HP <= 0 {
+				g.Player.Alive = false
+				g.recordRun("Died")
+				g.Phase = PhaseGameOver
+			}
+		}
+	}
+}
+
+// checkChallengeRooms spawns the reward chest once all challenge enemies are defeated.
+func (g *Game) checkChallengeRooms() {
+	cr := g.ChallengeRoom
+	if cr == nil || !cr.Triggered || cr.Cleared || len(cr.Enemies) == 0 {
+		return
+	}
+	for _, e := range cr.Enemies {
+		if e.Alive {
+			return
+		}
+	}
+	cr.Cleared = true
+	gear := g.pickAnyGear()
+	g.Chests = append(g.Chests, &Chest{
+		X: cr.RewardX, Y: cr.RewardY,
+		Gold: 15 + rand.Intn(11), // 15-25g
+		Gear: gear,
+	})
+	g.addMessage("Challenge cleared! A chest appears.")
 }
 
 func (g *Game) addMessage(msg string) {

@@ -52,6 +52,11 @@ const (
 	ColorEvent          = "#6C8CFF"
 	ColorVenomancer     = "#9AE6B4"
 	ColorGuard          = "#90CDF4"
+	ColorTrap           = "#ED8936" // static spike trap ^
+	ColorMovingTrap     = "#FC8181" // moving spike ◆
+	ColorShooter        = "#FC8181" // shooter glyph
+	ColorShooterWarn    = "#F6E05E" // shooter warning (1 turn before fire)
+	ColorAltar          = "#E53E3E" // sacrifice altar +
 
 	GameFont = "bold 15px 'Courier New', 'Lucida Console', monospace"
 	UIFont   = "12px Inter, system-ui, sans-serif"
@@ -98,6 +103,47 @@ func (g *Game) Render(ctx js.Value) {
 	for _, ev := range g.Events {
 		if g.Tiles[ev.Y][ev.X].Visible {
 			g.drawChar(ctx, '?', ev.X, ev.Y, ColorEvent)
+		}
+	}
+
+	// Sacrifice altar
+	if sa := g.SacrificeAltar; sa != nil && !sa.Used && g.Tiles[sa.Y][sa.X].Visible {
+		g.drawChar(ctx, '+', sa.X, sa.Y, ColorAltar)
+	}
+
+	// Static spike traps
+	for _, t := range g.Traps {
+		if g.Tiles[t.Y][t.X].Visible {
+			g.drawChar(ctx, '^', t.X, t.Y, ColorTrap)
+		}
+	}
+
+	// Moving spike traps
+	for _, mt := range g.MovingTraps {
+		if g.Tiles[mt.Y][mt.X].Visible {
+			g.drawChar(ctx, '◆', mt.X, mt.Y, ColorMovingTrap)
+		}
+	}
+
+	// Shooters (on wall tiles — always visible when room is explored nearby)
+	for _, s := range g.Shooters {
+		if s.Y >= 0 && s.Y < MapH && s.X >= 0 && s.X < MapW && g.Tiles[s.Y][s.X].Explored {
+			color := ColorShooter
+			if s.Timer == 1 {
+				color = ColorShooterWarn
+			}
+			var ch rune
+			switch {
+			case s.DX > 0:
+				ch = '→'
+			case s.DX < 0:
+				ch = '←'
+			case s.DY > 0:
+				ch = '↓'
+			default:
+				ch = '↑'
+			}
+			g.drawChar(ctx, ch, s.X, s.Y, color)
 		}
 	}
 
