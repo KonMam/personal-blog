@@ -23,6 +23,28 @@ type RunRecord struct {
 	Turns      int
 	Difficulty int
 	IsDaily    bool
+	Score      int
+}
+
+func calcRunScore(r RunRecord) int {
+	base := r.Floor*200 + r.Kills*15 + r.Gold
+	if r.Outcome == "Victory" {
+		base += 500
+	}
+	speed := 400 - r.Turns
+	if speed < 0 {
+		speed = 0
+	}
+	mult := 1.0
+	switch r.Difficulty {
+	case 1:
+		mult = 1.3
+	case 2:
+		mult = 1.6
+	case 3:
+		mult = 1.1
+	}
+	return int(float64(base+speed) * mult)
 }
 
 func (r RunRecord) encode() string {
@@ -30,8 +52,8 @@ func (r RunRecord) encode() string {
 	if r.IsDaily {
 		daily = "1"
 	}
-	return fmt.Sprintf("%s|%s|%d|%d|%d|%d|%d|%s",
-		r.Class, r.Outcome, r.Floor, r.Kills, r.Gold, r.Turns, r.Difficulty, daily)
+	return fmt.Sprintf("%s|%s|%d|%d|%d|%d|%d|%s|%d",
+		r.Class, r.Outcome, r.Floor, r.Kills, r.Gold, r.Turns, r.Difficulty, daily, r.Score)
 }
 
 func decodeRun(s string) (RunRecord, bool) {
@@ -60,6 +82,9 @@ func decodeRun(s string) (RunRecord, bool) {
 	}
 	if len(parts) >= 8 {
 		r.IsDaily = parts[7] == "1"
+	}
+	if len(parts) >= 9 {
+		r.Score, _ = strconv.Atoi(parts[8])
 	}
 	return r, true
 }
@@ -142,6 +167,7 @@ func (g *Game) recordRun(outcome string) {
 		Difficulty: g.Difficulty,
 		IsDaily:    g.IsDaily,
 	}
+	r.Score = calcRunScore(r)
 	history := loadRunHistory()
 	history = append([]RunRecord{r}, history...) // newest first
 	if len(history) > maxHistoryRuns {

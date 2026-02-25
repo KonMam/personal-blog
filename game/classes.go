@@ -6,6 +6,7 @@ package main
 type ClassDef struct {
 	Name      string
 	Flavor    string // one-line playstyle description
+	BuildHint string // synergy to hunt this run
 	Color     string
 	BaseHP    int
 	BaseAtk   int
@@ -80,6 +81,7 @@ var classDefs = []*ClassDef{
 	{
 		Name:      "Knight",
 		Flavor:    "Absorb hits with shield charges. Slow but unstoppable.",
+		BuildHint: "hunt: Fortress (shields + on-kill shield)",
 		Color:     "#9F7AEA",
 		BaseHP:    38,
 		BaseAtk:   4,
@@ -89,6 +91,7 @@ var classDefs = []*ClassDef{
 	{
 		Name:      "Rogue",
 		Flavor:    "Dodge attacks and drain life. Fragile but slippery.",
+		BuildHint: "hunt: Reactive (dodge + thorns)",
 		Color:     "#68D391",
 		BaseHP:    22,
 		BaseAtk:   7,
@@ -98,6 +101,7 @@ var classDefs = []*ClassDef{
 	{
 		Name:      "Berserker",
 		Flavor:    "Hit hard and make them bleed. No defense needed.",
+		BuildHint: "hunt: Rage Drain (berserker mod + lifesteal)",
 		Color:     "#FC8181",
 		BaseHP:    28,
 		BaseAtk:   9,
@@ -107,6 +111,7 @@ var classDefs = []*ClassDef{
 	{
 		Name:      "Alchemist",
 		Flavor:    "Set the dungeon on fire. Weak alone, deadly prepared.",
+		BuildHint: "hunt: Wildfire (burn on hit + double strike)",
 		Color:     "#F6AD55",
 		BaseHP:    24,
 		BaseAtk:   5,
@@ -117,6 +122,7 @@ var classDefs = []*ClassDef{
 	{
 		Name:      "Paladin",
 		Flavor:    "Faith in shields and sacrifice. Burns with holy purpose.",
+		BuildHint: "hunt: Fortress + Inferno (burn bonus + double strike)",
 		Color:     "#F6E05E",
 		BaseHP:    36,
 		BaseAtk:   5,
@@ -126,6 +132,7 @@ var classDefs = []*ClassDef{
 	{
 		Name:      "Shadowblade",
 		Flavor:    "Strike once from the dark. Every hit matters.",
+		BuildHint: "hunt: Reactive (dodge + thorns)",
 		Color:     "#9F7AEA",
 		BaseHP:    20,
 		BaseAtk:   9,
@@ -135,6 +142,7 @@ var classDefs = []*ClassDef{
 	{
 		Name:      "Warlord",
 		Flavor:    "Lead with fury. The dungeon bends to you.",
+		BuildHint: "hunt: Rage Drain (berserker mod + lifesteal)",
 		Color:     "#FC8181",
 		BaseHP:    32,
 		BaseAtk:   10,
@@ -144,6 +152,7 @@ var classDefs = []*ClassDef{
 	{
 		Name:      "Pyromancer",
 		Flavor:    "Everything burns. So do you, a little.",
+		BuildHint: "hunt: Inferno (burn bonus + double strike)",
 		Color:     "#ED8936",
 		BaseHP:    22,
 		BaseAtk:   6,

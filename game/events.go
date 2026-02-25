@@ -1277,4 +1277,29 @@ var allEvents = []*EventDef{
 			},
 		},
 	},
+	// 36
+	{
+		Title: "Mysterious Cache",
+		Body:  "A sealed container hums with strange energy. Its contents are unclear.",
+		Choices: []*EventChoice{
+			{
+				Label: "Open it",
+				Effect: func(g *Game) string {
+					gear := g.pickAnyGear()
+					if gear == nil {
+						return "The cache is empty."
+					}
+					gear.Unknown = true
+					g.PendingGear = gear
+					return "The cache releases a mysterious item. Its nature is hidden until equipped."
+				},
+			},
+			{
+				Label: "Leave it",
+				Effect: func(g *Game) string {
+					return "You leave the cache unopened."
+				},
+			},
+		},
+	},
 }

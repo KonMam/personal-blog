@@ -1367,6 +1367,11 @@ func (g *Game) doPlayerAttack(enemy *Entity) {
 // Returns true if the player dies.
 func (g *Game) doEnemyAttack(e *Entity, isRanged bool) bool {
 	rawDmg := e.CalcDamage()
+	heavy := e.HeavyStrike
+	if heavy {
+		rawDmg *= 2
+		e.HeavyStrike = false
+	}
 
 	// Shield absorbs the hit
 	if g.Player.ShieldCharges > 0 {
@@ -1420,7 +1425,9 @@ func (g *Game) doEnemyAttack(e *Entity, isRanged bool) bool {
 		return true
 	}
 
-	if isRanged {
+	if heavy {
+		g.addMessage(fmt.Sprintf("CRUSHING BLOW! The %s hits you for %d damage.", e.Name, finalDmg))
+	} else if isRanged {
 		g.addMessage(fmt.Sprintf("An arrow from the %s hits you for %d damage.", e.Name, finalDmg))
 	} else {
 		g.addMessage(fmt.Sprintf("The %s hits you for %d damage.", e.Name, finalDmg))
@@ -1572,6 +1579,25 @@ func (g *Game) enemyTurn() {
 					e.EnrageStacks++
 					e.Atk++
 					g.addMessage("The Warchief rages! [ATK↑]")
+				}
+			}
+		}
+
+		// Boss wind-up: telegraphs a heavy strike; only triggers when visible and close
+		if e.IsBoss && g.Tiles[e.Y][e.X].Visible {
+			if e.WindupTurn {
+				e.WindupTurn = false
+				e.HeavyStrike = true // consumed in doEnemyAttack
+			} else {
+				e.WindupCounter--
+				if e.WindupCounter <= 0 {
+					e.WindupCounter = 4 + rng.Intn(3)
+					dist := iAbs(g.Player.X-e.X) + iAbs(g.Player.Y-e.Y)
+					if dist <= 3 {
+						e.WindupTurn = true
+						g.addMessage(fmt.Sprintf("The %s winds up for a crushing blow!", e.Name))
+						continue
+					}
 				}
 			}
 		}

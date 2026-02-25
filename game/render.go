@@ -587,7 +587,7 @@ func (g *Game) renderUI(ctx js.Value) {
 	ctx.Call("fillText", fmt.Sprintf("† %d  ◈ %d", g.Player.Atk, g.Player.Def), float64(CanvasW)-12, top)
 	ctx.Set("textAlign", "left")
 
-	// --- Line 2: Gear slots ---
+	// --- Line 2: Gear slots + active synergies ---
 	gearY := top + 22
 
 	ctx.Set("font", UIFont)
@@ -595,6 +595,38 @@ func (g *Game) renderUI(ctx js.Value) {
 	g.renderGearSlot(ctx, 330, gearY, SlotArmor)
 	g.renderGearSlot(ctx, 648, gearY, SlotTrinket)
 	g.renderClassSlotRight(ctx, float64(CanvasW)-12, gearY)
+
+	// Active synergies — small colored labels between trinket and class slots
+	type synergyLabel struct{ name, color string }
+	var activeSynergies []synergyLabel
+	p := g.Player
+	if p.SynergyWildfire {
+		activeSynergies = append(activeSynergies, synergyLabel{"WILDFIRE", "#F6AD55"})
+	}
+	if p.SynergyFortress {
+		activeSynergies = append(activeSynergies, synergyLabel{"FORTRESS", "#9F7AEA"})
+	}
+	if p.SynergyRageDrain {
+		activeSynergies = append(activeSynergies, synergyLabel{"RAGE", "#FC8181"})
+	}
+	if p.SynergyReactive {
+		activeSynergies = append(activeSynergies, synergyLabel{"REACTIVE", "#68D391"})
+	}
+	if p.SynergyInferno {
+		activeSynergies = append(activeSynergies, synergyLabel{"INFERNO", "#ED8936"})
+	}
+	if len(activeSynergies) > 0 {
+		ctx.Set("font", "bold 9px Inter, system-ui, sans-serif")
+		ctx.Set("textAlign", "left")
+		sx := 762.0
+		for _, syn := range activeSynergies {
+			setFill(ctx, syn.color)
+			ctx.Call("fillText", "◆"+syn.name, sx, gearY+1)
+			w := ctx.Call("measureText", "◆"+syn.name).Get("width").Float()
+			sx += w + 6
+		}
+		ctx.Set("textAlign", "left")
+	}
 
 	// --- Lines 3-4: Messages ---
 	g.renderMessages(ctx, top+46)
@@ -766,6 +798,7 @@ func (g *Game) renderChestPanel(ctx js.Value) {
 
 	slot := g.PendingGear.Slot
 	current := g.Player.Equipped[slot]
+	isUnknown := g.PendingGear.Unknown
 
 	cx := float64(CanvasW) / 2
 	cy := float64(MapH*TileH) / 2
@@ -774,71 +807,182 @@ func (g *Game) renderChestPanel(ctx js.Value) {
 	ctx.Set("fillStyle", "rgba(10, 10, 20, 0.85)")
 	ctx.Call("fillRect", 0, 0, CanvasW, float64(MapH*TileH))
 
-	// Panel grows when there is an item to compare against
-	boxW := float64(400)
-	boxH := float64(168)
+	// Compute stat diffs (only when item identity is known)
+	type diffEntry struct{ text, color string }
+	var diffs []diffEntry
+	if !isUnknown {
+		ni, oi := g.PendingGear, current
+		getI := func(gear *Gear, f func(*Gear) int) int {
+			if gear == nil {
+				return 0
+			}
+			return f(gear)
+		}
+		getB := func(gear *Gear, f func(*Gear) bool) bool {
+			if gear == nil {
+				return false
+			}
+			return f(gear)
+		}
+		addNum := func(label string, delta int) {
+			if delta == 0 {
+				return
+			}
+			col := ColorHPHigh
+			if delta < 0 {
+				col = ColorHPLow
+			}
+			sign := "+"
+			if delta < 0 {
+				sign = ""
+			}
+			diffs = append(diffs, diffEntry{fmt.Sprintf("%s%d %s", sign, delta, label), col})
+		}
+		addBool := func(label string, gained, lost bool) {
+			if gained && !lost {
+				diffs = append(diffs, diffEntry{"+" + label, ColorHPHigh})
+			} else if lost && !gained {
+				diffs = append(diffs, diffEntry{"-" + label, ColorHPLow})
+			}
+		}
+		addNum("ATK", getI(ni, func(g *Gear) int { return g.AtkMod })-getI(oi, func(g *Gear) int { return g.AtkMod }))
+		addNum("DEF", getI(ni, func(g *Gear) int { return g.DefMod })-getI(oi, func(g *Gear) int { return g.DefMod }))
+		addNum("HP", getI(ni, func(g *Gear) int { return g.HPMod })-getI(oi, func(g *Gear) int { return g.HPMod }))
+		addNum("Thorns", getI(ni, func(g *Gear) int { return g.Thorns })-getI(oi, func(g *Gear) int { return g.Thorns }))
+		addNum("Drain", getI(ni, func(g *Gear) int { return g.LifestealMod })-getI(oi, func(g *Gear) int { return g.LifestealMod }))
+		addNum("Dodge%", getI(ni, func(g *Gear) int { return g.DodgeMod })-getI(oi, func(g *Gear) int { return g.DodgeMod }))
+		addNum("Sh/fl", getI(ni, func(g *Gear) int { return g.ShieldMod })-getI(oi, func(g *Gear) int { return g.ShieldMod }))
+		addNum("BurnDmg", getI(ni, func(g *Gear) int { return g.BurnBonus })-getI(oi, func(g *Gear) int { return g.BurnBonus }))
+		addNum("Rage", getI(ni, func(g *Gear) int { return g.BerserkerMod })-getI(oi, func(g *Gear) int { return g.BerserkerMod }))
+		addNum("Freeze%", getI(ni, func(g *Gear) int { return g.FreezeChance })-getI(oi, func(g *Gear) int { return g.FreezeChance }))
+		addBool("2x Strike", getB(ni, func(g *Gear) bool { return g.DoubleStrike }), getB(oi, func(g *Gear) bool { return g.DoubleStrike }))
+		addBool("Burn Hit", getB(ni, func(g *Gear) bool { return g.BurnOnHit }), getB(oi, func(g *Gear) bool { return g.BurnOnHit }))
+		addBool("Bleed Hit", getB(ni, func(g *Gear) bool { return g.BleedOnHit }), getB(oi, func(g *Gear) bool { return g.BleedOnHit }))
+		if ni.Cursed && (oi == nil || !oi.Cursed) {
+			diffs = append(diffs, diffEntry{fmt.Sprintf("Cursed (-%d)", ni.CursePenalty), ColorHPLow})
+		}
+	}
+
+	hasDiffs := len(diffs) > 0
+	boxW := float64(440)
+	boxH := 188.0
+	if hasDiffs {
+		boxH += 20
+	}
+	if g.PendingGear.Cursed {
+		boxH += 16
+	}
 	bx := cx - boxW/2
 	by := cy - boxH/2
 
+	borderColor := ColorChest
+	if g.PendingGear.Cursed {
+		borderColor = "#FC8181"
+	}
 	setFill(ctx, "#10101a")
 	ctx.Call("fillRect", bx, by, boxW, boxH)
-	ctx.Set("strokeStyle", ColorChest)
+	ctx.Set("strokeStyle", borderColor)
 	ctx.Set("lineWidth", 1)
 	ctx.Call("strokeRect", bx+0.5, by+0.5, boxW-1, boxH-1)
 
 	ctx.Set("textAlign", "center")
 	ctx.Set("textBaseline", "top")
 
+	y := by + 14.0
+
 	// Header
-	setFill(ctx, ColorChest)
-	ctx.Set("font", UIBold)
-	ctx.Call("fillText", "GEAR FOUND", cx, by+14)
-
-	// New gear — name + rarity
-	setFill(ctx, g.PendingGear.Color)
-	ctx.Set("font", "bold 15px Inter, system-ui, sans-serif")
-	rarity := gearRarityName(g.PendingGear)
-	gearLabel := string(g.PendingGear.Char) + " " + g.PendingGear.Name
-	if rarity != "" {
-		gearLabel += "  [" + rarity + "]"
+	header := "GEAR FOUND"
+	if isUnknown {
+		header = "MYSTERIOUS ITEM"
 	}
-	ctx.Call("fillText", gearLabel, cx, by+34)
+	setFill(ctx, borderColor)
+	ctx.Set("font", UIBold)
+	ctx.Call("fillText", header, cx, y)
+	y += 20
 
-	// New gear — description
-	setFill(ctx, ColorUI)
-	ctx.Set("font", UIFont)
-	ctx.Call("fillText", g.PendingGear.Desc, cx, by+54)
+	// Cursed warning badge
+	if g.PendingGear.Cursed {
+		setFill(ctx, "#FC8181")
+		ctx.Set("font", "bold 11px Inter, system-ui, sans-serif")
+		ctx.Call("fillText", "⚠ CURSED — equipping inflicts a permanent penalty", cx, y)
+		y += 16
+	}
+
+	// New gear — name + rarity (or mystery)
+	if isUnknown {
+		setFill(ctx, ColorUIDim)
+		ctx.Set("font", "bold 15px Inter, system-ui, sans-serif")
+		ctx.Call("fillText", "??? [UNKNOWN]", cx, y)
+		y += 20
+		setFill(ctx, ColorUIDim)
+		ctx.Set("font", UIFont)
+		ctx.Call("fillText", "Properties hidden until equipped.", cx, y)
+		y += 20
+	} else {
+		setFill(ctx, g.PendingGear.Color)
+		ctx.Set("font", "bold 15px Inter, system-ui, sans-serif")
+		rarity := gearRarityName(g.PendingGear)
+		gearLabel := string(g.PendingGear.Char) + " " + g.PendingGear.Name
+		if rarity != "" {
+			gearLabel += "  [" + rarity + "]"
+		}
+		ctx.Call("fillText", gearLabel, cx, y)
+		y += 20
+		setFill(ctx, ColorUI)
+		ctx.Set("font", UIFont)
+		ctx.Call("fillText", g.PendingGear.Desc, cx, y)
+		y += 20
+	}
+
+	// Stat diffs row
+	if hasDiffs {
+		ctx.Set("textAlign", "left")
+		ctx.Set("font", "11px Inter, system-ui, sans-serif")
+		totalW := 0.0
+		gaps := make([]float64, len(diffs))
+		for i, d := range diffs {
+			gaps[i] = ctx.Call("measureText", d.text).Get("width").Float()
+			totalW += gaps[i]
+		}
+		totalW += float64(len(diffs)-1) * 10
+		x := cx - totalW/2
+		for i, d := range diffs {
+			setFill(ctx, d.color)
+			ctx.Call("fillText", d.text, x, y)
+			x += gaps[i] + 10
+		}
+		y += 18
+		ctx.Set("textAlign", "center")
+	}
 
 	// Divider
 	setFill(ctx, ColorUIDim)
-	ctx.Call("fillRect", bx+20, by+72, boxW-40, 1)
+	ctx.Call("fillRect", bx+20, y, boxW-40, 1)
+	y += 8
 
 	// Current slot section
 	if current != nil {
-		// Label
 		setFill(ctx, ColorUIDim)
 		ctx.Set("font", "11px Inter, system-ui, sans-serif")
-		ctx.Call("fillText", "replaces", cx, by+78)
-
-		// Current item name
+		ctx.Call("fillText", "replaces", cx, y)
+		y += 14
 		setFill(ctx, current.Color)
 		ctx.Set("font", "bold 13px Inter, system-ui, sans-serif")
-		ctx.Call("fillText", string(current.Char)+" "+current.Name, cx, by+94)
-
-		// Current item description
+		ctx.Call("fillText", string(current.Char)+" "+current.Name, cx, y)
+		y += 16
 		setFill(ctx, ColorUIDim)
 		ctx.Set("font", UIFont)
-		ctx.Call("fillText", current.Desc, cx, by+112)
+		ctx.Call("fillText", current.Desc, cx, y)
 	} else {
 		setFill(ctx, ColorUIDim)
 		ctx.Set("font", UIFont)
-		ctx.Call("fillText", "(empty slot)", cx, by+90)
+		ctx.Call("fillText", "(empty slot)", cx, y)
 	}
 
 	// Actions
 	setFill(ctx, ColorMsgNew)
 	ctx.Set("font", UIBold)
-	ctx.Call("fillText", "[E] Equip     [Esc] Leave", cx, by+148)
+	ctx.Call("fillText", "[E] Equip     [Esc] Leave", cx, by+boxH-18)
 }
 
 func (g *Game) renderShopPanel(ctx js.Value) {
@@ -1048,9 +1192,13 @@ func (g *Game) renderEndHistory(ctx js.Value, bx, startY, boxW float64) float64 
 		}
 		setFill(ctx, color)
 		ctx.Set("font", UIFont)
+		scoreStr := ""
+		if r.Score > 0 {
+			scoreStr = fmt.Sprintf("  %d pts", r.Score)
+		}
 		ctx.Call("fillText",
-			fmt.Sprintf("%s — %s  F%d  %dK  %dg",
-				r.Outcome, r.Class, r.Floor, r.Kills, r.Gold),
+			fmt.Sprintf("%s — %s  F%d  %dK  %dg%s",
+				r.Outcome, r.Class, r.Floor, r.Kills, r.Gold, scoreStr),
 			bx+20, y)
 		y += 14
 	}
@@ -1074,7 +1222,7 @@ func (g *Game) renderDeathPanel(ctx js.Value) {
 	}
 
 	boxW := float64(480)
-	boxH := 256 + historyH + 36
+	boxH := 274 + historyH + 36
 	bx := cx - boxW/2
 	by := float64(MapH*TileH)/2 - boxH/2
 
@@ -1108,16 +1256,25 @@ func (g *Game) renderDeathPanel(ctx js.Value) {
 	ctx.Set("font", UIBold)
 	ctx.Call("fillText", fmt.Sprintf("%s · Floor %d", className, g.Floor), cx, by+50)
 
+	// Score
+	score := 0
+	if len(g.RunHistory) > 0 {
+		score = g.RunHistory[0].Score
+	}
+	setFill(ctx, ColorGold)
+	ctx.Set("font", "bold 20px Inter, system-ui, sans-serif")
+	ctx.Call("fillText", fmt.Sprintf("SCORE  %d", score), cx, by+68)
+
 	// Separator
 	setFill(ctx, ColorSeparator)
-	ctx.Call("fillRect", bx+14, by+68, boxW-28, 1)
+	ctx.Call("fillRect", bx+14, by+96, boxW-28, 1)
 
-	// Gear (3 lines)
+	// Gear (4 slots)
 	ctx.Set("textAlign", "left")
 	ctx.Set("font", UIFont)
 	gearLabels := []string{"†", "◈", "◇", "✦"}
 	for i, slot := range []GearSlot{SlotWeapon, SlotArmor, SlotTrinket, SlotClass} {
-		gy := by + 80 + float64(i)*16
+		gy := by + 108 + float64(i)*16
 		gear := g.Player.Equipped[slot]
 		if gear != nil {
 			setFill(ctx, gear.Color)
@@ -1130,44 +1287,44 @@ func (g *Game) renderDeathPanel(ctx js.Value) {
 
 	// Separator
 	setFill(ctx, ColorSeparator)
-	ctx.Call("fillRect", bx+14, by+148, boxW-28, 1)
+	ctx.Call("fillRect", bx+14, by+176, boxW-28, 1)
 
 	// Stats row 1
 	ctx.Set("textAlign", "center")
 	setFill(ctx, ColorUIDim)
 	ctx.Set("font", UIFont)
-	ctx.Call("fillText", "TURNS", cx-110, by+162)
-	ctx.Call("fillText", "GOLD", cx, by+162)
-	ctx.Call("fillText", "KILLS", cx+110, by+162)
+	ctx.Call("fillText", "TURNS", cx-110, by+190)
+	ctx.Call("fillText", "GOLD", cx, by+190)
+	ctx.Call("fillText", "KILLS", cx+110, by+190)
 
 	ctx.Set("font", "bold 16px Inter, system-ui, sans-serif")
 	setFill(ctx, ColorMsgNew)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Turns), cx-110, by+178)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Turns), cx-110, by+206)
 	setFill(ctx, ColorGold)
-	ctx.Call("fillText", fmt.Sprintf("%dg", g.Player.Gold), cx, by+178)
+	ctx.Call("fillText", fmt.Sprintf("%dg", g.Player.Gold), cx, by+206)
 	setFill(ctx, ColorHPLow)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Kills), cx+110, by+178)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Kills), cx+110, by+206)
 
 	// Stats row 2
 	setFill(ctx, ColorUIDim)
 	ctx.Set("font", UIFont)
-	ctx.Call("fillText", "DMG OUT", cx-172, by+200)
-	ctx.Call("fillText", "DMG IN", cx-57, by+200)
-	ctx.Call("fillText", "POTIONS", cx+57, by+200)
-	ctx.Call("fillText", "STEPS", cx+172, by+200)
+	ctx.Call("fillText", "DMG OUT", cx-172, by+228)
+	ctx.Call("fillText", "DMG IN", cx-57, by+228)
+	ctx.Call("fillText", "POTIONS", cx+57, by+228)
+	ctx.Call("fillText", "STEPS", cx+172, by+228)
 
 	ctx.Set("font", "bold 14px Inter, system-ui, sans-serif")
 	setFill(ctx, ColorHPMid)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageDealt), cx-172, by+216)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageDealt), cx-172, by+244)
 	setFill(ctx, ColorHPLow)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageTaken), cx-57, by+216)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageTaken), cx-57, by+244)
 	setFill(ctx, ColorPotion)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.PotionsUsed), cx+57, by+216)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.PotionsUsed), cx+57, by+244)
 	setFill(ctx, ColorUIDim)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.Steps), cx+172, by+216)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.Steps), cx+172, by+244)
 
 	// History
-	g.renderEndHistory(ctx, bx, by+236, boxW)
+	g.renderEndHistory(ctx, bx, by+264, boxW)
 
 	// Footer
 	setFill(ctx, ColorUIDim)
@@ -1193,7 +1350,7 @@ func (g *Game) renderVictoryPanel(ctx js.Value) {
 	}
 
 	boxW := float64(480)
-	boxH := 266 + historyH + 36
+	boxH := 294 + historyH + 36
 	bx := cx - boxW/2
 	by := float64(MapH*TileH)/2 - boxH/2
 
@@ -1227,16 +1384,25 @@ func (g *Game) renderVictoryPanel(ctx js.Value) {
 	ctx.Set("font", UIBold)
 	ctx.Call("fillText", fmt.Sprintf("%s · You escaped the dungeon!", className), cx, by+50)
 
+	// Score
+	score := 0
+	if len(g.RunHistory) > 0 {
+		score = g.RunHistory[0].Score
+	}
+	setFill(ctx, ColorGold)
+	ctx.Set("font", "bold 20px Inter, system-ui, sans-serif")
+	ctx.Call("fillText", fmt.Sprintf("SCORE  %d", score), cx, by+68)
+
 	// Separator
 	setFill(ctx, ColorSeparator)
-	ctx.Call("fillRect", bx+14, by+68, boxW-28, 1)
+	ctx.Call("fillRect", bx+14, by+96, boxW-28, 1)
 
-	// Gear (3 lines)
+	// Gear (4 slots)
 	ctx.Set("textAlign", "left")
 	ctx.Set("font", UIFont)
 	gearLabels := []string{"†", "◈", "◇", "✦"}
 	for i, slot := range []GearSlot{SlotWeapon, SlotArmor, SlotTrinket, SlotClass} {
-		gy := by + 80 + float64(i)*16
+		gy := by + 108 + float64(i)*16
 		gear := g.Player.Equipped[slot]
 		if gear != nil {
 			setFill(ctx, gear.Color)
@@ -1249,44 +1415,44 @@ func (g *Game) renderVictoryPanel(ctx js.Value) {
 
 	// Separator
 	setFill(ctx, ColorSeparator)
-	ctx.Call("fillRect", bx+14, by+148, boxW-28, 1)
+	ctx.Call("fillRect", bx+14, by+176, boxW-28, 1)
 
 	// Stats
 	ctx.Set("textAlign", "center")
 	setFill(ctx, ColorUIDim)
 	ctx.Set("font", UIFont)
-	ctx.Call("fillText", "TURNS", cx-110, by+162)
-	ctx.Call("fillText", "GOLD", cx, by+162)
-	ctx.Call("fillText", "KILLS", cx+110, by+162)
+	ctx.Call("fillText", "TURNS", cx-110, by+190)
+	ctx.Call("fillText", "GOLD", cx, by+190)
+	ctx.Call("fillText", "KILLS", cx+110, by+190)
 
 	ctx.Set("font", "bold 18px Inter, system-ui, sans-serif")
 	setFill(ctx, ColorMsgNew)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Turns), cx-110, by+180)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Turns), cx-110, by+208)
 	setFill(ctx, ColorGold)
-	ctx.Call("fillText", fmt.Sprintf("%dg", g.Player.Gold), cx, by+180)
+	ctx.Call("fillText", fmt.Sprintf("%dg", g.Player.Gold), cx, by+208)
 	setFill(ctx, ColorHPHigh)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Kills), cx+110, by+180)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Kills), cx+110, by+208)
 
 	// Stats row 2
 	setFill(ctx, ColorUIDim)
 	ctx.Set("font", UIFont)
-	ctx.Call("fillText", "DMG OUT", cx-172, by+202)
-	ctx.Call("fillText", "DMG IN", cx-57, by+202)
-	ctx.Call("fillText", "POTIONS", cx+57, by+202)
-	ctx.Call("fillText", "STEPS", cx+172, by+202)
+	ctx.Call("fillText", "DMG OUT", cx-172, by+230)
+	ctx.Call("fillText", "DMG IN", cx-57, by+230)
+	ctx.Call("fillText", "POTIONS", cx+57, by+230)
+	ctx.Call("fillText", "STEPS", cx+172, by+230)
 
 	ctx.Set("font", "bold 14px Inter, system-ui, sans-serif")
 	setFill(ctx, ColorHPMid)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageDealt), cx-172, by+218)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageDealt), cx-172, by+246)
 	setFill(ctx, ColorHPLow)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageTaken), cx-57, by+218)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.DamageTaken), cx-57, by+246)
 	setFill(ctx, ColorPotion)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.PotionsUsed), cx+57, by+218)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.PotionsUsed), cx+57, by+246)
 	setFill(ctx, ColorUIDim)
-	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.Steps), cx+172, by+218)
+	ctx.Call("fillText", fmt.Sprintf("%d", g.Player.Steps), cx+172, by+246)
 
 	// History
-	g.renderEndHistory(ctx, bx, by+240, boxW)
+	g.renderEndHistory(ctx, bx, by+268, boxW)
 
 	// Footer
 	setFill(ctx, ColorUIDim)
@@ -1448,7 +1614,7 @@ func (g *Game) renderClassSelect(ctx js.Value) {
 	baseDefs := classDefs[:4]
 	variantDefs := classDefs[4:]
 
-	const rowH = 76
+	const rowH = 82
 	rowCount := len(baseDefs)
 	for i := range variantDefs {
 		req := variantUnlockReq(4 + i)
@@ -1544,6 +1710,12 @@ func renderClassRow(ctx js.Value, def *ClassDef, keyNum int, bx, ry, boxW float6
 
 	setFill(ctx, ColorUIDim)
 	ctx.Call("fillText", def.Flavor, bx+30, ry+42)
+
+	if def.BuildHint != "" {
+		setFill(ctx, ColorAccent)
+		ctx.Set("font", "10px Inter, system-ui, sans-serif")
+		ctx.Call("fillText", def.BuildHint, bx+30, ry+58)
+	}
 }
 
 func (g *Game) renderHintOverlay(ctx js.Value) {

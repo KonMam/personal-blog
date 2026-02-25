@@ -62,6 +62,7 @@ type Gear struct {
 	CursePenalty int  // extra incoming damage per hit while equipped
 	FreezeChance int  // % chance to freeze enemy on hit
 	BleedOnHit   bool // apply Bleed 2 on each hit
+	Unknown      bool // stats hidden in chest panel until equipped
 	Desc         string
 }
 
@@ -186,11 +187,14 @@ type Entity struct {
 	LastSeenX   int  // position when last visible
 	LastSeenY   int
 	// Boss fields
-	IsBoss       bool
-	BossPhase2   bool
-	EnrageStacks int
-	EnrageTurns  int
-	DropGear     *Gear // pre-rolled at spawn time; awarded on boss kill
+	IsBoss        bool
+	BossPhase2    bool
+	EnrageStacks  int
+	EnrageTurns   int
+	DropGear      *Gear // pre-rolled at spawn time; awarded on boss kill
+	WindupCounter int   // counts down to heavy strike warning
+	WindupTurn    bool  // next attack is the telegraphed heavy hit
+	HeavyStrike   bool  // consumed in doEnemyAttack to double damage
 	// New enemy fields
 	MoveSpeed  int  // default 1, Brute = 2
 	IsRevealed bool // Mimic: false = appear as chest
@@ -316,7 +320,7 @@ func NewGoblinKing(x, y int) *Entity {
 	return &Entity{
 		X: x, Y: y, Char: 'K', Color: "#FC8181",
 		Name: "Goblin King", HP: 22, MaxHP: 22, Atk: 5,
-		Type: EntityGoblinKing, Alive: true, IsBoss: true, MoveSpeed: 1,
+		Type: EntityGoblinKing, Alive: true, IsBoss: true, MoveSpeed: 1, WindupCounter: 4,
 	}
 }
 
@@ -324,7 +328,7 @@ func NewOrcWarchief(x, y int) *Entity {
 	return &Entity{
 		X: x, Y: y, Char: 'W', Color: "#F6AD55",
 		Name: "Orc Warchief", HP: 30, MaxHP: 30, Atk: 6,
-		Type: EntityOrcWarchief, Alive: true, IsBoss: true, EnrageTurns: 2, MoveSpeed: 1,
+		Type: EntityOrcWarchief, Alive: true, IsBoss: true, EnrageTurns: 2, MoveSpeed: 1, WindupCounter: 5,
 	}
 }
 
@@ -332,7 +336,7 @@ func NewLich(x, y int) *Entity {
 	return &Entity{
 		X: x, Y: y, Char: 'L', Color: "#9F7AEA",
 		Name: "Lich", HP: 28, MaxHP: 28, Atk: 6, RangeAttack: 4,
-		Type: EntityLich, Alive: true, IsBoss: true, MoveSpeed: 1,
+		Type: EntityLich, Alive: true, IsBoss: true, MoveSpeed: 1, WindupCounter: 4,
 	}
 }
 
