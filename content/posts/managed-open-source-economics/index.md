@@ -1,12 +1,12 @@
 +++
 title = "The Managed Open Source Bargain"
-date = "2026-02-24T00:00:00+03:00"
+date = "2026-03-02T00:00:00+03:00"
 tags = ["data-engineering", "business", "open-source"]
 categories = ["tech"]
 description = """
 Apache Kafka is free. Airflow is free. Spark is free. But running them in production is not, and the companies that built these tools know exactly why.
 """
-draft = true
+draft = false
 +++
 
 Using open source tools for a while, I started wondering about the commercial side. The software is free, but the companies behind it clearly aren't running on goodwill. I haven't had to make the build-vs-buy call myself, but I've worked inside enough self-hosted setups to know the complexity is real. So I dug into both sides: how these businesses actually make money, and when paying for managed genuinely makes sense.
@@ -46,7 +46,7 @@ Operational complexity removal is the big one. Some of these tools are genuinely
 
 The enterprise feature moat is less visible but just as deliberate. SSO, RBAC, audit logging, compliance certifications, paywalled almost everywhere. dbt's metadata exploration tool, cross-project reference resolution, the Semantic Layer API: all require a paid plan. Confluent's Schema Registry ships under a community license that explicitly prohibits anyone from offering it as a competing managed service. I think this is the most honest part of the model. They're not hiding what they're doing.
 
-Compute markup is where the numbers quietly add up. Databricks bills in DBUs (Databricks Units) on top of whatever your AWS or Azure VM costs. An all-purpose cluster at the Premium tier runs about [$0.55 per DBU,](https://www.databricks.com/product/pricing) on top of EC2. Run an interactive notebook (the kind of exploratory work analysts do every day) and you pay roughly 4x the DBU rate of a scheduled batch job. The operational convenience is real. So is the difference.
+Compute markup is where the numbers quietly add up. Databricks bills in DBUs (Databricks Units) on top of whatever your AWS or Azure VM costs. An all-purpose cluster at the Premium tier runs about [$0.55 per DBU,](https://www.databricks.com/product/pricing) on top of EC2. Run an interactive notebook (the kind of exploratory work analysts do every day) and you pay roughly 4x the DBU rate of a scheduled batch job. The operational convenience is real and so is the difference.
 
 ---
 
@@ -67,21 +67,20 @@ Astro uses usage-based pricing where workers scale to zero when idle. You only p
 
 Astronomer raised a [$93M Series D in May 2025](https://www.astronomer.io/press-releases/astronomer-secures-93-million-series-d-funding/) at $775M valuation, disclosing 150% year-over-year ARR growth and 130% net revenue retention. Customers don't just stay; they expand as they run more pipelines over time. Consumption-based pricing compounds in the vendor's favor when the product is embedded in daily operations.
 
-What I find interesting about Airflow specifically is that the product's complexity isn't incidental to the business; it's structural to it. Simpler orchestration tools exist (Dagster, Prefect). Airflow persists in large organizations because of inertia and ecosystem depth. That same complexity is what makes teams reluctant to self-host, and what makes Astronomer's pitch land. It's a clean loop.
+What I find interesting about Airflow specifically is that the product's complexity isn't incidental to the business; it's structural to it. Simpler orchestration tools exist (Dagster, Prefect). Airflow persists in large organizations because of inertia and ecosystem depth. That same complexity is what makes teams reluctant to self-host, and what makes Astronomer's pitch land.
 
 ### Kafka and Confluent
 
-Confluent was founded by the three engineers who created Kafka at LinkedIn. Jay Kreps, Confluent's CEO, has been pretty direct about the tension: ["When building a business around open source, you want to find a way to do that [that] doesn't kill all the attractiveness of an open source platform."](https://diginomica.com/confluent-continues-deliver-ceo-jay-kreps-pitches-era-data-streaming-platforms)
+Confluent was founded by the three engineers who created Kafka at LinkedIn. Jay Kreps, Confluent's CEO, has been candid about the opportunity: ["This open source user base is growing rapidly and we are still in the early days of monetizing it."](https://diginomica.com/confluent-continues-deliver-ceo-jay-kreps-pitches-era-data-streaming-platforms)
 
 Apache Kafka stays fully open source under Apache 2.0. But in December 2018, when AWS announced Amazon MSK at re:Invent, Confluent moved Schema Registry and ksqlDB to a community license that prohibits anyone from running them as a competing managed service. The timing was not coincidental, and the community knew it.
 
-Confluent Cloud is now [over 54% of total company revenue,](https://investors.confluent.io/news-releases/news-release-details/confluent-announces-third-quarter-2025-financial-results) growing 24% year-over-year as of Q3 2025. [FY2024 total revenue was $963.6M.](https://investors.confluent.io/news-releases/news-release-details/confluent-announces-fourth-quarter-and-fiscal-year-2024) For comparison, a 3-broker AWS MSK cluster on m5.large instances costs roughly [$262/month in broker compute alone,](https://aws.amazon.com/msk/pricing/) before storage, cross-AZ replication traffic, and engineering time. The MSK number looks cheap until you add all those up. That's Confluent's actual pitch and it's not wrong.
-
+Confluent Cloud is now [over 54% of total company revenue,](https://investors.confluent.io/news-releases/news-release-details/confluent-announces-third-quarter-2025-financial-results) growing 24% year-over-year as of Q3 2025. [FY2024 total revenue was $963.6M.](https://investors.confluent.io/news-releases/news-release-details/confluent-announces-fourth-quarter-and-fiscal-year-2024) For comparison, a 3-broker AWS MSK cluster on m5.large instances costs roughly [$262/month in broker compute alone,](https://aws.amazon.com/msk/pricing/) before storage, cross-AZ replication traffic, and engineering time. The MSK number looks cheap until you add all those up.
 ### Spark and Databricks
 
 Databricks is approaching an IPO at a [$134B valuation,](https://www.databricks.com/company/newsroom/press-releases/databricks-grows-65-yoy-surpasses-5-4-billion-revenue-run-rate) built on top of Apache Spark. Revenue hit a $5.4B run-rate in January 2026, growing 65% year-over-year.
 
-Ali Ghodsi, their CEO, has described the model directly: ["The traditional way of monetizing open-source technology is selling services on top of the free code, but that's not a great long-term model... Instead, have customers rent your open-source product as a service in the cloud."](https://www.battery.com/blog/billion-dollar-b2b-databricks-ali-ghodsi/) He also acknowledged the paradox: "your biggest enemy is your open-source project," because wide free adoption makes converting users to paying customers hard.
+Ali Ghodsi, their CEO, has [described the model directly:](https://www.battery.com/blog/billion-dollar-b2b-databricks-ali-ghodsi/) selling services on top of free code gets commoditized fast, so the better play is having customers rent your open source product as a managed cloud service. The paradox he's navigating is that wide free adoption makes converting users to paying customers hard.
 
 The Delta Lake strategy is the most interesting part of the Databricks story. They created it, then in 2022 fully open-sourced it to the Linux Foundation. The logic: they don't monetize the format, they monetize the compute that processes data stored in it. Keep Delta open to maximize adoption, then charge DBUs for every workload that runs against it. The proprietary moat sits in Photon (a C++ rewrite of Spark's query engine), Unity Catalog, and a full ML platform from the [$1.3B MosaicML acquisition.](https://techcrunch.com/2023/06/26/databricks-picks-up-mosaicml-an-openai-competitor-for-1-3b/) The open source parts are the funnel. The proprietary parts are the business.
 
@@ -91,7 +90,7 @@ dbt Labs crossed [$100M ARR in early 2025](https://www.getdbt.com/blog/dbt-labs-
 
 dbt Core handles transformation logic and is Apache 2.0 licensed. dbt Cloud adds job scheduling, a browser-based IDE, CI/CD integration, dbt Explorer (column-level lineage, performance recommendations, documentation), and the cross-project reference resolution that makes dbt Mesh actually work. The Semantic Layer API, the integration point for BI tools to query metrics, also requires a paid plan.
 
-The dbt case has a wrinkle the others don't. In May 2025, dbt Labs announced [dbt Fusion,](https://www.getdbt.com/blog/new-code-new-license-understanding-the-new-license-for-the-dbt-fusion-engine) a new Rust-based engine claimed to be 30x faster. It ships under Elastic License 2.0, not Apache 2.0. ELv2 is source-available but prohibits running the software as a managed service for others. dbt Core keeps its Apache license and dbt Labs committed to maintaining it, but Fusion is where the performance innovation goes. I think this is the clearest signal yet about where the model ends up: the open core gets maintained, the real development moves to something you can't self-host competitively. They just finally said it out loud. If you're adopting dbt Core today, you're betting that "actively maintained" stays true long enough to matter. At some point the performance gap gets wide enough that staying on Core becomes the lock-in, not migrating to Cloud. That point might still be a while away, but the direction is set.
+The dbt case has a wrinkle the others don't. In May 2025, dbt Labs announced [dbt Fusion,](https://www.getdbt.com/blog/new-code-new-license-understanding-the-new-license-for-the-dbt-fusion-engine) a new Rust-based engine claimed to be 30x faster. It ships under Elastic License 2.0, not Apache 2.0. ELv2 is source-available but prohibits running the software as a managed service for others. dbt Core keeps its Apache license and dbt Labs committed to maintaining it, but Fusion is where the performance innovation goes. I think this is the clearest signal yet about where the model ends up: the open core gets maintained, the real development moves to something you can't self-host competitively. If you're adopting dbt Core today, you're betting that "actively maintained" stays true long enough to matter. At some point the performance gap gets wide enough that staying on Core becomes the lock-in, not migrating to Cloud. That point might still be a while away, but the direction is set.
 
 ---
 
@@ -132,5 +131,3 @@ Honestly, they're all hostile in their own way. The question isn't which vendor 
 ---
 
 Open source is one of the most effective go-to-market strategies in enterprise software: community-driven adoption, developer trust, no marketing budget needed at the top of the funnel. The managed service layer is how the economics resolve. Understanding what you're paying for, why the price is what it is, and where the vendor's incentives stop aligning with yours: that's the job before you sign anything.
-
-Thank you for reading.
