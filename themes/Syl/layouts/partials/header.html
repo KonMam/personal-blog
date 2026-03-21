@@ -9,8 +9,7 @@
           {{ range $.Site.Menus.main }}
             {{ if eq .Identifier "games" }}
               <a href="{{ .URL }}" class="nav-games-btn"{{ if .Params.NewTab }} target="_blank"{{ end }}>
-                <span class="nav-games-btn__icon">★</span>
-                <span class="nav-games-btn__text">Games</span>
+                <img src="/games-btn.svg" alt="Games" width="88" height="31">
               </a>
             {{ else }}
               <a href="{{ .URL }}"{{ if .Params.NewTab }} target="_blank"{{ end }}>{{ .Name }}</a>

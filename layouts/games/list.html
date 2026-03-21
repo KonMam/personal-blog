@@ -4,18 +4,7 @@
   <div class="games-grid">
     {{ range site.Data.games }}
     <a href="{{ .url }}" class="game-card">
-      <div class="game-card__chrome">
-        <span class="game-card__dot" style="background:#ff5f57"></span>
-        <span class="game-card__dot" style="background:#ffbd2e"></span>
-        <span class="game-card__dot" style="background:#28c840"></span>
-      </div>
-      <div class="game-card__screen">
-        <img src="{{ .image }}" alt="{{ .title }} title screen" loading="lazy">
-      </div>
-      <div class="game-card__footer">
-        <span class="game-card__title">{{ .title }}</span>
-        <span class="game-card__play">Play →</span>
-      </div>
+      <img src="{{ .image }}" alt="{{ .title }} title screen" loading="lazy">
     </a>
     {{ end }}
   </div>

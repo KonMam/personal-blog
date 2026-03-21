@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="88" height="31" shape-rendering="crispEdges">
+  <defs>
+    <pattern id="scan" x="0" y="0" width="1" height="2" patternUnits="userSpaceOnUse">
+      <rect x="0" y="1" width="1" height="1" fill="rgba(0,0,0,0.18)"/>
+    </pattern>
+    <linearGradient id="leftbg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a0a20"/>
+      <stop offset="100%" stop-color="#120510"/>
+    </linearGradient>
+    <linearGradient id="rightbg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#080005"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Backgrounds -->
+  <rect width="88" height="31" fill="url(#rightbg)"/>
+  <rect x="0" y="0" width="26" height="31" fill="url(#leftbg)"/>
+
+  <!-- Left zone: play triangle -->
+  <polygon points="9,10 9,21 19,15.5" fill="#ff1493"/>
+
+  <!-- Separator -->
+  <line x1="26" y1="0" x2="26" y2="31" stroke="#cc0066" stroke-width="1"/>
+
+  <!-- Top highlight in left zone -->
+  <line x1="1" y1="1" x2="25" y2="1" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+
+  <!-- GAMES text -->
+  <text x="57" y="15"
+        text-anchor="middle"
+        font-family="'Courier New', Courier, monospace"
+        font-size="9"
+        font-weight="bold"
+        fill="#ff1493"
+        letter-spacing="1.5">GAMES</text>
+
+  <!-- Sub label -->
+  <text x="57" y="25"
+        text-anchor="middle"
+        font-family="'Courier New', Courier, monospace"
+        font-size="6"
+        fill="#ffaadd"
+        letter-spacing="0.5">&#x2605; PLAY NOW! &#x2605;</text>
+
+  <!-- Scanlines -->
+  <rect width="88" height="31" fill="url(#scan)"/>
+
+  <!-- Outer border -->
+  <rect x="0" y="0" width="88" height="31" fill="none" stroke="#cc0066" stroke-width="1"/>
+</svg>
