@@ -39,6 +39,11 @@ keywords = "Konstantinas Mamonas, personal blog, software engineering, technolog
         name = "Categories"
         url = "/categories"
         weight = 3
+      [[languages.en.menu.main]]
+        identifier = "games"
+        name = "Games"
+        url = "/games/"
+        weight = 4
 
 [markup]
   [markup.goldmark]
