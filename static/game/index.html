@@ -8,11 +8,28 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg:          #0d0d14;
+      --color:       #b8bcc8;
+      --muted:       #4a5568;
+      --muted-dark:  #2d3748;
+      --kbd-bg:      #1a1d2e;
+      --kbd-border:  #2d3748;
+    }
+    [data-theme="light"] {
+      --bg:          #ffffff;
+      --color:       #1a1a2e;
+      --muted:       #6b7280;
+      --muted-dark:  #9ca3af;
+      --kbd-bg:      #f0f2f5;
+      --kbd-border:  #d1d5db;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #0d0d14;
-      color: #b8bcc8;
+      background: var(--bg);
+      color: var(--color);
       font-family: Inter, system-ui, sans-serif;
       min-height: 100vh;
       display: flex;
@@ -30,7 +47,7 @@
     }
 
     header a {
-      color: #4a5568;
+      color: var(--muted);
       text-decoration: none;
       font-size: 0.85rem;
       letter-spacing: 0.05em;
@@ -71,7 +88,7 @@
 
     footer {
       font-size: 0.75rem;
-      color: #2d3748;
+      color: var(--muted-dark);
       text-align: center;
       display: flex;
       flex-direction: column;
@@ -81,11 +98,11 @@
     footer .legend-row {
       line-height: 1.8;
     }
-    footer span { color: #4a5568; }
+    footer span { color: var(--muted); }
     footer kbd {
       display: inline-block;
-      background: #1a1d2e;
-      border: 1px solid #2d3748;
+      background: var(--kbd-bg);
+      border: 1px solid var(--kbd-border);
       border-radius: 3px;
       padding: 1px 5px;
       font-family: 'Courier New', monospace;
@@ -98,7 +115,7 @@
       text-align: center;
       line-height: 1.8;
     }
-    #mobile-notice p { color: #4a5568; font-size: 0.9rem; }
+    #mobile-notice p { color: var(--muted); font-size: 0.9rem; }
     #mobile-notice .glyph { font-size: 2rem; color: #6C8CFF; display: block; margin-bottom: 8px; }
 
     @media (pointer: coarse) {
@@ -106,6 +123,13 @@
       #loading, #canvas-wrapper, footer { display: none !important; }
     }
   </style>
+  <script>
+    (function() {
+      var t = localStorage.getItem('theme');
+      if (!t) t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
 </head>
 <body>
   <header>

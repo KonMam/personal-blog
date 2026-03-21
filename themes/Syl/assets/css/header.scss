@@ -60,25 +60,21 @@
   flex-shrink: 0;
   opacity: 1 !important;
   text-decoration: none !important;
-  image-rendering: pixelated;
-  box-shadow: 0 0 5px rgba(255, 20, 147, 0.3);
-  animation: games-btn-glow 2s ease-in-out infinite;
+  box-shadow: 0 0 5px rgba(200, 160, 0, 0.35);
+  animation: games-btn-glow 2.5s ease-in-out infinite;
 
-  img {
-    display: block;
-    image-rendering: pixelated;
-  }
+  img { display: block; }
 
   &:hover {
     opacity: 1 !important;
     animation: none;
-    box-shadow: 0 0 10px rgba(255, 20, 147, 0.7), 0 0 20px rgba(255, 20, 147, 0.25);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.7), 0 0 20px rgba(255, 215, 0, 0.25);
   }
 }
 
 @keyframes games-btn-glow {
-  0%, 100% { box-shadow: 0 0 4px rgba(255, 20, 147, 0.25); }
-  50%       { box-shadow: 0 0 9px rgba(255, 20, 147, 0.55), 0 0 16px rgba(255, 20, 147, 0.18); }
+  0%, 100% { box-shadow: 0 0 4px rgba(200, 160, 0, 0.3); }
+  50%       { box-shadow: 0 0 9px rgba(255, 215, 0, 0.6), 0 0 16px rgba(255, 215, 0, 0.2); }
 }
 
 button.theme-toggle {
