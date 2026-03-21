@@ -64,17 +64,38 @@
   animation: games-btn-glow 2.5s ease-in-out infinite;
 
   img { display: block; }
+  img.nav-games-btn__light { display: none; }
 
   &:hover {
     opacity: 1 !important;
     animation: none;
     box-shadow: 0 0 10px rgba(255, 215, 0, 0.7), 0 0 20px rgba(255, 215, 0, 0.25);
   }
+
+  [data-theme="light"] & {
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.15), 0 0 6px rgba(68,102,204,0.25);
+    animation: games-btn-glow-light 2.5s ease-in-out infinite;
+
+    &:hover {
+      animation: none;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.1), 0 0 10px rgba(68,102,204,0.6), 0 0 20px rgba(68,102,204,0.2);
+    }
+  }
+}
+
+[data-theme="light"] .nav-games-btn {
+  img.nav-games-btn__dark  { display: none; }
+  img.nav-games-btn__light { display: block; }
 }
 
 @keyframes games-btn-glow {
   0%, 100% { box-shadow: 0 0 4px rgba(200, 160, 0, 0.3); }
   50%       { box-shadow: 0 0 9px rgba(255, 215, 0, 0.6), 0 0 16px rgba(255, 215, 0, 0.2); }
+}
+
+@keyframes games-btn-glow-light {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.15), 0 0 5px rgba(68,102,204,0.2); }
+  50%       { box-shadow: 0 0 0 1px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.15), 0 0 9px rgba(68,102,204,0.45); }
 }
 
 button.theme-toggle {
