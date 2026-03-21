@@ -2,14 +2,24 @@
 {{ $alt := .Get "alt" }}
 {{ $width := .Get "width" }}
 {{ $renderWidth := .Get "renderWidth" | default $width }}
+{{ $class := .Get "class" }}
 {{ $image := .Page.Resources.GetMatch $src }}
 
 {{ with $image }}
   {{ $webp := .Resize (printf "%sx webp Lanczos q100" $width) }}
+  {{ if $class }}
+  <figure class="{{ $class }}">
+    <picture>
+      <source srcset="{{ $webp.RelPermalink }}" type="image/webp">
+      <img src="{{ .RelPermalink }}" alt="{{ $alt }}" width="{{ $renderWidth }}" loading="lazy">
+    </picture>
+  </figure>
+  {{ else }}
   <picture>
     <source srcset="{{ $webp.RelPermalink }}" type="image/webp">
     <img src="{{ .RelPermalink }}" alt="{{ $alt }}" width="{{ $renderWidth }}" loading="lazy">
   </picture>
+  {{ end }}
 {{ else }}
   <!-- Image not found -->
 {{ end }}
