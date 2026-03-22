@@ -17,13 +17,25 @@ I built a small ASCII roguelike in Go and WebAssembly. Here is why, and what I l
 
 A few years ago I took part in a game jam solo and built [Muscle Domain](https://keelaric.itch.io/muscle-domain) in Godot in a week. You play as a disembodied arm wielding a dumbbell. Throw it with left click, teleport to it with right click, collect steroids to reach the next level. I'm not sure it even runs anymore.
 
-After that I wanted to make something again, but without a full engine and without worrying about art assets. Something small I could actually finish. Not helping is that the algorithm keeps surfacing game dev content on my feed, so the idea of making something is never that far from my mind.
+After that I realised how much effort went into something so simple and never looked back. But I kept watching devlog channels on YouTube and reading other people's game dev posts, and eventually decided to give it another go. This time without a big engine, and without anything that would require me to be good at art.
 
 ---
 
-I'm genuinely bad at art, so making it ASCII removed that obstacle entirely. No sprites to draw, no animations, no art direction to maintain. Just characters on a grid. It also pushed the design toward communicating everything through numbers and symbols, which is where the genre started anyway.
+The genre was an easy pick. Roguelikes have been eating my brain for years, and two in particular shaped what Dungeon ended up being.
 
-For the tech I went with Go compiled to WebAssembly. WASM is a binary format that browsers can run at near-native speed -- code compiled from Go, C, Rust, and others runs directly in the browser without plugins or JavaScript. For something this simple I didn't need a real engine, so it felt like a good excuse to try it.
+{{< image src="rogue-screenshot.png" alt="Rogue (1980) gameplay showing ASCII dungeon" width="637" renderWidth="550" class="center" >}}
+
+[Rogue](https://en.wikipedia.org/wiki/Rogue_(video_game)) is the 1980 Unix game the whole genre is named after. Procedurally generated floors, gear that defines your build, permadeath, a dungeon drawn entirely in ASCII characters. Those mechanics are the backbone of Dungeon, and the aesthetic is a direct nod to it.
+
+{{< image src="slay-the-spire.jpg" alt="Slay the Spire gameplay screenshot" width="1920" renderWidth="550" class="center" >}}
+
+[Slay the Spire](https://www.megacrit.com/) gave me the event system. Random encounters mid-floor that offer you a choice with some risk attached: take the cursed item, pay gold to remove a debuff, gamble on a random reward. That kind of small decision-making does a lot to make short runs feel different from each other. Beyond those two, the list of roguelikes that had some influence is long: Hades, Dead Cells, Isaac, Risk of Rain. The genre has a lot of shared DNA and I wasn't trying to reinvent it.
+
+---
+
+With the game figured out, I still had to decide how to build it. I'm genuinely bad at art, so making it ASCII removed that obstacle entirely. No sprites to draw, no animations, no art direction. Just characters on a grid, which also happens to be exactly where the genre started.
+
+For the tech I went with Go compiled to WebAssembly. WASM is a binary format that browsers can run at near-native speed -- code compiled from Go, C, Rust, and others runs directly in the browser without plugins or JavaScript. For something this simple I didn't need a real engine, so it felt like a good excuse to try it. The Go code talks to the browser through a small set of APIs:
 
 <div class="diagram-scroll">
 <figure class="center" style="width:100%;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 170" width="100%" aria-label="Dungeon tech stack: renderer connects to Canvas 2D, sound to Web Audio API, run history to localStorage, all bridged via syscall/js">
@@ -52,36 +64,22 @@ For the tech I went with Go compiled to WebAssembly. WASM is a binary format tha
 
 No external libraries, about 6,600 lines of standard library Go. What surprised me was how little WASM changed things. You still write the same loop: keyboard event in, update state, draw. WASM just runs it in the browser.
 
-I initially wanted it to be playable on mobile too, with on-screen buttons and touch controls. That turned out to complicate the game design more than it was worth, so I cut it.
-
 ---
 
-The project took about a week of evenings. I dropped it partway through when the balance felt off and I couldn't tell if it was fun or just frustrating. Came back later, played a few runs, decided it was actually fun, and pushed it through to something shippable.
+I initially wanted it to be playable on mobile too, but the touch controls complicated the game design more than they were worth, so I cut it. In total it took about a week of evenings, but at some point I dropped it completely and forgot about it for a month. Eventually decided it was worth getting to the end, came back, polished what was left, and shipped it.
 
 It's not well balanced. I was the only playtester, which means I tuned everything around how I play. Some class and gear combinations are probably too strong. Some floors will end a run on turn three for no good reason.
 
 ---
 
-The two main inspirations are Rogue and Slay the Spire.
-
-{{< image src="rogue-screenshot.png" alt="Rogue (1980) gameplay showing ASCII dungeon" width="637" renderWidth="550" class="center" >}}
-
-[Rogue](https://en.wikipedia.org/wiki/Rogue_(video_game)) is the 1980 Unix game the whole genre is named after. Procedurally generated floors, gear that defines your build, permadeath, a dungeon drawn entirely in ASCII characters. Those mechanics are the backbone of Dungeon, and the aesthetic is a direct nod to it.
-
-{{< image src="slay-the-spire.jpg" alt="Slay the Spire gameplay screenshot" width="1920" renderWidth="550" class="center" >}}
-
-[Slay the Spire](https://www.megacrit.com/) gave me the event system. Random encounters mid-floor that offer you a choice with some risk attached: take the cursed item, pay gold to remove a debuff, gamble on a random reward. That kind of small decision-making does a lot to make short runs feel different from each other. Beyond those two, the list of roguelikes that had some influence is long: Hades, Dead Cells, Isaac, Risk of Rain. The genre has a lot of shared DNA and I wasn't trying to reinvent it.
-
----
-
 What I'm happiest with is the complexity that comes out of fairly simple systems. Eight classes (four unlocked by winning three times with their base class), around forty gear items, a handful of synergies between specific item combinations.
 
-Each addition multiplies the number of viable builds in ways that are hard to predict when you're adding individual pieces. One synergy makes fire spread on every second strike. Another scales lifesteal off berserk stacks. I didn't plan for all the combinations, they just emerged.
-
-Watching a run come together around something unplanned is exactly why the genre works, and it's satisfying to see it happen even at this scale.
+Each addition multiplies the number of viable builds in ways that are hard to predict when you're adding individual pieces. One synergy makes fire spread on every second strike. Another scales lifesteal off berserk stacks. I didn't plan for all the combinations, they just emerged. Watching a run come together around something unplanned is exactly why the genre works, and it's satisfying to see it happen even at this scale.
 
 ---
 
 I've been playing video games since I was a kid and there's something different about being on the other side of it. Making even a small game gives you a better sense of why certain mechanics work the way they do, what tradeoffs the developers were making, and where the limitations come from. I'll probably keep making small games for that reason alone. The engine situation and the art situation remain unsolved problems, but those are for future me to deal with.
 
 [Play it here.](https://dungeon.mamonas.dev) Runs in the browser, no install needed.
+
+Thank you for reading.
