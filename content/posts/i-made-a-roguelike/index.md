@@ -52,9 +52,9 @@ For the tech I went with Go compiled to WebAssembly. WASM is a binary format tha
   <text x="100" y="93" text-anchor="middle" fill="currentColor" font-size="12" font-weight="500">sound</text>
   <rect x="10" y="116" width="180" height="38" rx="6" fill="#6C8CFF" fill-opacity="0.1" stroke="#6C8CFF" stroke-width="1.2"/>
   <text x="100" y="139" text-anchor="middle" fill="currentColor" font-size="12" font-weight="500">run history</text>
-  <line x1="190" y1="43" x2="337" y2="43" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5" marker-end="url(#dg-arr)"/>
-  <line x1="190" y1="89" x2="337" y2="89" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5" marker-end="url(#dg-arr)"/>
-  <line x1="190" y1="135" x2="337" y2="135" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+  <line x1="198" y1="43" x2="337" y2="43" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5" marker-end="url(#dg-arr)"/>
+  <line x1="198" y1="89" x2="337" y2="89" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5" marker-end="url(#dg-arr)"/>
+  <line x1="198" y1="135" x2="337" y2="135" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
   <text x="263" y="62" text-anchor="middle" fill="currentColor" fill-opacity="0.25" font-size="10">syscall/js</text>
   <rect x="345" y="24" width="220" height="38" rx="6" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.2" stroke-width="1"/>
   <text x="455" y="47" text-anchor="middle" fill="currentColor" font-size="12" font-weight="500">Canvas 2D</text>
