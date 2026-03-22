@@ -31,7 +31,7 @@ The genre was an easy pick. Roguelikes have been eating my brain for years, and 
 
 {{< image src="slay-the-spire.jpg" alt="Slay the Spire gameplay screenshot" width="1920" renderWidth="550" class="center" >}}
 
-[Slay the Spire](https://www.megacrit.com/) gave me the event system. Random encounters mid-floor that offer you a choice with some risk attached: take the cursed item, pay gold to remove a debuff, gamble on a random reward. That kind of small decision-making does a lot to make short runs feel different from each other. 
+[Slay the Spire](https://www.megacrit.com/) gave me the event system. Random encounters mid-floor that offer you a choice with some risk attached: take the cursed item, pay gold to remove a debuff, gamble on a random reward. That kind of small decision-making does a lot to make short runs feel different from each other.
 
 Beyond those two, the list of roguelikes that had some influence is long: Hades, Dead Cells, Isaac, Risk of Rain. The genre has a lot of shared DNA and I wasn't trying to reinvent it.
 
@@ -52,9 +52,9 @@ For the tech I went with Go compiled to WebAssembly. WASM is a binary format tha
   <text x="100" y="93" text-anchor="middle" fill="currentColor" font-size="12" font-weight="500">sound</text>
   <rect x="10" y="116" width="180" height="38" rx="6" fill="#6C8CFF" fill-opacity="0.1" stroke="#6C8CFF" stroke-width="1.2"/>
   <text x="100" y="139" text-anchor="middle" fill="currentColor" font-size="12" font-weight="500">run history</text>
-  <line x1="198" y1="43" x2="337" y2="43" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5" marker-end="url(#dg-arr)"/>
-  <line x1="198" y1="89" x2="337" y2="89" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5" marker-end="url(#dg-arr)"/>
-  <line x1="198" y1="135" x2="337" y2="135" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+  <line x1="205" y1="43" x2="330" y2="43" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5" marker-end="url(#dg-arr)"/>
+  <line x1="205" y1="89" x2="330" y2="89" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5" marker-end="url(#dg-arr)"/>
+  <line x1="205" y1="135" x2="330" y2="135" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
   <text x="263" y="62" text-anchor="middle" fill="currentColor" fill-opacity="0.25" font-size="10">syscall/js</text>
   <rect x="345" y="24" width="220" height="38" rx="6" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.2" stroke-width="1"/>
   <text x="455" y="47" text-anchor="middle" fill="currentColor" font-size="12" font-weight="500">Canvas 2D</text>
