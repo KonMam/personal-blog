@@ -10,6 +10,7 @@
   function setTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
+    document.cookie = 'theme=' + theme + '; domain=.mamonas.dev; max-age=31536000; path=/; SameSite=Lax';
     updateIcon(theme);
   }
 
