@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="88" height="31" shape-rendering="crispEdges">
+  <defs>
+    <pattern id="bg" x="0" y="0" width="2" height="2" patternUnits="userSpaceOnUse">
+      <rect width="2" height="2" fill="#04040e"/>
+      <rect x="0" y="0" width="1" height="1" fill="#07071a"/>
+      <rect x="1" y="1" width="1" height="1" fill="#07071a"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="88" height="31" fill="url(#bg)"/>
+
+  <!-- Outer border: gold -->
+  <rect x="0" y="0" width="88" height="31" fill="none" stroke="#b8860b" stroke-width="1"/>
+  <!-- Inner border: dark gold -->
+  <rect x="2" y="2" width="84" height="27" fill="none" stroke="#3a2800" stroke-width="1"/>
+
+  <!-- Corner jewels -->
+  <rect x="1" y="1" width="2" height="2" fill="#ffd700"/>
+  <rect x="85" y="1" width="2" height="2" fill="#ffd700"/>
+  <rect x="1" y="28" width="2" height="2" fill="#ffd700"/>
+  <rect x="85" y="28" width="2" height="2" fill="#ffd700"/>
+
+  <!-- Left zone -->
+  <rect x="3" y="3" width="22" height="25" fill="#020208"/>
+
+  <!-- Pixel sword (gold), centered at x=13 -->
+  <!-- Blade tip -->
+  <rect x="12" y="4"  width="2" height="1" fill="#ffec8b"/>
+  <!-- Blade (with highlight) -->
+  <rect x="12" y="5"  width="2" height="12" fill="#ffd700"/>
+  <rect x="12" y="5"  width="1" height="12" fill="#ffec8b"/>
+  <!-- Cross-guard -->
+  <rect x="7"  y="17" width="10" height="2" fill="#ffd700"/>
+  <rect x="7"  y="17" width="10" height="1" fill="#ffec8b"/>
+  <!-- Handle -->
+  <rect x="12" y="19" width="2" height="5"  fill="#8b6400"/>
+  <!-- Pommel -->
+  <rect x="10" y="24" width="5"  height="2" fill="#ffd700"/>
+
+  <!-- Zone separator -->
+  <line x1="26" y1="3" x2="26" y2="28" stroke="#b8860b" stroke-width="1"/>
+
+  <!-- Right zone -->
+  <rect x="27" y="3" width="58" height="25" fill="#02020c"/>
+
+  <!-- GAMES in gold -->
+  <text x="56" y="15"
+        text-anchor="middle"
+        font-family="'Courier New', Courier, monospace"
+        font-size="9"
+        font-weight="bold"
+        fill="#ffd700"
+        letter-spacing="1.5">GAMES</text>
+
+  <!-- Divider -->
+  <line x1="29" y1="19" x2="83" y2="19" stroke="#3a2800" stroke-width="1"/>
+
+  <!-- New quest label -->
+  <text x="56" y="27"
+        text-anchor="middle"
+        font-family="'Courier New', Courier, monospace"
+        font-size="5"
+        fill="#c8a020"
+        letter-spacing="0.5">&#x2605; NEW &#x2605;</text>
+</svg>

@@ -1,0 +1,12 @@
+{{ define "main" }}
+<div class="games-page">
+  <h1 class="games-page__title">{{ .Title }}</h1>
+  <div class="games-grid">
+    {{ range site.Data.games }}
+    <a href="{{ .url }}" class="game-card">
+      <img src="{{ .image }}" alt="{{ .title }} title screen" loading="lazy">
+    </a>
+    {{ end }}
+  </div>
+</div>
+{{ end }}
